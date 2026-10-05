@@ -1,0 +1,25 @@
+{
+  "name": "Kunitori Flutter",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": ["Dart-Code.flutter", "Dart-Code.dart-code"]
+    }
+  },
+  "containerEnv": {
+    "FLUTTER_VERSION": "3.29.3"
+  },
+  "remoteEnv": {
+    "PATH": "/home/vscode/flutter/bin:${containerEnv:PATH}"
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Flutter Web preview",
+      "onAutoForward": "notify",
+      "visibility": "private"
+    }
+  }
+}

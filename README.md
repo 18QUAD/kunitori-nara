@@ -1,0 +1,118 @@
+# くにとり・奈良 — Flutter MVP
+
+奈良県全39市町村・3,078町丁字を対象とするソロ陣取りゲーム。
+2020年国勢調査境界の人口合計は1,324,473人。架空の町割り・人口は使用していません。
+
+## 起動
+
+Flutter 3.29.3 / Dart 3.7.2で検証。
+
+```sh
+flutter pub get
+flutter run
+```
+
+Androidは接続端末を選択。iOSの実行・署名はmacOSとXcodeが必要です。
+Android NDKはshared_preferences_androidに合わせて27.0.12077973を指定しています。
+Androidの配布用署名・アプリIDは本番公開前に設定してください。現在は開発用署名です。
+
+```sh
+flutter test
+flutter analyze
+flutter build apk --debug
+flutter run -d chrome
+flutter build web --release
+```
+
+APK: `build/app/outputs/flutter-apk/app-debug.apk`
+
+## 遊び方
+
+1. 地図または地名検索から町丁字を選び、難易度と本拠地を決定。
+2. 金色の隣接地域を選択し「タップで進軍」。白い輪郭は選択中、緑は自領。
+3. 「土地の記憶」を読み、「次の情報」で地域情報を切り替える。
+4. 市町村の全町丁字を獲得すると、表示済み情報から4択クイズを出題。
+5. 正解で制圧確定。不正解・時間切れでは対象市町村の約10%（切り上げ）の領土を喪失。本拠地と累計実績は保持。
+
+難易度は本拠地決定時に固定。タップ数は `max(3, ceil((6 + sqrt(人口) × 1.4) × 倍率))`。
+旅人は0.5倍・25秒、武将は1倍・15秒、天下人は1.8倍・8秒。
+旅人にはネタ選択肢、武将・天下人には紛らわしい選択肢を用意。
+クイズ締切は絶対時刻で保存され、バックグラウンド移行や再起動では延長されません。
+
+## 保存
+
+端末内のshared_preferencesに、領土・本拠地・進行中タップ・表示済み情報・クイズ・称号・累計値を保存。
+連続タップ時の書き込みは直列化・集約。失敗時は画面に再試行ボタンを表示。
+破損・未知バージョンのデータは上書きせず読み込みエラーを表示します。
+端末間同期・サーバーバックアップはありません。アンインストールやデータ削除には耐えません。
+Webプレビューの保存とスマホ端末の保存は独立しています。
+
+## 構成
+
+- `lib/game.dart`: 地域モデル、攻略ルール、情報・クイズ、保存データの検証
+- `lib/territory_map.dart`: オフライン地図、パン・ズーム、ポリゴン選択
+- `lib/main.dart`: 進軍・地域図鑑・戦績、検索、タイマー、ライフサイクル
+- `lib/save_store.dart`: 保存処理
+- `assets/data/nara.json`: 実データと隣接グラフ
+- `tools/import_nara.py`: 原本取得と地図生成（Python標準ライブラリ、Windowsのcurl.exe）
+- `test/`: 実データ検証、ルール・保存・時間切れ、スマホ画面の操作テスト
+
+## データ出典と加工
+
+[国勢調査町丁・字等別境界データセット（CODH作成）](https://geoshape.ex.nii.ac.jp/ka/)
+「令和2年国勢調査町丁・字等別境界データ」（e-Stat）を加工。
+doi:10.20676/00000450 / [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+
+同じKEY_CODEの分割領域を統合し、人口・面積を合算。描画形状はDouglas–Peucker法で簡略化。
+隣接グラフは簡略化前の共有線分（経緯度小数6桁）から計算し、点接触を除外。
+全3,078領域の到達可能性、隣接の対称性、県人口合計をテストしています。
+法的・測量用途の境界ではありません。町丁字の名称・境界は2020年時点です。
+
+```sh
+python tools/import_nara.py
+```
+
+原本は`data/raw/`にキャッシュ（Git対象外）。生成レポートは`assets/data/import_report.json`。
+地図データと日本語フォントは同梱し、Androidではネット接続不要。
+
+地域情報は市町村別統計を基本とし、県共通の産業情報と斑鳩町の文化財情報を追加しています。
+全市町村の名物・歴史記事を網羅する段階ではありません。
+
+- [奈良県・商工業](https://www.pref.nara.lg.jp/n002/1360.html)
+- [文化庁・法隆寺地域の仏教建造物](https://kunishitei.bunka.go.jp/heritage/detail/911/1)
+- Noto Sans JP: Google Fonts / SIL Open Font License。`assets/fonts/OFL.txt`を同梱。
+
+## 今後の拡張
+
+今回の範囲は「地図→隣接→タップ攻略→地域情報→市町村クイズ→領土保存」。
+県全域・市町村への移動と町丁字選択に対応。全国・地方を含む5階層地図、主要道路侵攻、
+対戦・チーム・シーズン、オンラインランキング、GDP・石高、企業広告は未実装です。
+対戦の導入にはサーバー側の領土状態・タップ検証・シーズン集計・認証が必要です。
+
+## クラウド開発（GitHub）
+
+`.github/workflows/flutter.yml`で、mainへのpush・Pull Request・手動実行時に次を実行します。
+
+1. Flutter 3.29.3 / Java 17の準備とロックファイルどおりの依存取得
+2. Dartフォーマット確認・静的解析・全テスト
+3. Android開発用APKとWebプレビューバンドルの生成
+4. APK・Web・カバレッジをActionsのArtifactsへ7日間保存
+
+GitHubの **Actions → Flutter checks and builds → 成功した実行 → Artifacts** から取得できます。
+開発用APKはストア配布用ではありません。クラウドの開発署名はローカルと異なるため、
+既存APKへの上書きインストールができない場合があります。既存アプリを削除すると端末内保存も消えるため、
+大切な進行データがある端末では既存版を残し、別端末・エミュレーターで確認してください。
+Webはファイル生成のみで、公開デプロイは行いません。iOSクラウドビルドは未設定です。
+
+ブラウザで編集する場合は **Code → Codespaces → Create codespace on main** を選択します。
+`.devcontainer/`でFlutterとVS Code拡張を準備します。起動後のターミナルで次を実行します。
+
+```sh
+flutter test
+flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080
+```
+
+ポート8080のプレビューは非公開のまま利用してください。Codespacesでは編集・テスト・Web確認を行い、
+Androidビルドはpush後にActionsで行います。Codespacesの起動はユーザー操作です。
+利用枠・料金はアカウント契約に依存します。使用後はCodespaceを停止してください。
+ゲームの端末内保存をクラウド同期する変更は含みません。
