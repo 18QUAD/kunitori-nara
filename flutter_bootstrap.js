@@ -9,6 +9,6 @@ if (!window._flutter) {
 _flutter.buildConfig = {"engineRevision":"cf56914b326edb0ccb123ffdc60f00060bd513fa","builds":[{"compileTarget":"dart2js","renderer":"canvaskit","mainJsPath":"main.dart.js"}]};
 
 for (const build of _flutter.buildConfig.builds) {
-  if (build.mainJsPath) build.mainJsPath += '?v=town-v1';
+  if (build.mainJsPath) build.mainJsPath += '?v=town-label-v2';
 }
 _flutter.loader.load({config: {canvasKitBaseUrl: 'canvaskit/'}});
