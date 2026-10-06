@@ -434,7 +434,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 IconButton(
-                  tooltip: '市町村・町丁字を探す',
+                  tooltip: '市町村・町を探す',
                   onPressed: _search,
                   icon: const Icon(Icons.search),
                 ),
@@ -504,7 +504,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 12),
             Text(
-              g.home == null ? 'あなたの本拠地を\n決めましょう。' : '市区町村から\n町丁字へ。',
+              g.home == null ? 'あなたの本拠地を\n決めましょう。' : '市区町村から\n町へ。',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -514,10 +514,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             const SizedBox(height: 16),
             Text(
               cityFilter == null
-                  ? '市区町村を地図または検索から選び、次に町丁字を選んでください。'
+                  ? '市区町村を地図または検索から選び、次に町を選んでください。'
                   : g.home == null
-                  ? '${atlas!.cities[cityFilter]}の町丁字を選び、本拠地を決めてください。'
-                  : '${atlas!.cities[cityFilter]}の町丁字を選び、進軍してください。',
+                  ? '${atlas!.cities[cityFilter]}の町を選び、本拠地を決めてください。'
+                  : '${atlas!.cities[cityFilter]}の町を選び、進軍してください。',
               style: TextStyle(height: 1.7, color: Colors.white70),
             ),
             const SizedBox(height: 20),
@@ -526,7 +526,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             FilledButton.icon(
               onPressed: _search,
               icon: const Icon(Icons.search),
-              label: Text(g.home == null ? '地名から本拠地を探す' : '市区町村・町丁字を探す'),
+              label: Text(g.home == null ? '地名から本拠地を探す' : '市区町村・町を探す'),
             ),
             const SizedBox(height: 12),
             const Text(
@@ -553,7 +553,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 children: [
                   Expanded(
                     child: Text(
-                      '${atlas!.cities[t.cityId]}  /  町丁・字',
+                      '${atlas!.cities[t.cityId]}  /  町',
                       style: const TextStyle(
                         color: Colors.white60,
                         fontSize: 13,
@@ -908,7 +908,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       const SizedBox(height: 8),
       const Text('進軍中に出会った、土地の記憶。', style: TextStyle(color: Colors.white60)),
       const SizedBox(height: 20),
-      if (game!.seen.isEmpty) const Text('町丁・字を選ぶと地域情報が見つかります。'),
+      if (game!.seen.isEmpty) const Text('町を選ぶと地域情報が見つかります。'),
       ...atlas!.facts.entries
           .where((e) => e.value.any((f) => game!.seen.contains(f.id)))
           .map(
@@ -1090,12 +1090,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1. 市区町村を選び、次に町丁字から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略\n3. 「土地の記憶」を読み、知識を蓄積\n4. 市町村の全領土獲得でクイズに挑戦\n5. 正解で市町村制圧。失敗で一部領土を失う',
+                    '1. 市区町村を選び、次に町から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略\n3. 「土地の記憶」を読み、知識を蓄積\n4. 市町村の全領土獲得でクイズに挑戦\n5. 正解で市町村制圧。失敗で一部領土を失う',
                     style: TextStyle(height: 2),
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1タップで1人。人口と同じ回数のタップで町丁字を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。',
+                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
@@ -1105,7 +1105,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    '奈良県39市町村・3,078町丁字。2020年国勢調査時点。町丁字は同一KEY_CODEで統合しています。描画用境界のみ簡略化し、隣接は元の境界から計算しています。面積は収録境界の合計です。',
+                    '奈良県39市町村。2020年国勢調査の3,078町丁字を、丁目・小字をまとめた町・大字単位に統合しています。人口・面積を合算し、統合後の隣接関係を使います。描画用境界のみ簡略化しています。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 12),
@@ -1124,7 +1124,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    '県全域・市町村への移動と町丁字の選択に対応。全国・地方の地図、主要道路ルート、対戦、ランキング、広告は今後の拡張です。保存は端末内のみで、アンインストールやブラウザのデータ削除では失われます。クイズ中にアプリを閉じても締切時刻は変わりません。',
+                    '県全域・市町村への移動と町の選択に対応。全国・地方の地図、主要道路ルート、対戦、ランキング、広告は今後の拡張です。保存は端末内のみで、アンインストールやブラウザのデータ削除では失われます。クイズ中にアプリを閉じても締切時刻は変わりません。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 24),
@@ -1222,7 +1222,7 @@ class _SearchSheetState extends State<_SearchSheet> {
               autofocus: false,
               onChanged: (v) => setState(() => query = v),
               decoration: const InputDecoration(
-                hintText: '市区町村・町丁字名で検索',
+                hintText: '市区町村・町名で検索',
                 prefixIcon: Icon(Icons.search),
               ),
             ),
@@ -1253,7 +1253,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                         .elementAt(i);
                     return ListTile(
                       title: Text(c.value),
-                      subtitle: Text('${a.byCity[c.key]!.length}町丁字'),
+                      subtitle: Text('${a.byCity[c.key]!.length}町'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap:
                           () => setState(() {

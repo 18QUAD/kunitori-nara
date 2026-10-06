@@ -17,7 +17,8 @@ void main() {
   });
   test('full Nara data has symmetric boundary adjacency and is connected', () {
     expect(atlas.cities.length, 39);
-    expect(atlas.towns.length, 3078);
+    expect(atlas.sourceTowns.length, 3078);
+    expect(atlas.towns.length, lessThan(3078));
     expect(atlas.towns.values.fold(0, (s, t) => s + t.population), 1324473);
     final reached = <String>{};
     final queue = [atlas.towns.keys.first];
@@ -32,7 +33,52 @@ void main() {
         if (!reached.contains(n)) queue.add(n);
       }
     }
-    expect(reached.length, 3078);
+    expect(reached.length, atlas.towns.length);
+  });
+  test('chome and small districts combine with totals preserved', () {
+    final aoyama = atlas.byCity['29201']!.singleWhere((t) => t.name == '青山');
+    final members = atlas.membersByTown[aoyama.id]!;
+    expect(members.length, 9);
+    expect(aoyama.population, members.fold<int>(0, (s, t) => s + t.population));
+    expect(atlas.towns.values.any((t) => t.name.endsWith('丁目')), false);
+    expect(
+      atlas.towns.values.fold<double>(0, (s, t) => s + t.area),
+      closeTo(
+        atlas.sourceTowns.values.fold<double>(0, (s, t) => s + t.area),
+        0.000001,
+      ),
+    );
+    final achiga = atlas.byCity['29443']!.singleWhere((t) => t.name == '大字阿知賀');
+    expect(atlas.membersByTown[achiga.id]!.length, 12);
+    // Census codes occasionally mix different towns; do not collapse those names.
+    expect(atlas.byCity['29206']!.where((t) => t.name == '朝倉台西'), hasLength(1));
+    expect(atlas.byCity['29206']!.where((t) => t.name == '朝倉台東'), hasLength(1));
+  });
+  test('legacy home and partial district acquisitions migrate to towns', () {
+    final groups =
+        atlas.membersByTown.values
+            .where((ts) => ts.length > 1 && ts[1].population > 2)
+            .toList();
+    final home = groups.first;
+    final target = groups[1];
+    final old = Game(atlas).toJson()..remove('territoryUnit');
+    old['home'] = home.last.id;
+    old['owned'] = [home.last.id, target.first.id];
+    old['everOwned'] = old['owned'];
+    old['progress'] = {target[1].id: 2};
+    old['totalTaps'] = target.first.population + 2;
+    final migrated = Game.restore(atlas, old);
+    final homeId = atlas.sourceToTown[home.last.id]!;
+    final targetId = atlas.sourceToTown[target.first.id]!;
+    expect(migrated.home, homeId);
+    expect(migrated.owned, contains(homeId));
+    expect(migrated.owned, isNot(contains(targetId)));
+    expect(migrated.progress[targetId], target.first.population + 2);
+    expect(
+      Game.restore(atlas, migrated.toJson()).population,
+      migrated.population,
+    );
+    expect(migrated.totalTaps, old['totalTaps']);
   });
   test(
     'cannot attack remote, owned or unstarted territories; exact taps conquer',
@@ -165,6 +211,36 @@ void main() {
     expect(g.totalTaps, 1000);
     expect(g.titles, contains('千里の旅人'));
   });
+  test(
+    'legacy district quiz updates to towns without extending its deadline',
+    () {
+      final g = completeCity();
+      final old = g.toJson()..remove('territoryUnit');
+      final ids =
+          g.owned
+              .expand((id) => atlas.membersByTown[id]!.map((t) => t.id))
+              .toList();
+      old['owned'] = ids;
+      old['everOwned'] = ids;
+      final q = old['quiz'] as Map<String, dynamic>;
+      final count =
+          atlas.sourceTowns.values
+              .where((t) => t.cityId == g.quiz!.cityId)
+              .length;
+      q['question'] = '旧町丁字の問題';
+      q['answer'] = '$count町丁字';
+      q['choices'] = [
+        '$count町丁字',
+        '${count + 1}町丁字',
+        '${count + 2}町丁字',
+        '${count + 3}町丁字',
+      ];
+      final migrated = Game.restore(atlas, old);
+      expect(migrated.quiz!.deadline, g.quiz!.deadline);
+      expect(migrated.quiz!.question, isNot('旧町丁字の問題'));
+      expect(migrated.answer(migrated.quiz!.answer, now), true);
+    },
+  );
   test('saved quiz retains deadline; reopening expires it exactly once', () {
     final g = completeCity();
     final q = g.quiz!;

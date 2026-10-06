@@ -65,19 +65,22 @@ class _TerritoryMapState extends State<TerritoryMap> {
     paths = {};
     bounds = {};
     for (final t in widget.atlas.towns.values) {
-      final path = Path()..fillType = PathFillType.evenOdd;
+      final parts = <Path>[];
       for (final polygon in t.polygons) {
+        final part = Path()..fillType = PathFillType.evenOdd;
         for (final ring in polygon) {
           if (ring.isEmpty) continue;
           final start = project(ring.first);
-          path.moveTo(start.dx, start.dy);
+          part.moveTo(start.dx, start.dy);
           for (final p in ring.skip(1)) {
             final o = project(p);
-            path.lineTo(o.dx, o.dy);
+            part.lineTo(o.dx, o.dy);
           }
-          path.close();
+          part.close();
         }
+        parts.add(part);
       }
+      final path = _union(parts);
       paths[t.id] = path;
       bounds[t.id] = path.getBounds();
     }

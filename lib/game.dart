@@ -64,10 +64,76 @@ class Atlas {
     for (final c in j['cities'] as List) {
       cities[c['id'] as String] = c['name'] as String;
     }
+    final codeGroups = <String, List<Town>>{};
     for (final t in j['towns'] as List) {
       final town = Town.fromJson(t as Map<String, dynamic>);
-      towns[town.id] = town;
-      byCity.putIfAbsent(town.cityId, () => []).add(town);
+      sourceTowns[town.id] = town;
+      codeGroups.putIfAbsent(town.id.substring(0, 9), () => []).add(town);
+    }
+    final groups = <String, List<Town>>{};
+    for (final entry in codeGroups.entries) {
+      final parts = <String, List<Town>>{};
+      for (final town in entry.value) {
+        // Some census town codes straddle distinct named towns. Keep those apart.
+        final part = switch (entry.key) {
+          '292015930' ||
+          '292060010' ||
+          '292060420' ||
+          '293430132' => _withoutChome(town.name),
+          '294430010' => town.name.startsWith('大字新住') ? '大字新住' : '大字下市',
+          _ => '',
+        };
+        parts.putIfAbsent(part, () => []).add(town);
+      }
+      for (final part in parts.entries) {
+        final names = part.value.map((t) => _withoutChome(t.name)).toList();
+        var name = part.key.isNotEmpty ? part.key : names.first;
+        if (part.key.isEmpty) {
+          for (final other in names.skip(1)) {
+            var i = 0;
+            while (i < name.length && i < other.length && name[i] == other[i]) {
+              i++;
+            }
+            name = name.substring(0, i);
+          }
+          if (name.startsWith('大字') && name.length > 2) {
+            final sub = name.indexOf('字', 2);
+            if (sub >= 0) name = name.substring(0, sub);
+          }
+        }
+        if (name.isEmpty || name == '大字') {
+          throw FormatException('町名を特定できません: ${entry.key}');
+        }
+        groups
+            .putIfAbsent('${part.value.first.cityId}:$name', () => [])
+            .addAll(part.value);
+      }
+    }
+    for (final entry in groups.entries) {
+      final members = entry.value;
+      final id = members.first.id;
+      for (final member in members) {
+        sourceToTown[member.id] = id;
+      }
+      final merged = Town.fromJson({
+        'id': id,
+        'name': entry.key.substring(entry.key.indexOf(':') + 1),
+        'cityId': members.first.cityId,
+        'population': members.fold<int>(0, (s, t) => s + t.population),
+        'area': members.fold<double>(0, (s, t) => s + t.area),
+        'neighbors': <String>[],
+        'polygons': <dynamic>[],
+      });
+      merged.polygons.addAll(members.expand((t) => t.polygons));
+      towns[id] = merged;
+      membersByTown[id] = members;
+      byCity.putIfAbsent(merged.cityId, () => []).add(merged);
+    }
+    for (final town in towns.values) {
+      for (final source in membersByTown[town.id]!) {
+        town.neighbors.addAll(source.neighbors.map((id) => sourceToTown[id]!));
+      }
+      town.neighbors.remove(town.id);
     }
     for (final city in cities.entries) {
       final ts = byCity[city.key]!;
@@ -80,10 +146,10 @@ class Atlas {
           '${city.key}:count',
           city.key,
           '地理',
-          '${city.value}の攻略対象は$n町丁・字。すべての領土を獲得すると地域クイズが始まります。',
-          '${city.value}の攻略対象は何町丁・字？',
-          '$n町丁・字',
-          ['${n + 1}町丁・字', '${max(0, n - 1)}町丁・字', '${n + 10}町丁・字'],
+          '${city.value}の攻略対象は$n町。すべての領土を獲得すると地域クイズが始まります。',
+          '${city.value}の攻略対象は何町？',
+          '$n町',
+          ['${n + 1}町', '${max(0, n - 1)}町', '${n + 10}町'],
           censusSource,
         ),
         LocalFact(
@@ -104,8 +170,8 @@ class Atlas {
           '${city.key}:largest',
           city.key,
           '地域',
-          '${city.value}で収録人口が最も多い町丁・字は${largest.first.name}（${number(largest.first.population)}人）です。',
-          '${city.value}で収録人口が最も多い町丁・字は？',
+          '${city.value}で収録人口が最も多い町は${largest.first.name}（${number(largest.first.population)}人）です。',
+          '${city.value}で収録人口が最も多い町は？',
           largest.first.name,
           largest
               .skip(1)
@@ -121,6 +187,11 @@ class Atlas {
     }
   }
   static const censusSource = 'https://geoshape.ex.nii.ac.jp/ka/';
+  static String _withoutChome(String name) =>
+      name.replaceFirst(RegExp(r'[一二三四五六七八九十百0-9０-９]+丁目$'), '');
+  final Map<String, Town> sourceTowns = {};
+  final Map<String, String> sourceToTown = {};
+  final Map<String, List<Town>> membersByTown = {};
   final Map<String, Town> towns = {};
   final Map<String, String> cities = {};
   final Map<String, List<Town>> byCity = {};
@@ -332,6 +403,7 @@ class Game {
     'version': 1,
     'dataset': 'nara-2020-v1',
     'tapRule': 'population-v1',
+    'territoryUnit': 'town-v1',
     'difficulty': difficulty.name,
     'home': home,
     'owned': owned.toList(),
@@ -345,6 +417,49 @@ class Game {
     'losses': losses,
     'quiz': quiz?.toJson(),
   };
+
+  void _migrateTownUnits() {
+    final valid = atlas.sourceTowns.keys.toSet();
+    if (!valid.containsAll(owned) ||
+        !valid.containsAll(everOwned) ||
+        !valid.containsAll(progress.keys) ||
+        !everOwned.containsAll(owned) ||
+        (home != null && !owned.contains(home)) ||
+        progress.entries.any((e) => e.value < 0 || owned.contains(e.key))) {
+      throw const FormatException('保存データに不整合があります。');
+    }
+    final oldOwned = {...owned};
+    final oldProgress = {...progress};
+    home = home == null ? null : atlas.sourceToTown[home];
+    final visited = everOwned.map((id) => atlas.sourceToTown[id]!).toSet();
+    owned.clear();
+    progress.clear();
+    everOwned
+      ..clear()
+      ..addAll(visited);
+    for (final entry in atlas.membersByTown.entries) {
+      if (entry.key == home ||
+          entry.value.every((t) => oldOwned.contains(t.id))) {
+        owned.add(entry.key);
+        everOwned.add(entry.key);
+      } else {
+        final count = entry.value.fold<int>(
+          0,
+          (s, t) =>
+              s +
+              (oldOwned.contains(t.id)
+                  ? t.population
+                  : min(oldProgress[t.id] ?? 0, t.population)),
+        );
+        if (count > 0) {
+          progress[entry.key] = min(
+            count,
+            requiredTaps(atlas.towns[entry.key]!) - 1,
+          );
+        }
+      }
+    }
+  }
 
   factory Game.restore(Atlas atlas, Map<String, dynamic> j) {
     if (j['version'] != 1 || j['dataset'] != 'nara-2020-v1') {
@@ -361,6 +476,11 @@ class Game {
     g.everOwned.addAll(List<String>.from(j['everOwned']));
     g.titles.addAll(List<String>.from(j['titles']));
     g.progress.addAll(Map<String, int>.from(j['progress']));
+    final legacyUnits = j['territoryUnit'] == null;
+    if (!legacyUnits && j['territoryUnit'] != 'town-v1') {
+      throw const FormatException('対応していない地域単位です。');
+    }
+    if (legacyUnits) g._migrateTownUnits();
     // Retain acquired territories and adapt legacy partial progress to the new cap.
     if (j['tapRule'] == null) {
       for (final id in g.progress.keys.toList()) {
@@ -377,6 +497,25 @@ class Game {
     g.losses = j['losses'] as int;
     if (j['quiz'] != null) {
       g.quiz = Quiz.fromJson(Map<String, dynamic>.from(j['quiz']));
+    }
+    if (legacyUnits && g.quiz != null) {
+      final q = g.quiz!;
+      final fs = atlas.facts[q.cityId]?.where((f) => f.id == q.factId).toList();
+      if (fs != null &&
+          fs.length == 1 &&
+          q.choices.length == 4 &&
+          q.choices.toSet().length == 4 &&
+          q.choices.contains(q.answer)) {
+        final f = fs.single;
+        g.quiz = Quiz(
+          cityId: q.cityId,
+          factId: f.id,
+          question: f.question,
+          answer: f.answer,
+          choices: [f.answer, ...f.decoys.take(3)],
+          deadline: q.deadline,
+        );
+      }
     }
     final validIds = atlas.towns.keys.toSet();
     final validFacts =

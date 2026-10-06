@@ -24,7 +24,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('くにとり'), findsOneWidget);
     expect(tester.takeException(), isNull);
-    await tester.tap(find.byTooltip('市町村・町丁字を探す'));
+    await tester.tap(find.byTooltip('市町村・町を探す'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(ListTile, '油留木町'), findsNothing);
     await tester.tap(find.widgetWithText(ListTile, '奈良市'));
