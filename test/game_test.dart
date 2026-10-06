@@ -78,6 +78,16 @@ void main() {
       expect(g.owned, contains(t.id));
     }
   });
+  test('45 residents require 45 taps even after 16 taps', () {
+    final town = atlas.towns.values.firstWhere((t) => t.population == 45);
+    final g = Game(atlas)..setHome(town.neighbors.first);
+    expect(g.requiredTaps(town), 45);
+    for (var i = 0; i < 16; i++) {
+      expect(g.tap(town.id, now), false);
+    }
+    expect(g.progress[town.id], 16);
+    expect(g.owned.contains(town.id), false);
+  });
   test('zero population takes one tap without adding population', () {
     final t = atlas.towns.values.firstWhere(
       (t) => t.population == 0 && t.neighbors.isNotEmpty,
