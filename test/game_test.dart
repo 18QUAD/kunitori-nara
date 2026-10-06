@@ -62,15 +62,46 @@ void main() {
       expect(g.totalTaps, taps);
     },
   );
-  test('difficulty changes cost, zero population still needs taps', () {
+  test('each tap adds one person, independent of difficulty', () {
+    final t = atlas.towns.values.firstWhere(
+      (t) => t.population > 2 && t.neighbors.isNotEmpty,
+    );
+    for (final difficulty in Difficulty.values) {
+      final g = Game(atlas)..difficulty = difficulty;
+      g.setHome(t.neighbors.first);
+      final initial = g.population;
+      expect(g.requiredTaps(t), t.population);
+      for (var i = 1; i <= t.population; i++) {
+        expect(g.tap(t.id, now), i == t.population);
+        expect(g.population, initial + i);
+      }
+      expect(g.owned, contains(t.id));
+    }
+  });
+  test('zero population takes one tap without adding population', () {
+    final t = atlas.towns.values.firstWhere(
+      (t) => t.population == 0 && t.neighbors.isNotEmpty,
+    );
     final g = Game(atlas);
-    final t = atlas.towns.values.firstWhere((t) => t.population == 0);
-    g.difficulty = Difficulty.casual;
-    expect(g.requiredTaps(t), 3);
-    g.difficulty = Difficulty.standard;
-    expect(g.requiredTaps(t), 6);
-    g.difficulty = Difficulty.expert;
-    expect(g.requiredTaps(t), 11);
+    g.setHome(t.neighbors.first);
+    final initial = g.population;
+    expect(g.requiredTaps(t), 1);
+    expect(g.tap(t.id, now), true);
+    expect(g.population, initial);
+  });
+  test('legacy partial progress adapts while acquired territories remain', () {
+    final t = atlas.towns.values.firstWhere(
+      (t) => t.population == 0 && t.neighbors.isNotEmpty,
+    );
+    final g = Game(atlas)..setHome(t.neighbors.first);
+    final legacy = g.toJson()..remove('tapRule');
+    legacy['progress'] = {t.id: 2};
+    legacy['totalTaps'] = 2;
+    final restored = Game.restore(atlas, legacy);
+    expect(restored.home, g.home);
+    expect(restored.owned, g.owned);
+    expect(restored.progress[t.id], 0);
+    expect(restored.tap(t.id, now), true);
   });
   Game completeCity() {
     final city = atlas.byCity.entries.reduce(

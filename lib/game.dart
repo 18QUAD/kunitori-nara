@@ -1,13 +1,12 @@
 import 'dart:math';
 
 enum Difficulty {
-  casual('旅人', 0.5, 25),
-  standard('武将', 1, 15),
-  expert('天下人', 1.8, 8);
+  casual('旅人', 25),
+  standard('武将', 15),
+  expert('天下人', 8);
 
-  const Difficulty(this.label, this.multiplier, this.seconds);
+  const Difficulty(this.label, this.seconds);
   final String label;
-  final double multiplier;
   final int seconds;
 }
 
@@ -222,8 +221,7 @@ class Game {
   Quiz? quiz;
   String message = '';
 
-  int requiredTaps(Town t) =>
-      max(3, ((6 + sqrt(t.population) * 1.4) * difficulty.multiplier).ceil());
+  int requiredTaps(Town t) => max(1, t.population);
   bool canAttack(String id) =>
       home != null &&
       quiz == null &&
@@ -232,7 +230,10 @@ class Game {
   bool cityOwned(String id) =>
       atlas.byCity[id]!.every((t) => owned.contains(t.id));
   int get population =>
-      owned.fold(0, (s, id) => s + atlas.towns[id]!.population);
+      owned.fold(0, (s, id) => s + atlas.towns[id]!.population) +
+      progress.entries
+          .where((e) => !owned.contains(e.key))
+          .fold(0, (s, e) => s + min(e.value, atlas.towns[e.key]!.population));
   double get area => owned.fold(0.0, (s, id) => s + atlas.towns[id]!.area);
 
   void observe(String city) => seen.addAll(atlas.facts[city]!.map((f) => f.id));
@@ -330,6 +331,7 @@ class Game {
   Map<String, dynamic> toJson() => {
     'version': 1,
     'dataset': 'nara-2020-v1',
+    'tapRule': 'population-v1',
     'difficulty': difficulty.name,
     'home': home,
     'owned': owned.toList(),
@@ -359,6 +361,17 @@ class Game {
     g.everOwned.addAll(List<String>.from(j['everOwned']));
     g.titles.addAll(List<String>.from(j['titles']));
     g.progress.addAll(Map<String, int>.from(j['progress']));
+    // Retain acquired territories and adapt legacy partial progress to the new cap.
+    if (j['tapRule'] == null) {
+      for (final id in g.progress.keys.toList()) {
+        final town = atlas.towns[id];
+        if (town != null && g.progress[id]! >= 0) {
+          g.progress[id] = min(g.progress[id]!, g.requiredTaps(town) - 1);
+        }
+      }
+    } else if (j['tapRule'] != 'population-v1') {
+      throw const FormatException('対応していないタップ方式です。');
+    }
     g.totalTaps = j['totalTaps'] as int;
     g.wins = j['wins'] as int;
     g.losses = j['losses'] as int;

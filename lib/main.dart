@@ -685,7 +685,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ),
                     icon: Icon(can ? Icons.touch_app : Icons.lock_outline),
                     label: Text(
-                      can ? 'タップで進軍' : '隣接する自領が必要です',
+                      can ? 'タップで進軍 · 1人' : '隣接する自領が必要です',
                       style: const TextStyle(fontSize: 18),
                     ),
                   ),
@@ -1095,7 +1095,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    'タップ数 = ceil((6 + √人口 × 1.4) × 難易度倍率)、最低3回。旅人0.5倍・武将1倍・天下人1.8倍。人口0の地域も攻略対象です。点で接するだけの地域は隣接扱いにしません。',
+                    '1タップで1人。人口と同じ回数のタップで町丁字を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
