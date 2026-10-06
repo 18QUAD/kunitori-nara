@@ -115,8 +115,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       setState(() {});
       if (g.home != null) _save();
       timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
-        if (!mounted || g.quiz == null) return;
-        final expired = g.expire(DateTime.now());
+        if (!mounted || game!.quiz == null) return;
+        final expired = game!.expire(DateTime.now());
         setState(() {});
         if (expired) _save();
       });
@@ -145,6 +145,39 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   void _save() {
     if (game != null && store != null) unawaited(store!.save(game!));
+  }
+
+  Future<void> _restart() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('最初からやり直しますか？'),
+            content: const Text(
+              '本拠地・領土・戦績・称号・地域図鑑をリセットします。元に戻せません。市区町村から新しい本拠地を選び直せます。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('やり直す'),
+              ),
+            ],
+          ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      game = Game(atlas!);
+      selected = null;
+      cityFilter = null;
+      tab = 0;
+      factIndex = 0;
+      mapFocus = 0;
+    });
+    await store!.save(game!);
   }
 
   LocalFact? get visibleFact {
@@ -983,6 +1016,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 .toList(),
       ),
       const SizedBox(height: 24),
+      OutlinedButton.icon(
+        onPressed: _restart,
+        icon: const Icon(Icons.restart_alt),
+        label: const Text('最初からやり直す'),
+      ),
+      const SizedBox(height: 12),
       const Text(
         'MVPはソロプレイです。全国ランキング・対戦シーズンは未実装です。GDP・石高は未収録のため表示していません。',
         style: TextStyle(color: Colors.white54, height: 1.6),

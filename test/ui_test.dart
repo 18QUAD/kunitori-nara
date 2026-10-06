@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -53,6 +54,32 @@ void main() {
     await tester.tap(find.text('戦績'));
     await tester.pumpAndSettle();
     expect(find.text('大和への第一歩'), findsOneWidget);
+    await tester.ensureVisible(find.text('最初からやり直す'));
+    await tester.tap(find.text('最初からやり直す'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('キャンセル'));
+    await tester.pumpAndSettle();
+    expect(prefs.getString('kunitori.nara.v1'), contains('292010010'));
+    await tester.tap(find.text('最初からやり直す'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('やり直す'));
+    await tester.pumpAndSettle();
+    expect(find.text('奈良県 · 市区町村'), findsOneWidget);
+    expect(find.text('旅のはじまり'), findsOneWidget);
+    final saved =
+        jsonDecode(prefs.getString('kunitori.nara.v1')!)
+            as Map<String, dynamic>;
+    expect(saved['home'], isNull);
+    expect(saved['owned'], isEmpty);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(const KunitoriApp());
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(seconds: 2));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('奈良県 · 市区町村'), findsOneWidget);
+    expect(find.text('旅のはじまり'), findsOneWidget);
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
 }
