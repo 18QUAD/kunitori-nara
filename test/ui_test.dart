@@ -22,7 +22,8 @@ void main() {
       if (find.text('旅のはじまり').evaluate().isNotEmpty) break;
     }
     await tester.pumpAndSettle();
-    expect(find.text('くにとり'), findsOneWidget);
+    expect(find.text('くにとり'), findsNothing);
+    expect(find.text('奈良県'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.tap(find.byTooltip('市町村・町を探す'));
     await tester.pumpAndSettle();
@@ -34,6 +35,7 @@ void main() {
     expect(find.widgetWithText(ListTile, '油留木町'), findsOneWidget);
     await tester.tap(find.widgetWithText(ListTile, '油留木町'));
     await tester.pumpAndSettle();
+    expect(find.text('奈良県 奈良市 油留木町'), findsOneWidget);
     await tester.ensureVisible(find.text('ここを本拠地にする'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('ここを本拠地にする'));

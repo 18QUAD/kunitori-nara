@@ -259,21 +259,26 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       );
     }
     final g = game!;
+    final town = selected == null ? null : atlas!.towns[selected];
+    final city = town?.cityId ?? cityFilter;
+    final location = [
+      '奈良県',
+      if (city != null) atlas!.cities[city]!,
+      if (town != null) town.name,
+    ].join(' ');
     return Scaffold(
       appBar: AppBar(
         backgroundColor: ink,
         titleSpacing: 24,
-        title: const Row(
-          children: [
-            Icon(Icons.flag_rounded, color: mint),
-            SizedBox(width: 10),
-            Text(
-              'くにとり',
-              style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 3),
-            ),
-            SizedBox(width: 12),
-            Text('大和国', style: TextStyle(color: gold, fontSize: 14)),
-          ],
+        title: Tooltip(
+          message: location,
+          child: Text(
+            location,
+            key: const Key('current-location'),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
         ),
         actions: [
           IconButton(
