@@ -25,6 +25,9 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.tap(find.byTooltip('市町村・町丁字を探す'));
     await tester.pumpAndSettle();
+    expect(find.widgetWithText(ListTile, '油留木町'), findsNothing);
+    await tester.tap(find.widgetWithText(ListTile, '奈良市'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '油留木町');
     await tester.pumpAndSettle();
     expect(find.widgetWithText(ListTile, '油留木町'), findsOneWidget);
@@ -35,6 +38,15 @@ void main() {
     await tester.tap(find.text('ここを本拠地にする'));
     await tester.pumpAndSettle();
     expect(find.text('この地域はあなたの領土です'), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, 900));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('県全域を表示'));
+    await tester.tap(find.byTooltip('県全域を表示'));
+    await tester.pumpAndSettle();
+    expect(find.text('奈良県 · 市区町村'), findsOneWidget);
+    expect(find.text('ここを本拠地にする'), findsNothing);
+    await tester.tap(find.byTooltip('本拠地へ'));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('kunitori.nara.v1'), contains('292010010'));

@@ -11,12 +11,13 @@ class TerritoryMap extends StatefulWidget {
     required this.cityId,
     required this.focusVersion,
     required this.onSelected,
+    required this.onCitySelected,
   });
   final Atlas atlas;
   final Game game;
   final String? selected, cityId;
   final int focusVersion;
-  final ValueChanged<String> onSelected;
+  final ValueChanged<String> onSelected, onCitySelected;
   @override
   State<TerritoryMap> createState() => _TerritoryMapState();
 }
@@ -25,12 +26,15 @@ class _TerritoryMapState extends State<TerritoryMap> {
   final controller = TransformationController();
   late Map<String, Path> paths;
   late Map<String, Rect> bounds;
+  late Map<String, Path> cityPaths;
+  late Map<String, Rect> cityBounds;
   Size? viewport;
   static const mapSize = Size(1100, 1500);
   @override
   void initState() {
     super.initState();
     _buildPaths();
+    _buildCities();
   }
 
   @override
@@ -77,6 +81,26 @@ class _TerritoryMapState extends State<TerritoryMap> {
       paths[t.id] = path;
       bounds[t.id] = path.getBounds();
     }
+  }
+
+  void _buildCities() {
+    cityPaths = {};
+    cityBounds = {};
+    for (final city in widget.atlas.byCity.entries) {
+      final outline = _union(city.value.map((t) => paths[t.id]!).toList());
+      cityPaths[city.key] = outline;
+      cityBounds[city.key] = outline.getBounds();
+    }
+  }
+
+  Path _union(List<Path> parts) {
+    if (parts.length == 1) return parts.single;
+    final mid = parts.length ~/ 2;
+    return Path.combine(
+      PathOperation.union,
+      _union(parts.sublist(0, mid)),
+      _union(parts.sublist(mid)),
+    );
   }
 
   @override
@@ -140,11 +164,16 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 onTapUp: (details) {
                   final point = details.localPosition;
                   final hits =
-                      bounds.entries
+                      (widget.cityId == null ? cityBounds : bounds).entries
                           .where(
                             (e) =>
+                                (widget.cityId == null ||
+                                    widget.atlas.towns[e.key]!.cityId ==
+                                        widget.cityId) &&
                                 e.value.contains(point) &&
-                                paths[e.key]!.contains(point),
+                                (widget.cityId == null ? cityPaths : paths)[e
+                                        .key]!
+                                    .contains(point),
                           )
                           .toList()
                         ..sort(
@@ -152,19 +181,26 @@ class _TerritoryMapState extends State<TerritoryMap> {
                             b.value.width * b.value.height,
                           ),
                         );
-                  if (hits.isNotEmpty) widget.onSelected(hits.first.key);
+                  if (hits.isNotEmpty) {
+                    if (widget.cityId == null) {
+                      widget.onCitySelected(hits.first.key);
+                    } else {
+                      widget.onSelected(hits.first.key);
+                    }
+                  }
                 },
                 child: SizedBox(
                   width: mapSize.width,
                   height: mapSize.height,
                   child: CustomPaint(
                     painter: _MapPainter(
-                      paths,
-                      bounds,
+                      widget.cityId == null ? cityPaths : paths,
+                      widget.cityId == null ? cityBounds : bounds,
                       widget.atlas,
                       widget.game,
                       widget.selected,
                       controller,
+                      widget.cityId,
                     ),
                   ),
                 ),
@@ -234,103 +270,94 @@ class _MapPainter extends CustomPainter {
     this.game,
     this.selected,
     this.transform,
+    this.cityId,
   ) : super(repaint: transform);
   final TransformationController transform;
   final Map<String, Path> paths;
   final Map<String, Rect> bounds;
   final Atlas atlas;
   final Game game;
-  final String? selected;
+  final String? selected, cityId;
   @override
   void paint(Canvas canvas, Size size) {
     final zoom = transform.value.getMaxScaleOnAxis();
-    final owned = game.owned;
+    final overview = cityId == null;
     final adjacent = <String>{};
-    for (final id in owned) {
+    for (final id in game.owned) {
       adjacent.addAll(atlas.towns[id]!.neighbors);
     }
-    adjacent.removeAll(owned);
-    final fill = Paint();
+    adjacent.removeAll(game.owned);
     final stroke =
         Paint()
           ..style = PaintingStyle.stroke
           ..color = const Color(0xFF102A32)
-          ..strokeWidth = 0.6 / zoom;
+          ..strokeWidth = 1 / zoom;
     for (final e in paths.entries) {
-      fill.color =
-          owned.contains(e.key)
-              ? const Color(0xFF7AE1BB)
-              : adjacent.contains(e.key)
-              ? const Color(0xFFEEC47C)
-              : const Color(0xFF43616A);
-      canvas.drawPath(e.value, fill);
+      if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
+      final ids = overview ? atlas.byCity[e.key]!.map((t) => t.id) : [e.key];
+      final owned =
+          overview
+              ? ids.every(game.owned.contains)
+              : game.owned.contains(e.key);
+      final reachable = ids.any(adjacent.contains);
+      canvas.drawPath(
+        e.value,
+        Paint()
+          ..color =
+              owned
+                  ? const Color(0xFF7AE1BB)
+                  : reachable
+                  ? const Color(0xFFEEC47C)
+                  : const Color(0xFF43616A),
+      );
       canvas.drawPath(e.value, stroke);
-    }
-    for (final city in atlas.byCity.entries.where((_) => zoom < 3)) {
-      final box = city.value
-          .map((t) => bounds[t.id]!)
-          .reduce((a, b) => a.expandToInclude(b));
-      if (box.width < 20) continue;
+      if (!overview && e.key == selected) {
+        canvas.drawPath(
+          e.value,
+          Paint()..color = Colors.white.withValues(alpha: 0.2),
+        );
+        canvas.drawPath(
+          e.value,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2 / zoom
+            ..color = Colors.white,
+        );
+      }
+      final box = bounds[e.key]!;
       final label = TextPainter(
         text: TextSpan(
-          text: atlas.cities[city.key],
+          text: overview ? atlas.cities[e.key] : atlas.towns[e.key]!.name,
           style: TextStyle(
             fontFamily: 'NotoSansJP',
             fontSize: 12 / zoom,
-            color: Colors.white70,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
             shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      label.paint(
-        canvas,
-        box.center - Offset(label.width / 2, label.height / 2),
-      );
-    }
-    if (selected != null) {
-      final path = paths[selected]!;
-      canvas.drawPath(
-        path,
-        Paint()..color = Colors.white.withValues(alpha: 0.2),
-      );
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2 / zoom
-          ..color = Colors.white,
-      );
-      if (zoom >= 3) {
-        final ids = {selected!, ...atlas.towns[selected]!.neighbors};
-        for (final id in ids) {
-          final box = bounds[id]!;
-          final label = TextPainter(
-            text: TextSpan(
-              text: atlas.towns[id]!.name,
-              style: TextStyle(
-                fontFamily: 'NotoSansJP',
-                fontSize: 12 / zoom,
-                color: Colors.white,
-                shadows: const [Shadow(color: Colors.black, blurRadius: 3)],
-              ),
-            ),
-            textDirection: TextDirection.ltr,
-          )..layout();
-          if (id == selected || label.width < box.width) {
-            label.paint(
-              canvas,
-              box.center - Offset(label.width / 2, label.height / 2),
-            );
-          }
-        }
+      if (overview ||
+          e.key == selected ||
+          (label.width < box.width && label.height < box.height)) {
+        label.paint(
+          canvas,
+          box.center - Offset(label.width / 2, label.height / 2),
+        );
       }
     }
     if (game.home != null) {
-      final p = bounds[game.home]!.center;
-      canvas.drawCircle(p, 4 / zoom, Paint()..color = const Color(0xFF101C2B));
-      canvas.drawCircle(p, 2 / zoom, Paint()..color = Colors.white);
+      final town = atlas.towns[game.home]!;
+      if (overview || town.cityId == cityId) {
+        final p = bounds[overview ? town.cityId : town.id]!.center;
+        canvas.drawCircle(
+          p,
+          4 / zoom,
+          Paint()..color = const Color(0xFF101C2B),
+        );
+        canvas.drawCircle(p, 2 / zoom, Paint()..color = Colors.white);
+      }
     }
   }
 

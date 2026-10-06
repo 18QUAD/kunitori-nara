@@ -68,7 +68,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Game? game;
   SaveStore? store;
   String? error, selected;
-  String? cityFilter = '29201';
+  String? cityFilter;
   int tab = 0, factIndex = 0, mapFocus = 0;
   Timer? timer;
   bool corrupt = false;
@@ -156,6 +156,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void _rememberVisibleFact() {
     final f = visibleFact;
     if (f != null) game!.seen.add(f.id);
+  }
+
+  void _selectCity(String? id) {
+    setState(() {
+      cityFilter = id;
+      selected = null;
+      mapFocus = 0;
+      factIndex = 0;
+    });
   }
 
   void _select(String id) {
@@ -386,7 +395,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 Expanded(
                   child: Text(
                     cityFilter == null
-                        ? '奈良県 · 全域'
+                        ? '奈良県 · 市区町村'
                         : '奈良県  /  ${atlas!.cities[cityFilter]}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
@@ -398,11 +407,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 ),
                 IconButton(
                   tooltip: '県全域を表示',
-                  onPressed:
-                      () => setState(() {
-                        cityFilter = null;
-                        mapFocus++;
-                      }),
+                  onPressed: () => _selectCity(null),
                   icon: const Icon(Icons.zoom_out_map),
                 ),
                 IconButton(
@@ -430,6 +435,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               cityId: cityFilter,
               focusVersion: mapFocus,
               onSelected: _select,
+              onCitySelected: _selectCity,
             ),
           ),
           const Padding(
@@ -459,13 +465,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '旅のはじまり',
+            Text(
+              g.home == null ? '旅のはじまり' : '進軍先を選ぶ',
               style: TextStyle(color: mint, fontSize: 13, letterSpacing: 2),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'あなたの本拠地を\n決めましょう。',
+            Text(
+              g.home == null ? 'あなたの本拠地を\n決めましょう。' : '市区町村から\n町丁字へ。',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -473,17 +479,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              '地図の町丁・字をタップ。獲得した領土に隣接する地域へ、一歩ずつ勢力を広げます。',
+            Text(
+              cityFilter == null
+                  ? '市区町村を地図または検索から選び、次に町丁字を選んでください。'
+                  : g.home == null
+                  ? '${atlas!.cities[cityFilter]}の町丁字を選び、本拠地を決めてください。'
+                  : '${atlas!.cities[cityFilter]}の町丁字を選び、進軍してください。',
               style: TextStyle(height: 1.7, color: Colors.white70),
             ),
             const SizedBox(height: 20),
-            _difficulty(),
+            if (g.home == null) _difficulty(),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: _search,
               icon: const Icon(Icons.search),
-              label: const Text('地名から本拠地を探す'),
+              label: Text(g.home == null ? '地名から本拠地を探す' : '市区町村・町丁字を探す'),
             ),
             const SizedBox(height: 12),
             const Text(
@@ -1008,7 +1018,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: ink,
-      builder: (context) => _SearchSheet(atlas: atlas!, game: game!),
+      builder:
+          (context) =>
+              _SearchSheet(atlas: atlas!, game: game!, initialCity: cityFilter),
     );
     if (result != null && mounted) {
       _select(result);
@@ -1039,7 +1051,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1. 地図・地名検索で本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略\n3. 「土地の記憶」を読み、知識を蓄積\n4. 市町村の全領土獲得でクイズに挑戦\n5. 正解で市町村制圧。失敗で一部領土を失う',
+                    '1. 市区町村を選び、次に町丁字から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略\n3. 「土地の記憶」を読み、知識を蓄積\n4. 市町村の全領土獲得でクイズに挑戦\n5. 正解で市町村制圧。失敗で一部領土を失う',
                     style: TextStyle(height: 2),
                   ),
                   const SizedBox(height: 20),
@@ -1106,7 +1118,12 @@ class _Legend extends StatelessWidget {
 }
 
 class _SearchSheet extends StatefulWidget {
-  const _SearchSheet({required this.atlas, required this.game});
+  const _SearchSheet({
+    required this.atlas,
+    required this.game,
+    this.initialCity,
+  });
+  final String? initialCity;
   final Atlas atlas;
   final Game game;
   @override
@@ -1116,6 +1133,12 @@ class _SearchSheet extends StatefulWidget {
 class _SearchSheetState extends State<_SearchSheet> {
   String query = '';
   String? city;
+  @override
+  void initState() {
+    super.initState();
+    city = widget.initialCity;
+  }
+
   @override
   Widget build(BuildContext context) {
     final a = widget.atlas;
@@ -1156,36 +1179,50 @@ class _SearchSheetState extends State<_SearchSheet> {
             ),
             const SizedBox(height: 16),
             TextField(
+              key: ValueKey(city),
               autofocus: false,
               onChanged: (v) => setState(() => query = v),
               decoration: const InputDecoration(
-                hintText: '奈良市、法隆寺、大字…',
+                hintText: '市区町村・町丁字名で検索',
                 prefixIcon: Icon(Icons.search),
               ),
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              value: city,
-              decoration: const InputDecoration(labelText: '市町村'),
-              items: [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('すべての市町村'),
-                ),
-                ...a.cities.entries.map(
-                  (c) => DropdownMenuItem(
-                    value: c.key,
-                    child: Text('${c.value} · ${a.byCity[c.key]!.length}町丁字'),
-                  ),
-                ),
-              ],
-              onChanged: (v) => setState(() => city = v),
-            ),
+            if (city != null)
+              TextButton.icon(
+                onPressed:
+                    () => setState(() {
+                      city = null;
+                      query = '';
+                    }),
+                icon: const Icon(Icons.arrow_back),
+                label: Text('${a.cities[city]} · 市区町村を選び直す'),
+              ),
             const SizedBox(height: 8),
             Expanded(
               child: ListView.builder(
-                itemCount: towns.length,
+                itemCount:
+                    city == null
+                        ? a.cities.values
+                            .where((name) => name.contains(query))
+                            .length
+                        : towns.length,
                 itemBuilder: (context, i) {
+                  if (city == null) {
+                    final c = a.cities.entries
+                        .where((c) => c.value.contains(query))
+                        .elementAt(i);
+                    return ListTile(
+                      title: Text(c.value),
+                      subtitle: Text('${a.byCity[c.key]!.length}町丁字'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap:
+                          () => setState(() {
+                            city = c.key;
+                            query = '';
+                          }),
+                    );
+                  }
                   final t = towns[i];
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 4),
