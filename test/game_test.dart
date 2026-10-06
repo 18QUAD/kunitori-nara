@@ -48,7 +48,7 @@ void main() {
         0.000001,
       ),
     );
-    final achiga = atlas.byCity['29443']!.singleWhere((t) => t.name == '大字阿知賀');
+    final achiga = atlas.byCity['29443']!.singleWhere((t) => t.name == '阿知賀');
     expect(atlas.membersByTown[achiga.id]!.length, 12);
     // Census codes occasionally mix different towns; do not collapse those names.
     expect(atlas.byCity['29206']!.where((t) => t.name == '朝倉台西'), hasLength(1));
@@ -241,6 +241,22 @@ void main() {
       expect(migrated.answer(migrated.quiz!.answer, now), true);
     },
   );
+  test('saved quiz with old oaza names loads with the same deadline', () {
+    final g = Game(atlas);
+    final towns = atlas.byCity['29453']!;
+    g.setHome(towns.first.id);
+    g.owned.addAll(towns.map((t) => t.id));
+    g.everOwned.addAll(g.owned);
+    g.seen.add('29453:largest');
+    g.startQuiz('29453', now);
+    final saved = g.toJson();
+    final q = saved['quiz'] as Map<String, dynamic>;
+    q['answer'] = '大字${g.quiz!.answer}';
+    q['choices'] = g.quiz!.choices.map((name) => '大字$name').toList();
+    final restored = Game.restore(atlas, saved);
+    expect(restored.quiz!.answer, g.quiz!.answer);
+    expect(restored.quiz!.deadline, g.quiz!.deadline);
+  });
   test('saved quiz retains deadline; reopening expires it exactly once', () {
     final g = completeCity();
     final q = g.quiz!;

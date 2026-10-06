@@ -117,7 +117,9 @@ class Atlas {
       }
       final merged = Town.fromJson({
         'id': id,
-        'name': entry.key.substring(entry.key.indexOf(':') + 1),
+        'name': entry.key
+            .substring(entry.key.indexOf(':') + 1)
+            .replaceFirst(RegExp(r'^大字'), ''),
         'cityId': members.first.cityId,
         'population': members.fold<int>(0, (s, t) => s + t.population),
         'area': members.fold<double>(0, (s, t) => s + t.area),
@@ -496,7 +498,18 @@ class Game {
     g.wins = j['wins'] as int;
     g.losses = j['losses'] as int;
     if (j['quiz'] != null) {
-      g.quiz = Quiz.fromJson(Map<String, dynamic>.from(j['quiz']));
+      final savedQuiz = Map<String, dynamic>.from(j['quiz']);
+      if ((savedQuiz['factId'] as String).endsWith(':largest')) {
+        savedQuiz['answer'] = (savedQuiz['answer'] as String).replaceFirst(
+          RegExp(r'^大字'),
+          '',
+        );
+        savedQuiz['choices'] =
+            List<String>.from(
+              savedQuiz['choices'],
+            ).map((name) => name.replaceFirst(RegExp(r'^大字'), '')).toList();
+      }
+      g.quiz = Quiz.fromJson(savedQuiz);
     }
     if (legacyUnits && g.quiz != null) {
       final q = g.quiz!;
