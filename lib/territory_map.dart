@@ -13,12 +13,13 @@ class TerritoryMap extends StatefulWidget {
     required this.onSelected,
     required this.onCitySelected,
     this.controls = const [],
+    this.centerVersion = 0,
   });
   final List<Widget> controls;
   final Atlas atlas;
   final Game game;
   final String? selected, cityId;
-  final int focusVersion;
+  final int focusVersion, centerVersion;
   final ValueChanged<String> onSelected, onCitySelected;
   @override
   State<TerritoryMap> createState() => _TerritoryMapState();
@@ -111,10 +112,26 @@ class _TerritoryMapState extends State<TerritoryMap> {
   @override
   void didUpdateWidget(TerritoryMap old) {
     super.didUpdateWidget(old);
-    if (old.cityId != widget.cityId ||
+    if (old.centerVersion != widget.centerVersion &&
+        old.cityId != null &&
+        widget.cityId != null) {
+      _centerSelected();
+    } else if (old.cityId != widget.cityId ||
         old.focusVersion != widget.focusVersion) {
       _fit();
     }
+  }
+
+  void _centerSelected() {
+    final size = viewport;
+    final target = bounds[widget.selected];
+    if (size == null || target == null) return;
+    final scale = controller.value.getMaxScaleOnAxis();
+    controller.value = Matrix4.copy(controller.value)..setTranslationRaw(
+      size.width / 2 - target.center.dx * scale,
+      size.height / 2 - target.center.dy * scale,
+      0,
+    );
   }
 
   void _fit() {

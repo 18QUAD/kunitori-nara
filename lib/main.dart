@@ -69,7 +69,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   SaveStore? store;
   String? error, selected;
   String? cityFilter;
-  int tab = 0, factIndex = 0, mapFocus = 0;
+  int tab = 0, factIndex = 0, mapFocus = 0, mapCenter = 0;
   Timer? timer, tipsTimer;
   bool corrupt = false;
   @override
@@ -254,6 +254,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _rememberVisibleFact();
       cityFilter = atlas!.towns[target]!.cityId;
       mapFocus++;
+      mapCenter++;
     });
     _startTipsTimer();
     _save();
@@ -625,6 +626,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         selected: selected,
         cityId: cityFilter,
         focusVersion: mapFocus,
+        centerVersion: mapCenter,
         onSelected: _select,
         onCitySelected: _selectCity,
         controls: [

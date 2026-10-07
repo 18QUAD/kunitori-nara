@@ -96,9 +96,23 @@ void main() {
       tester.widget<Text>(find.byKey(const Key('attack-progress'))).data,
       '${number(homeTown.population)} / ${number(homeTown.population)}',
     );
+    final initialScale =
+        tester
+            .widget<InteractiveViewer>(find.byType(InteractiveViewer))
+            .transformationController!
+            .value
+            .getMaxScaleOnAxis();
     await tester.tap(find.byKey(const Key('map-home')));
     await tester.pumpAndSettle();
     expectCenteredOn(tester, '292010010');
+    expect(
+      tester
+          .widget<InteractiveViewer>(find.byType(InteractiveViewer))
+          .transformationController!
+          .value
+          .getMaxScaleOnAxis(),
+      initialScale,
+    );
     final map = tester.widget<TerritoryMap>(find.byType(TerritoryMap));
     final target = map.atlas.towns.values.firstWhere(
       (t) => map.game.canAttack(t.id) && t.population > 10,
@@ -181,11 +195,27 @@ void main() {
       target.id,
     );
     expectCenteredOn(tester, target.id);
+    await tester.tap(find.byTooltip('拡大'));
+    await tester.pumpAndSettle();
+    final zoomedScale =
+        tester
+            .widget<InteractiveViewer>(find.byType(InteractiveViewer))
+            .transformationController!
+            .value
+            .getMaxScaleOnAxis();
     await tester.drag(find.byType(InteractiveViewer), const Offset(40, 30));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('map-home')));
     await tester.pumpAndSettle();
     expectCenteredOn(tester, target.id);
+    expect(
+      tester
+          .widget<InteractiveViewer>(find.byType(InteractiveViewer))
+          .transformationController!
+          .value
+          .getMaxScaleOnAxis(),
+      zoomedScale,
+    );
     tester.view.physicalSize = const Size(844, 390);
     await tester.pumpAndSettle();
     expectMapControlsInside(tester);
