@@ -275,6 +275,16 @@ class _TerritoryMapState extends State<TerritoryMap> {
   }
 }
 
+/// Advance the town fill only when another 10% of its population is reached.
+Color townFillColor(Town town, Game game, {required bool reachable}) {
+  const conquered = Color(0xFF7AE1BB);
+  if (game.owned.contains(town.id)) return conquered;
+  final base = reachable ? const Color(0xFFEEC47C) : const Color(0xFF43616A);
+  final taps = game.progress[town.id] ?? 0;
+  final step = (taps * 10 ~/ math.max(1, town.population)).clamp(0, 10);
+  return Color.lerp(base, conquered, step / 10)!;
+}
+
 class _MapPainter extends CustomPainter {
   _MapPainter(
     this.paths,
@@ -317,7 +327,13 @@ class _MapPainter extends CustomPainter {
         e.value,
         Paint()
           ..color =
-              owned
+              !overview
+                  ? townFillColor(
+                    atlas.towns[e.key]!,
+                    game,
+                    reachable: reachable,
+                  )
+                  : owned
                   ? const Color(0xFF7AE1BB)
                   : reachable
                   ? const Color(0xFFEEC47C)

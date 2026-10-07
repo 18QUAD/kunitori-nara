@@ -69,8 +69,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   SaveStore? store;
   String? error, selected;
   String? cityFilter;
-  int tab = 0, factIndex = 0, mapFocus = 0, tipsTaps = 0;
-  Timer? timer;
+  int tab = 0, factIndex = 0, mapFocus = 0;
+  Timer? timer, tipsTimer;
   bool corrupt = false;
   @override
   void initState() {
@@ -82,6 +82,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     timer?.cancel();
+    tipsTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     if (store != null) store!.onChanged = null;
     super.dispose();
@@ -113,6 +114,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       g.expire(DateTime.now());
       _rememberVisibleFact();
       setState(() {});
+      _startTipsTimer();
       if (g.home != null) _save();
       timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
         if (!mounted || game!.quiz == null) return;
@@ -175,9 +177,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       cityFilter = null;
       tab = 0;
       factIndex = 0;
-      tipsTaps = 0;
       mapFocus = 0;
     });
+    _startTipsTimer();
     await store!.save(game!);
   }
 
@@ -193,15 +195,33 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (f != null) game!.seen.add(f.id);
   }
 
+  void _startTipsTimer() {
+    tipsTimer?.cancel();
+    tipsTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (!mounted ||
+          game!.quiz != null ||
+          visibleFact == null ||
+          (lifecycle != null && lifecycle != AppLifecycleState.resumed)) {
+        return;
+      }
+      setState(() {
+        factIndex++;
+        _rememberVisibleFact();
+      });
+      _save();
+    });
+  }
+
   void _selectCity(String? id) {
     setState(() {
       cityFilter = id;
       selected = null;
       mapFocus = 0;
       factIndex = 0;
-      tipsTaps = 0;
       _rememberVisibleFact();
     });
+    _startTipsTimer();
     _save();
   }
 
@@ -209,10 +229,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     setState(() {
       selected = id;
       factIndex = 0;
-      tipsTaps = 0;
       tab = 0;
       _rememberVisibleFact();
     });
+    _startTipsTimer();
     _save();
   }
 
@@ -222,14 +242,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final won = g.tap(selected!, DateTime.now());
     if (g.totalTaps == before) return;
     if (won) HapticFeedback.mediumImpact();
-    setState(() {
-      tipsTaps++;
-      if (tipsTaps == 10) {
-        tipsTaps = 0;
-        factIndex++;
-        _rememberVisibleFact();
-      }
-    });
+    setState(() {});
     _save();
   }
 
@@ -799,7 +812,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1. 市区町村を選び、次に町から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略\n3. 地域tipsを読み、知識を蓄積（10タップごとに切替）\n4. 市町村の全領土獲得でクイズに挑戦\n5. 正解で市町村制圧。失敗で一部領土を失う',
+                    '1. 市区町村を選び、次に町から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略\n3. 地域tipsを読み、知識を蓄積（5秒ごとに切替）\n4. 市町村の全領土獲得でクイズに挑戦\n5. 正解で市町村制圧。失敗で一部領土を失う',
                     style: TextStyle(height: 2),
                   ),
                   const SizedBox(height: 20),

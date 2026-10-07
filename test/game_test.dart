@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
+import 'package:kunitori/territory_map.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kunitori/game.dart';
 import 'package:kunitori/save_store.dart';
@@ -133,6 +135,30 @@ void main() {
     }
     expect(g.progress[town.id], 16);
     expect(g.owned.contains(town.id), false);
+  });
+  test('town color changes only at 10 percent population thresholds', () {
+    final town = atlas.towns.values.firstWhere((t) => t.population == 45);
+    final g = Game(atlas);
+    const initial = Color(0xFFEEC47C), conquered = Color(0xFF7AE1BB);
+    g.progress[town.id] = 4;
+    expect(townFillColor(town, g, reachable: true), initial);
+    g.progress[town.id] = 5;
+    final tenPercent = Color.lerp(initial, conquered, 0.1);
+    expect(townFillColor(town, g, reachable: true), tenPercent);
+    g.progress[town.id] = 8;
+    expect(townFillColor(town, g, reachable: true), tenPercent);
+    g.progress[town.id] = 9;
+    expect(
+      townFillColor(town, g, reachable: true),
+      Color.lerp(initial, conquered, 0.2),
+    );
+    g.progress[town.id] = 44;
+    expect(
+      townFillColor(town, g, reachable: true),
+      Color.lerp(initial, conquered, 0.9),
+    );
+    g.owned.add(town.id);
+    expect(townFillColor(town, g, reachable: true), conquered);
   });
   test('zero population takes one tap without adding population', () {
     final t = atlas.towns.values.firstWhere(

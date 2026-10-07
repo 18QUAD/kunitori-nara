@@ -71,20 +71,25 @@ void main() {
     await tester.pumpAndSettle();
     final firstTip =
         tester.widget<Text>(find.byKey(const Key('tip-text'))).data;
-    final attackRect = tester.getRect(find.byKey(const Key('attack')));
-    for (var i = 0; i < 9; i++) {
-      await tester.tap(find.byKey(const Key('attack')));
-      await tester.pumpAndSettle();
-    }
+    await tester.pump(const Duration(seconds: 4));
     expect(
       tester.widget<Text>(find.byKey(const Key('tip-text'))).data,
       firstTip,
     );
-    await tester.tap(find.byKey(const Key('attack')));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    final timedTip =
+        tester.widget<Text>(find.byKey(const Key('tip-text'))).data;
+    expect(timedTip, isNot(firstTip));
+    final attackRect = tester.getRect(find.byKey(const Key('attack')));
+    for (var i = 0; i < 10; i++) {
+      await tester.tap(find.byKey(const Key('attack')));
+      await tester.pump();
+    }
     await tester.pumpAndSettle();
     expect(
       tester.widget<Text>(find.byKey(const Key('tip-text'))).data,
-      isNot(firstTip),
+      timedTip,
     );
     expect(map.game.progress[target.id], 10);
     expect(tester.getRect(find.byKey(const Key('fixed-region'))), fixed);
