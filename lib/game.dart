@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'regional_tips.dart';
 
 enum Difficulty {
   casual('旅人', 25),
@@ -53,10 +54,12 @@ class LocalFact {
     this.question,
     this.answer,
     this.decoys,
-    this.source,
-  );
+    this.source, {
+    this.quizEligible = true,
+  });
   final String id, cityId, category, text, question, answer, source;
   final List<String> decoys;
+  final bool quizEligible;
 }
 
 class Atlas {
@@ -185,6 +188,21 @@ class Atlas {
           censusSource,
         ),
         ..._culture(city.key),
+        ...regionalTips
+            .where((tip) => tip['cityId'] == city.key)
+            .map(
+              (tip) => LocalFact(
+                tip['id']!,
+                city.key,
+                tip['category']!,
+                tip['text']!,
+                '',
+                '',
+                const [],
+                tip['source']!,
+                quizEligible: false,
+              ),
+            ),
       ];
     }
   }
@@ -342,6 +360,22 @@ class Game {
   double get area => owned.fold(0.0, (s, id) => s + atlas.towns[id]!.area);
 
   void observe(String city) => seen.addAll(atlas.facts[city]!.map((f) => f.id));
+
+  List<LocalFact> tipsFor({String? selectedTown, String? selectedCity}) {
+    final target = attackTarget ?? selectedTown;
+    final city =
+        target == null
+            ? selectedCity ?? (home == null ? null : atlas.towns[home]?.cityId)
+            : atlas.towns[target]?.cityId;
+    if (city == null) return const [];
+    final local = atlas.facts[city]!;
+    return [
+      ...local.where((f) => !f.quizEligible),
+      ...local.where((f) => f.id == '$city:heritage'),
+      ...local.where((f) => f.category.startsWith('県の')),
+    ];
+  }
+
   void setHome(String id) {
     if (home != null || !atlas.towns.containsKey(id)) return;
     home = id;
@@ -377,7 +411,10 @@ class Game {
 
   void startQuiz(String city, DateTime now) {
     if (quiz != null || !cityOwned(city) || mastered.contains(city)) return;
-    final pool = atlas.facts[city]!.where((f) => seen.contains(f.id)).toList();
+    final pool =
+        atlas.facts[city]!
+            .where((f) => f.quizEligible && seen.contains(f.id))
+            .toList();
     if (pool.isEmpty) return;
     final fact = pool[random.nextInt(pool.length)];
     final decoys = [...fact.decoys];

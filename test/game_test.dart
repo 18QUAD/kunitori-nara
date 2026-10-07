@@ -17,6 +17,70 @@ void main() {
           as Map<String, dynamic>,
     );
   });
+  test('90 regional tips load with sources and survive save restoration', () {
+    final tips =
+        atlas.facts.values
+            .expand((fs) => fs)
+            .where((f) => !f.quizEligible)
+            .toList();
+    expect(tips, hasLength(90));
+    expect(tips.map((f) => f.id).toSet(), hasLength(90));
+    expect(tips.every((f) => f.source.startsWith('https://')), isTrue);
+    expect(tips.every((f) => !f.text.contains('人口')), isTrue);
+    final g = Game(atlas)..setHome(atlas.byCity['29202']!.first.id);
+    g.seen.add(tips.first.id);
+    final restored = Game.restore(atlas, g.toJson());
+    expect(restored.seen, contains(tips.first.id));
+  });
+  test('Sakurai home and campaign display its 12 local tips first', () {
+    final home = atlas.byCity['29206']!.firstWhere(
+      (t) => t.neighbors.any(
+        (id) =>
+            atlas.towns[id]!.cityId == '29206' &&
+            atlas.towns[id]!.population > 2,
+      ),
+    );
+    final g = Game(atlas)..setHome(home.id);
+    final local = g.tipsFor().where((f) => !f.quizEligible).toList();
+    expect(local, hasLength(12));
+    expect(g.tipsFor().first.text, contains('桜井市の市の木'));
+    final target = home.neighbors.firstWhere(
+      (id) =>
+          atlas.towns[id]!.cityId == '29206' && atlas.towns[id]!.population > 2,
+    );
+    g.selectAttackTarget(target);
+    g.tap(target, now);
+    final displayed = g.tipsFor(selectedCity: '29202');
+    expect(displayed.take(12).map((f) => f.id), local.map((f) => f.id));
+    expect(displayed.every((f) => f.cityId == '29206'), isTrue);
+  });
+  test(
+    'campaign municipality overrides browsing and local tips come first',
+    () {
+      final home = atlas.byCity['29202']!.firstWhere(
+        (t) => t.neighbors.any((id) => atlas.towns[id]!.population > 2),
+      );
+      final target = home.neighbors
+          .map((id) => atlas.towns[id]!)
+          .firstWhere((t) => t.population > 2);
+      final g = Game(atlas)..setHome(home.id);
+      expect(g.selectAttackTarget(target.id), isTrue);
+      final tips = g.tipsFor(
+        selectedTown: atlas.byCity['29449']!.first.id,
+        selectedCity: '29449',
+      );
+      expect(tips.every((f) => f.cityId == target.cityId), isTrue);
+      final locals = tips.where((f) => !f.quizEligible).length;
+      expect(tips.take(locals).every((f) => !f.quizEligible), isTrue);
+      expect(tips.skip(locals).every((f) => f.quizEligible), isTrue);
+      expect(
+        tips.any(
+          (f) => f.id.endsWith(':population') || f.id.endsWith(':largest'),
+        ),
+        isFalse,
+      );
+    },
+  );
   test('only one campaign can progress and reload preserves the target', () {
     final home = atlas.towns.values.firstWhere(
       (t) =>

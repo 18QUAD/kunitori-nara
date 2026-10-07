@@ -183,9 +183,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   LocalFact? get visibleFact {
-    final city = selected == null ? cityFilter : atlas!.towns[selected]!.cityId;
-    if (city == null) return null;
-    final facts = atlas!.facts[city]!;
+    final facts = game!.tipsFor(
+      selectedTown: selected,
+      selectedCity: cityFilter,
+    );
+    if (facts.isEmpty) return null;
     return facts[factIndex % facts.length];
   }
 
@@ -259,11 +261,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   void _attack() {
     final g = game!;
+    final oldCity =
+        g.attackTarget == null ? null : atlas!.towns[g.attackTarget]!.cityId;
     final before = g.totalTaps;
     final won = g.tap(selected!, DateTime.now());
     if (g.totalTaps == before) return;
     if (won) HapticFeedback.mediumImpact();
-    setState(() {});
+    setState(() {
+      final newCity =
+          g.attackTarget == null ? null : atlas!.towns[g.attackTarget]!.cityId;
+      if (oldCity != newCity) factIndex = 0;
+      _rememberVisibleFact();
+    });
     _save();
   }
 
