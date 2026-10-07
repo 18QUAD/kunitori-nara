@@ -17,6 +17,61 @@ void main() {
           as Map<String, dynamic>,
     );
   });
+  test('only one campaign can progress and reload preserves the target', () {
+    final home = atlas.towns.values.firstWhere(
+      (t) =>
+          t.neighbors.where((id) => atlas.towns[id]!.population > 2).length >=
+          2,
+    );
+    final targets =
+        home.neighbors
+            .map((id) => atlas.towns[id]!)
+            .where((t) => t.population > 2)
+            .take(2)
+            .toList();
+    final g = Game(atlas)..setHome(home.id);
+    expect(g.selectAttackTarget(targets[0].id), isTrue);
+    expect(g.selectAttackTarget(targets[1].id), isTrue);
+    g.tap(targets[1].id, now);
+    expect(g.selectAttackTarget(targets[0].id), isFalse);
+    expect(g.canAttack(targets[0].id), isFalse);
+    g.tap(targets[0].id, now);
+    expect(g.totalTaps, 1);
+    expect(g.progress.keys, [targets[1].id]);
+    final restored = Game.restore(atlas, jsonDecode(jsonEncode(g.toJson())));
+    expect(restored.attackTarget, targets[1].id);
+    expect(restored.canAttack(targets[0].id), isFalse);
+    for (var i = 1; i < targets[1].population; i++) {
+      restored.tap(targets[1].id, now);
+    }
+    expect(restored.attackTarget, isNull);
+    expect(restored.selectAttackTarget(targets[0].id), isTrue);
+  });
+  test('old parallel progress resumes sequentially without losing taps', () {
+    final home = atlas.towns.values.firstWhere(
+      (t) =>
+          t.neighbors.where((id) => atlas.towns[id]!.population > 2).length >=
+          2,
+    );
+    final targets =
+        home.neighbors
+            .map((id) => atlas.towns[id]!)
+            .where((t) => t.population > 2)
+            .take(2)
+            .toList();
+    final g = Game(atlas)..setHome(home.id);
+    g.progress.addAll({targets[0].id: 1, targets[1].id: 2});
+    g.totalTaps = 3;
+    final saved = g.toJson()..remove('attackTarget');
+    final restored = Game.restore(atlas, saved);
+    expect(restored.attackTarget, targets[0].id);
+    expect(restored.canAttack(targets[1].id), isFalse);
+    for (var i = 1; i < targets[0].population; i++) {
+      restored.tap(targets[0].id, now);
+    }
+    expect(restored.attackTarget, targets[1].id);
+    expect(restored.progress[targets[1].id], 2);
+  });
   test('regional tap counts survive reload and reject inactive taps', () {
     final g = Game(atlas);
     final home = atlas.towns.values.firstWhere((t) => t.neighbors.isNotEmpty);

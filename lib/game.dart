@@ -283,7 +283,7 @@ class Game {
   final Atlas atlas;
   final Random random;
   Difficulty difficulty = Difficulty.standard;
-  String? home;
+  String? home, attackTarget;
   final Set<String> owned = {},
       mastered = {},
       seen = {},
@@ -297,11 +297,36 @@ class Game {
   String message = '';
 
   int requiredTaps(Town t) => max(1, t.population);
-  bool canAttack(String id) =>
+  bool isReachable(String id) =>
       home != null &&
-      quiz == null &&
       !owned.contains(id) &&
-      atlas.towns[id]!.neighbors.any(owned.contains);
+      (atlas.towns[id]?.neighbors.any(owned.contains) ?? false);
+  bool canAttack(String id) =>
+      quiz == null &&
+      isReachable(id) &&
+      (attackTarget == null || attackTarget == id);
+
+  bool selectAttackTarget(String id) {
+    if (!isReachable(id) || quiz != null) return false;
+    if (attackTarget != null &&
+        attackTarget != id &&
+        (progress[attackTarget] ?? 0) > 0) {
+      return false;
+    }
+    attackTarget = id;
+    return true;
+  }
+
+  void _resumePendingTarget() {
+    attackTarget = null;
+    for (final id in progress.keys) {
+      if (isReachable(id)) {
+        attackTarget = id;
+        break;
+      }
+    }
+  }
+
   bool cityOwned(String id) =>
       atlas.byCity[id]!.every((t) => owned.contains(t.id));
   int get population =>
@@ -323,6 +348,7 @@ class Game {
 
   bool tap(String id, DateTime now) {
     if (!canAttack(id)) return false;
+    attackTarget = id;
     totalTaps++;
     final city = atlas.towns[id]!.cityId;
     cityTaps[city] = (cityTaps[city] ?? 0) + 1;
@@ -334,6 +360,7 @@ class Game {
     owned.add(id);
     everOwned.add(id);
     progress.remove(id);
+    _resumePendingTarget();
     if (everOwned.length >= 10) titles.add('十郷の領主');
     if (everOwned.length >= 100) titles.add('大和の開拓者');
     message = '${town.name}を獲得しました！';
@@ -394,6 +421,9 @@ class Game {
       message =
           '${choice == null ? '時間切れ' : '不正解'}。正解は「${q.answer}」。$count領土を失いました。本拠地と累計実績は保持されます。';
     }
+    if (attackTarget != null && !isReachable(attackTarget!)) {
+      _resumePendingTarget();
+    }
     return correct;
   }
 
@@ -412,6 +442,7 @@ class Game {
     'territoryUnit': 'town-v1',
     'difficulty': difficulty.name,
     'home': home,
+    'attackTarget': attackTarget,
     'owned': owned.toList(),
     'mastered': mastered.toList(),
     'seen': seen.toList(),
@@ -567,6 +598,13 @@ class Game {
               g.owned.contains(e.key),
         )) {
       throw const FormatException('保存データに不整合があります。');
+    }
+    g.attackTarget = j['attackTarget'] as String?;
+    if (g.attackTarget != null && !validIds.contains(g.attackTarget)) {
+      throw const FormatException('攻略先が不正です。');
+    }
+    if (g.attackTarget == null || !g.isReachable(g.attackTarget!)) {
+      g._resumePendingTarget();
     }
     final q = g.quiz;
     if (q != null) {

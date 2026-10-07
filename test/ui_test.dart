@@ -7,11 +7,30 @@ import 'package:kunitori/territory_map.dart';
 
 void expectMapControlsInside(WidgetTester tester) {
   final map = tester.getRect(find.byType(TerritoryMap));
-  for (final label in ['市町村・町を探す', '県全域を表示', '本拠地へ', '拡大', '縮小']) {
+  for (final label in ['市町村・町を探す', '県全域を表示', '拡大', '縮小']) {
     final control = tester.getRect(find.byTooltip(label));
     expect(map.contains(control.topLeft), isTrue, reason: label);
     expect(map.contains(control.bottomRight), isTrue, reason: label);
   }
+  final home = tester.getRect(find.byKey(const Key('map-home')));
+  expect(map.contains(home.topLeft), isTrue);
+  expect(map.contains(home.bottomRight), isTrue);
+}
+
+void expectCenteredOn(WidgetTester tester, String id) {
+  final map = find.byType(TerritoryMap);
+  final viewer = tester.widget<InteractiveViewer>(
+    find.descendant(of: map, matching: find.byType(InteractiveViewer)),
+  );
+  final detector = viewer.child as GestureDetector;
+  final canvas = detector.child as SizedBox;
+  final dynamic painter = (canvas.child as CustomPaint).painter;
+  final Rect bounds = painter.bounds[id] as Rect;
+  final center = viewer.transformationController!.toScene(
+    tester.getSize(map).center(Offset.zero),
+  );
+  expect(center.dx, closeTo(bounds.center.dx, 0.01));
+  expect(center.dy, closeTo(bounds.center.dy, 0.01));
 }
 
 void main() {
@@ -46,6 +65,10 @@ void main() {
     );
     expect(tester.widget<Text>(find.byKey(const Key('tip-text'))).maxLines, 2);
     expectMapControlsInside(tester);
+    expect(
+      tester.widget<IconButton>(find.byKey(const Key('map-home'))).onPressed,
+      isNull,
+    );
     expect(tester.takeException(), isNull);
     await tester.tap(find.byTooltip('市町村・町を探す'));
     await tester.pumpAndSettle();
@@ -63,6 +86,9 @@ void main() {
     await tester.tap(find.text('ここを本拠地にする'));
     await tester.pumpAndSettle();
     expect(find.text('この地域はあなたの領土です'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('map-home')));
+    await tester.pumpAndSettle();
+    expectCenteredOn(tester, '292010010');
     final map = tester.widget<TerritoryMap>(find.byType(TerritoryMap));
     final target = map.atlas.towns.values.firstWhere(
       (t) => map.game.canAttack(t.id) && t.population > 10,
@@ -92,6 +118,21 @@ void main() {
       timedTip,
     );
     expect(map.game.progress[target.id], 10);
+    final other = map.atlas.towns.values.firstWhere(
+      (t) => t.id != target.id && map.game.isReachable(t.id),
+    );
+    map.onSelected(other.id);
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TerritoryMap>(find.byType(TerritoryMap)).selected,
+      target.id,
+    );
+    expect(map.game.attackTarget, target.id);
+    expect(map.game.progress.containsKey(other.id), isFalse);
+    ScaffoldMessenger.of(
+      tester.element(find.byType(TerritoryMap)),
+    ).hideCurrentSnackBar();
+    await tester.pumpAndSettle();
     expect(
       tester.widget<Text>(find.byKey(const Key('attack-progress'))).data,
       startsWith('10 / '),
@@ -120,9 +161,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('奈良県'), findsOneWidget);
     expect(find.text('ここを本拠地にする'), findsNothing);
-    await tester.tap(find.byTooltip('本拠地へ'));
+    await tester.tap(find.byKey(const Key('map-home')));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    expect(
+      tester.widget<TerritoryMap>(find.byType(TerritoryMap)).selected,
+      target.id,
+    );
+    expectCenteredOn(tester, target.id);
+    await tester.drag(find.byType(InteractiveViewer), const Offset(40, 30));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('map-home')));
+    await tester.pumpAndSettle();
+    expectCenteredOn(tester, target.id);
     tester.view.physicalSize = const Size(844, 390);
     await tester.pumpAndSettle();
     expectMapControlsInside(tester);

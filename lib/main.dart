@@ -109,7 +109,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       saver.onChanged = () {
         if (mounted) setState(() {});
       };
-      selected = g.home;
+      selected = g.attackTarget ?? g.home;
       if (selected != null) cityFilter = data.towns[selected]!.cityId;
       g.expire(DateTime.now());
       _rememberVisibleFact();
@@ -225,12 +225,35 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _save();
   }
 
-  void _select(String id) {
+  bool _select(String id) {
+    final g = game!;
+    if (g.isReachable(id) && !g.selectAttackTarget(id)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('攻略先は1か所です。攻略中の町を獲得してから選んでください。')),
+      );
+      return false;
+    }
     setState(() {
       selected = id;
       factIndex = 0;
       tab = 0;
       _rememberVisibleFact();
+    });
+    _startTipsTimer();
+    _save();
+    return true;
+  }
+
+  void _focusCampaign() {
+    final target = game!.attackTarget ?? game!.home;
+    if (target == null) return;
+    setState(() {
+      selected = target;
+      tab = 0;
+      factIndex = 0;
+      _rememberVisibleFact();
+      cityFilter = atlas!.towns[target]!.cityId;
+      mapFocus++;
     });
     _startTipsTimer();
     _save();
@@ -616,17 +639,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             icon: const Icon(Icons.zoom_out_map),
           ),
           IconButton.filledTonal(
-            tooltip: '本拠地へ',
+            key: const Key('map-home'),
+            tooltip: game!.attackTarget == null ? '本拠地へ' : '攻略中の町へ',
             onPressed:
-                game!.home == null
+                (game!.attackTarget ?? game!.home) == null
                     ? null
-                    : () {
-                      _select(game!.home!);
-                      setState(() {
-                        cityFilter = atlas!.towns[game!.home]!.cityId;
-                        mapFocus++;
-                      });
-                    },
+                    : _focusCampaign,
             icon: const Icon(Icons.home_outlined),
           ),
         ],
@@ -829,7 +847,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               _SearchSheet(atlas: atlas!, game: game!, initialCity: cityFilter),
     );
     if (result != null && mounted) {
-      _select(result);
+      if (!_select(result)) return;
       setState(() {
         cityFilter = atlas!.towns[result]!.cityId;
         mapFocus++;
