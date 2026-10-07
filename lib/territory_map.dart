@@ -12,7 +12,9 @@ class TerritoryMap extends StatefulWidget {
     required this.focusVersion,
     required this.onSelected,
     required this.onCitySelected,
+    this.controls = const [],
   });
+  final List<Widget> controls;
   final Atlas atlas;
   final Game game;
   final String? selected, cityId;
@@ -210,40 +212,42 @@ class _TerritoryMapState extends State<TerritoryMap> {
               ),
             ),
           ),
-          const Positioned(
-            top: 8,
-            left: 14,
-            child: Column(
-              children: [
-                Icon(
-                  Icons.navigation_outlined,
-                  size: 22,
-                  color: Colors.white54,
-                ),
-                Text(
-                  'N',
-                  style: TextStyle(fontSize: 12, color: Colors.white54),
-                ),
-              ],
-            ),
-          ),
           Positioned(
-            right: 12,
+            right: 8,
+            top: 8,
             bottom: 8,
-            child: Column(
-              children: [
-                IconButton.filledTonal(
-                  tooltip: '拡大',
-                  onPressed: () => _zoom(1.7),
-                  icon: const Icon(Icons.add),
+            child: SizedBox(
+              width: 48,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.navigation_outlined,
+                      size: 22,
+                      color: Colors.white54,
+                    ),
+                    const Text(
+                      'N',
+                      style: TextStyle(fontSize: 12, color: Colors.white54),
+                    ),
+                    const SizedBox(height: 8),
+                    ...widget.controls.expand(
+                      (control) => [control, const SizedBox(height: 6)],
+                    ),
+                    IconButton.filledTonal(
+                      tooltip: '拡大',
+                      onPressed: () => _zoom(1.7),
+                      icon: const Icon(Icons.add),
+                    ),
+                    const SizedBox(height: 6),
+                    IconButton.filledTonal(
+                      tooltip: '縮小',
+                      onPressed: () => _zoom(1 / 1.7),
+                      icon: const Icon(Icons.remove),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                IconButton.filledTonal(
-                  tooltip: '縮小',
-                  onPressed: () => _zoom(1 / 1.7),
-                  icon: const Icon(Icons.remove),
-                ),
-              ],
+              ),
             ),
           ),
         ],

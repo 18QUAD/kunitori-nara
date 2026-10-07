@@ -31,6 +31,10 @@ void main() {
     final fixed = tester.getRect(find.byKey(const Key('fixed-region')));
     final layout = tester.getSize(find.byKey(const Key('play-layout')));
     expect(fixed.height, closeTo(layout.height * 0.6, 1));
+    expect(
+      tester.getSize(find.byType(TerritoryMap)).height,
+      closeTo(fixed.height - 48, 1),
+    );
     expect(tester.widget<Text>(find.byKey(const Key('tip-text'))).maxLines, 2);
     expect(tester.takeException(), isNull);
     await tester.tap(find.byTooltip('市町村・町を探す'));
@@ -83,7 +87,7 @@ void main() {
     await tester.ensureVisible(find.byTooltip('県全域を表示'));
     await tester.tap(find.byTooltip('県全域を表示'));
     await tester.pumpAndSettle();
-    expect(find.text('奈良県 · 市区町村'), findsOneWidget);
+    expect(find.text('奈良県'), findsOneWidget);
     expect(find.text('ここを本拠地にする'), findsNothing);
     await tester.tap(find.byTooltip('本拠地へ'));
     await tester.pumpAndSettle();
@@ -109,7 +113,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('やり直す'));
     await tester.pumpAndSettle();
-    expect(find.text('奈良県 · 市区町村'), findsOneWidget);
+    expect(find.text('奈良県'), findsOneWidget);
     expect(find.text('旅のはじまり'), findsOneWidget);
     final saved =
         jsonDecode(prefs.getString('kunitori.nara.v1')!)
@@ -122,7 +126,7 @@ void main() {
       await Future<void>.delayed(const Duration(seconds: 2));
     });
     await tester.pumpAndSettle();
-    expect(find.text('奈良県 · 市区町村'), findsOneWidget);
+    expect(find.text('奈良県'), findsOneWidget);
     expect(find.text('旅のはじまり'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());

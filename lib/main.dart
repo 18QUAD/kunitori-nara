@@ -534,86 +534,46 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _map() => LayoutBuilder(
-    builder:
-        (context, constraints) => ClipRRect(
-          borderRadius: BorderRadius.circular(22),
-          child: ColoredBox(
-            color: const Color(0xFF122B32),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          cityFilter == null
-                              ? '奈良県 · 市区町村'
-                              : '奈良県  /  ${atlas!.cities[cityFilter]}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: '市町村・町を探す',
-                        onPressed: _search,
-                        icon: const Icon(Icons.search),
-                      ),
-                      IconButton(
-                        tooltip: '県全域を表示',
-                        onPressed: () => _selectCity(null),
-                        icon: const Icon(Icons.zoom_out_map),
-                      ),
-                      IconButton(
-                        tooltip: '本拠地へ',
-                        onPressed:
-                            game!.home == null
-                                ? null
-                                : () {
-                                  _select(game!.home!);
-                                  setState(() {
-                                    cityFilter =
-                                        atlas!.towns[game!.home]!.cityId;
-                                    mapFocus++;
-                                  });
-                                },
-                        icon: const Icon(Icons.home_outlined),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: TerritoryMap(
-                    atlas: atlas!,
-                    game: game!,
-                    selected: selected,
-                    cityId: cityFilter,
-                    focusVersion: mapFocus,
-                    onSelected: _select,
-                    onCitySelected: _selectCity,
-                  ),
-                ),
-                if (constraints.maxHeight >= 210)
-                  const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Wrap(
-                      spacing: 16,
-                      runSpacing: 8,
-                      children: [
-                        _Legend(mint, '自領'),
-                        _Legend(gold, '攻略可能'),
-                        _Legend(Color(0xFF43616A), '未接続'),
-                        Text(
-                          'ピンチで拡大・ドラッグで移動',
-                          style: TextStyle(fontSize: 12, color: Colors.white60),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
+  Widget _map() => ClipRRect(
+    borderRadius: BorderRadius.circular(22),
+    child: ColoredBox(
+      color: const Color(0xFF122B32),
+      child: TerritoryMap(
+        atlas: atlas!,
+        game: game!,
+        selected: selected,
+        cityId: cityFilter,
+        focusVersion: mapFocus,
+        onSelected: _select,
+        onCitySelected: _selectCity,
+        controls: [
+          IconButton.filledTonal(
+            tooltip: '市町村・町を探す',
+            onPressed: _search,
+            icon: const Icon(Icons.search),
           ),
-        ),
+          IconButton.filledTonal(
+            tooltip: '県全域を表示',
+            onPressed: () => _selectCity(null),
+            icon: const Icon(Icons.zoom_out_map),
+          ),
+          IconButton.filledTonal(
+            tooltip: '本拠地へ',
+            onPressed:
+                game!.home == null
+                    ? null
+                    : () {
+                      _select(game!.home!);
+                      setState(() {
+                        cityFilter = atlas!.towns[game!.home]!.cityId;
+                        mapFocus++;
+                      });
+                    },
+            icon: const Icon(Icons.home_outlined),
+          ),
+        ],
+      ),
+    ),
   );
   Widget _difficulty() => DropdownButtonFormField<Difficulty>(
     value: game!.difficulty,
@@ -880,28 +840,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 ],
               ),
         ),
-  );
-}
-
-class _Legend extends StatelessWidget {
-  const _Legend(this.color, this.label);
-  final Color color;
-  final String label;
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: 9,
-        height: 9,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-      const SizedBox(width: 5),
-      Text(label, style: const TextStyle(fontSize: 12, color: Colors.white70)),
-    ],
   );
 }
 
