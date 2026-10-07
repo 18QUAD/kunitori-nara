@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kunitori/main.dart';
+import 'package:kunitori/game.dart' show number;
 import 'package:kunitori/territory_map.dart';
 
 void expectMapControlsInside(WidgetTester tester) {
@@ -139,11 +140,13 @@ void main() {
     );
     expect(
       tester.widget<Text>(find.byKey(const Key('city-progress'))).data,
-      startsWith('${map.atlas.cities[target.cityId]} 10 / '),
+      startsWith(
+        '${map.atlas.cities[target.cityId]} ${number(map.game.currentCityPopulation(target.cityId))} / ',
+      ),
     );
     expect(
       tester.widget<Text>(find.byKey(const Key('prefecture-progress'))).data,
-      '奈良県 10 / 1,324,473',
+      '奈良県 ${number(map.atlas.towns[map.game.home]!.population + 10)} / 1,324,473',
     );
     expect(
       tester.getRect(find.byKey(const Key('attack-progress'))).bottom,

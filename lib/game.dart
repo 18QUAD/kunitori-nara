@@ -329,11 +329,11 @@ class Game {
 
   bool cityOwned(String id) =>
       atlas.byCity[id]!.every((t) => owned.contains(t.id));
-  int currentCityTaps(String city) => atlas.byCity[city]!.fold(0, (sum, town) {
-    if (town.id == home) return sum;
-    if (owned.contains(town.id)) return sum + requiredTaps(town);
-    return sum + (progress[town.id] ?? 0);
-  });
+  int currentCityPopulation(String city) =>
+      atlas.byCity[city]!.fold(0, (sum, town) {
+        if (owned.contains(town.id)) return sum + town.population;
+        return sum + min(progress[town.id] ?? 0, town.population);
+      });
   int get population =>
       owned.fold(0, (s, id) => s + atlas.towns[id]!.population) +
       progress.entries

@@ -362,7 +362,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      '${city == null ? '市区町村未選択' : atlas!.cities[city]!} ${city == null ? "— / —" : "${number(g.currentCityTaps(city))} / ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}"}',
+                      '${city == null ? '市区町村未選択' : atlas!.cities[city]!} ${city == null ? "— / —" : "${number(g.currentCityPopulation(city))} / ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}"}',
                       key: const Key('city-progress'),
                       style: const TextStyle(fontSize: 12),
                     ),
@@ -374,7 +374,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
                     child: Text(
-                      '奈良県 ${number(g.totalTaps)} / ${number(atlas!.towns.values.fold<int>(0, (sum, t) => sum + t.population))}',
+                      '奈良県 ${number(g.population)} / ${number(atlas!.towns.values.fold<int>(0, (sum, t) => sum + t.population))}',
                       key: const Key('prefecture-progress'),
                       style: const TextStyle(fontSize: 12),
                     ),

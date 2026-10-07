@@ -72,39 +72,47 @@ void main() {
     expect(restored.attackTarget, targets[1].id);
     expect(restored.progress[targets[1].id], 2);
   });
-  test(
-    'current city taps are derived from territories and partial progress',
-    () {
-      final city = atlas.byCity.keys.first;
-      final towns =
-          atlas.byCity[city]!.where((t) => t.population > 5).take(3).toList();
-      final g = Game(atlas)..setHome(towns[0].id);
-      g.owned.add(towns[1].id);
-      g.everOwned.add(towns[1].id);
-      g.progress[towns[2].id] = 3;
-      expect(g.currentCityTaps(city), towns[1].population + 3);
-      final legacy =
-          g.toJson()
-            ..remove('cityTaps')
-            ..remove('cityTapsComplete');
-      final restored = Game.restore(atlas, legacy);
-      expect(restored.currentCityTaps(city), towns[1].population + 3);
-      expect(
-        restored.currentCityTaps(
-          atlas.byCity.keys.firstWhere((c) => c != city),
-        ),
-        0,
-      );
-      restored.progress.remove(towns[2].id);
-      restored.owned.add(towns[2].id);
-      expect(
-        restored.currentCityTaps(city),
-        towns[1].population + towns[2].population,
-      );
-      restored.owned.remove(towns[1].id);
-      expect(restored.currentCityTaps(city), towns[2].population);
-    },
-  );
+  test('regional progress includes home population and partial progress', () {
+    final city = atlas.byCity.keys.first;
+    final towns =
+        atlas.byCity[city]!.where((t) => t.population > 5).take(3).toList();
+    final g = Game(atlas)..setHome(towns[0].id);
+    g.owned.add(towns[1].id);
+    g.everOwned.add(towns[1].id);
+    g.progress[towns[2].id] = 3;
+    expect(
+      g.currentCityPopulation(city),
+      towns[0].population + towns[1].population + 3,
+    );
+    expect(g.population, g.currentCityPopulation(city));
+    final legacy =
+        g.toJson()
+          ..remove('cityTaps')
+          ..remove('cityTapsComplete');
+    final restored = Game.restore(atlas, legacy);
+    expect(
+      restored.currentCityPopulation(city),
+      towns[0].population + towns[1].population + 3,
+    );
+    expect(
+      restored.currentCityPopulation(
+        atlas.byCity.keys.firstWhere((c) => c != city),
+      ),
+      0,
+    );
+    restored.progress.remove(towns[2].id);
+    restored.owned.add(towns[2].id);
+    expect(
+      restored.currentCityPopulation(city),
+      towns[0].population + towns[1].population + towns[2].population,
+    );
+    restored.owned.remove(towns[1].id);
+    expect(
+      restored.currentCityPopulation(city),
+      towns[0].population + towns[2].population,
+    );
+    expect(restored.population, restored.currentCityPopulation(city));
+  });
   test('regional tap counts survive reload and reject inactive taps', () {
     final g = Game(atlas);
     final home = atlas.towns.values.firstWhere((t) => t.neighbors.isNotEmpty);
