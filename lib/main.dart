@@ -69,7 +69,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   SaveStore? store;
   String? error, selected;
   String? cityFilter;
-  int tab = 0, factIndex = 0, mapFocus = 0, mapCenter = 0;
+  int factIndex = 0, mapFocus = 0, mapCenter = 0;
   Timer? timer, tipsTimer;
   bool corrupt = false;
   @override
@@ -175,7 +175,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       game = Game(atlas!);
       selected = null;
       cityFilter = null;
-      tab = 0;
       factIndex = 0;
       mapFocus = 0;
     });
@@ -236,7 +235,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     setState(() {
       selected = id;
       factIndex = 0;
-      tab = 0;
       _rememberVisibleFact();
     });
     _startTipsTimer();
@@ -249,7 +247,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (target == null) return;
     setState(() {
       selected = target;
-      tab = 0;
       factIndex = 0;
       _rememberVisibleFact();
       cityFilter = atlas!.towns[target]!.cityId;
@@ -386,10 +383,30 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           ],
         ),
         actions: [
-          IconButton(
-            onPressed: _about,
-            tooltip: '遊び方・データ出典',
-            icon: const Icon(Icons.info_outline),
+          PopupMenuButton<String>(
+            tooltip: '設定',
+            icon: const Icon(Icons.settings_outlined),
+            onSelected: (value) {
+              if (value == 'records') _showRecords();
+              if (value == 'help') _about();
+            },
+            itemBuilder:
+                (_) => const [
+                  PopupMenuItem(
+                    value: 'records',
+                    child: ListTile(
+                      leading: Icon(Icons.emoji_events_outlined),
+                      title: Text('戦績'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'help',
+                    child: ListTile(
+                      leading: Icon(Icons.help_outline),
+                      title: Text('ヘルプ'),
+                    ),
+                  ),
+                ],
           ),
           const SizedBox(width: 8),
         ],
@@ -419,29 +436,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                           SizedBox(
                             key: const Key('fixed-region'),
                             height: topHeight,
-                            child: Column(
-                              children: [
-                                SizedBox(
-                                  height: 48,
-                                  child: Row(
-                                    children: [
-                                      _viewTab(0, '地図', Icons.map_outlined),
-                                      _viewTab(
-                                        1,
-                                        '戦績',
-                                        Icons.emoji_events_outlined,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: IndexedStack(
-                                    index: tab,
-                                    children: [_map(), _records()],
-                                  ),
-                                ),
-                              ],
-                            ),
+                            child: _map(),
                           ),
                           Expanded(child: _controls()),
                         ],
@@ -468,24 +463,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ),
     );
   }
-
-  Widget _viewTab(int index, String label, IconData icon) => Expanded(
-    child: Semantics(
-      selected: tab == index,
-      child: TextButton.icon(
-        onPressed:
-            game!.quiz != null ? null : () => setState(() => tab = index),
-        style: TextButton.styleFrom(
-          foregroundColor: tab == index ? mint : Colors.white54,
-          backgroundColor: tab == index ? panel : ink,
-          shape: const RoundedRectangleBorder(),
-          minimumSize: const Size(0, 48),
-        ),
-        icon: Icon(icon, size: 20),
-        label: Text(label),
-      ),
-    ),
-  );
 
   Widget _controls() {
     final tip =
@@ -753,7 +730,54 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _records() => ListView(
+  void _showRecords() => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: panel,
+    builder:
+        (sheetContext) => SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * 0.9,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 8, 0),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '戦績',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: '戦績を閉じる',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(sheetContext),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _records(
+                  onRestart: () async {
+                    final before = game;
+                    await _restart();
+                    if (sheetContext.mounted && game != before) {
+                      Navigator.pop(sheetContext);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+  );
+
+  Widget _records({required VoidCallback onRestart}) => ListView(
     padding: const EdgeInsets.all(20),
     children: [
       const Text(
@@ -804,7 +828,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ),
       const SizedBox(height: 24),
       OutlinedButton.icon(
-        onPressed: _restart,
+        onPressed: onRestart,
         icon: const Icon(Icons.restart_alt),
         label: const Text('最初からやり直す'),
       ),

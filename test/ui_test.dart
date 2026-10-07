@@ -53,6 +53,8 @@ void main() {
     }
     await tester.pumpAndSettle();
     expect(find.text('くにとり'), findsNothing);
+    expect(find.text('地図'), findsNothing);
+    expect(find.text('戦績'), findsNothing);
     expect(find.text('奈良県'), findsOneWidget);
     expect(find.text('領土'), findsNothing);
     expect(find.text('人口'), findsNothing);
@@ -62,7 +64,7 @@ void main() {
     expect(fixed.height, closeTo(layout.height * 0.6, 1));
     expect(
       tester.getSize(find.byType(TerritoryMap)).height,
-      closeTo(fixed.height - 48, 1),
+      closeTo(fixed.height, 1),
     );
     expect(tester.widget<Text>(find.byKey(const Key('tip-text'))).maxLines, 2);
     expectMapControlsInside(tester);
@@ -176,10 +178,20 @@ void main() {
       lessThan(fixed.top),
     );
     expect(tester.getRect(find.byKey(const Key('fixed-region'))), fixed);
+    await tester.tap(find.byTooltip('設定'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('戦績'));
     await tester.pumpAndSettle();
     expect(tester.getRect(find.byKey(const Key('attack'))), attackRect);
-    await tester.tap(find.text('地図'));
+    await tester.tap(find.byTooltip('戦績を閉じる'));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byKey(const Key('fixed-region'))), fixed);
+    await tester.tap(find.byTooltip('設定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ヘルプ'));
+    await tester.pumpAndSettle();
+    expect(find.text('大和国の歩き方'), findsOneWidget);
+    Navigator.of(tester.element(find.text('大和国の歩き方'))).pop();
     await tester.pumpAndSettle();
     expect(tester.getRect(find.byKey(const Key('fixed-region'))), fixed);
     await tester.ensureVisible(find.byTooltip('県全域を表示'));
@@ -224,6 +236,8 @@ void main() {
     await tester.pumpAndSettle();
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('kunitori.nara.v1'), contains('292010010'));
+    await tester.tap(find.byTooltip('設定'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('戦績'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('大和への第一歩'), 150);
