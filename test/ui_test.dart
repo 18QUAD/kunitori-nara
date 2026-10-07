@@ -139,11 +139,11 @@ void main() {
     );
     expect(
       tester.widget<Text>(find.byKey(const Key('city-progress'))).data,
-      startsWith('市区町村 10 / '),
+      startsWith('${map.atlas.cities[target.cityId]} 10 / '),
     );
     expect(
       tester.widget<Text>(find.byKey(const Key('prefecture-progress'))).data,
-      '都道府県 10 / 1,324,473',
+      '奈良県 10 / 1,324,473',
     );
     expect(
       tester.getRect(find.byKey(const Key('attack-progress'))).bottom,
