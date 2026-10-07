@@ -495,7 +495,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 style: const TextStyle(
                   fontSize: 14,
                   height: 1.5,
-                  color: Colors.white70,
+                  color: Colors.white,
                 ),
               ),
             ),
