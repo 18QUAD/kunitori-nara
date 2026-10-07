@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kunitori/main.dart';
+import 'package:kunitori/territory_map.dart';
 
 void main() {
   testWidgets('phone layout loads, search selects a home, campaign saves', (
@@ -24,6 +25,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('くにとり'), findsNothing);
     expect(find.text('奈良県'), findsOneWidget);
+    expect(find.text('領土'), findsNothing);
+    expect(find.text('人口'), findsNothing);
+    expect(find.text('面積'), findsNothing);
+    final fixed = tester.getRect(find.byKey(const Key('fixed-region')));
+    final layout = tester.getSize(find.byKey(const Key('play-layout')));
+    expect(fixed.height, closeTo(layout.height * 0.6, 1));
+    expect(tester.widget<Text>(find.byKey(const Key('tip-text'))).maxLines, 2);
     expect(tester.takeException(), isNull);
     await tester.tap(find.byTooltip('市町村・町を探す'));
     await tester.pumpAndSettle();
@@ -41,8 +49,37 @@ void main() {
     await tester.tap(find.text('ここを本拠地にする'));
     await tester.pumpAndSettle();
     expect(find.text('この地域はあなたの領土です'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, 900));
+    final map = tester.widget<TerritoryMap>(find.byType(TerritoryMap));
+    final target = map.atlas.towns.values.firstWhere(
+      (t) => map.game.canAttack(t.id) && t.population > 10,
+    );
+    map.onSelected(target.id);
     await tester.pumpAndSettle();
+    final firstTip =
+        tester.widget<Text>(find.byKey(const Key('tip-text'))).data;
+    final attackRect = tester.getRect(find.byKey(const Key('attack')));
+    for (var i = 0; i < 9; i++) {
+      await tester.tap(find.byKey(const Key('attack')));
+      await tester.pumpAndSettle();
+    }
+    expect(
+      tester.widget<Text>(find.byKey(const Key('tip-text'))).data,
+      firstTip,
+    );
+    await tester.tap(find.byKey(const Key('attack')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Text>(find.byKey(const Key('tip-text'))).data,
+      isNot(firstTip),
+    );
+    expect(map.game.progress[target.id], 10);
+    expect(tester.getRect(find.byKey(const Key('fixed-region'))), fixed);
+    await tester.tap(find.text('戦績'));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byKey(const Key('attack'))), attackRect);
+    await tester.tap(find.text('地図'));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byKey(const Key('fixed-region'))), fixed);
     await tester.ensureVisible(find.byTooltip('県全域を表示'));
     await tester.tap(find.byTooltip('県全域を表示'));
     await tester.pumpAndSettle();
@@ -51,12 +88,18 @@ void main() {
     await tester.tap(find.byTooltip('本拠地へ'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    tester.view.physicalSize = const Size(844, 390);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('kunitori.nara.v1'), contains('292010010'));
     await tester.tap(find.text('戦績'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('大和への第一歩'), 150);
     expect(find.text('大和への第一歩'), findsOneWidget);
-    await tester.ensureVisible(find.text('最初からやり直す'));
+    await tester.scrollUntilVisible(find.text('最初からやり直す'), 150);
     await tester.tap(find.text('最初からやり直す'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('キャンセル'));

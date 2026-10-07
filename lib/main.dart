@@ -69,7 +69,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   SaveStore? store;
   String? error, selected;
   String? cityFilter;
-  int tab = 0, factIndex = 0, mapFocus = 0;
+  int tab = 0, factIndex = 0, mapFocus = 0, tipsTaps = 0;
   Timer? timer;
   bool corrupt = false;
   @override
@@ -154,7 +154,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           (context) => AlertDialog(
             title: const Text('最初からやり直しますか？'),
             content: const Text(
-              '本拠地・領土・戦績・称号・地域図鑑をリセットします。元に戻せません。市区町村から新しい本拠地を選び直せます。',
+              '本拠地・領土・戦績・称号・地域tipsの履歴をリセットします。元に戻せません。市区町村から新しい本拠地を選び直せます。',
             ),
             actions: [
               TextButton(
@@ -175,14 +175,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       cityFilter = null;
       tab = 0;
       factIndex = 0;
+      tipsTaps = 0;
       mapFocus = 0;
     });
     await store!.save(game!);
   }
 
   LocalFact? get visibleFact {
-    if (selected == null) return null;
-    final facts = atlas!.facts[atlas!.towns[selected]!.cityId]!;
+    final city = selected == null ? cityFilter : atlas!.towns[selected]!.cityId;
+    if (city == null) return null;
+    final facts = atlas!.facts[city]!;
     return facts[factIndex % facts.length];
   }
 
@@ -197,13 +199,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       selected = null;
       mapFocus = 0;
       factIndex = 0;
+      tipsTaps = 0;
+      _rememberVisibleFact();
     });
+    _save();
   }
 
   void _select(String id) {
     setState(() {
       selected = id;
       factIndex = 0;
+      tipsTaps = 0;
       tab = 0;
       _rememberVisibleFact();
     });
@@ -211,9 +217,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _attack() {
-    final won = game!.tap(selected!, DateTime.now());
+    final g = game!;
+    final before = g.totalTaps;
+    final won = g.tap(selected!, DateTime.now());
+    if (g.totalTaps == before) return;
     if (won) HapticFeedback.mediumImpact();
-    setState(() {});
+    setState(() {
+      tipsTaps++;
+      if (tipsTaps == 10) {
+        tipsTaps = 0;
+        factIndex++;
+        _rememberVisibleFact();
+      }
+    });
     _save();
   }
 
@@ -294,7 +310,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           children: [
             Column(
               children: [
-                _stats(),
                 if (store!.error != null)
                   MaterialBanner(
                     content: Text(store!.error!),
@@ -303,9 +318,46 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ],
                   ),
                 Expanded(
-                  child: IndexedStack(
-                    index: tab,
-                    children: [_campaign(), _almanac(), _records()],
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final topHeight = math.min(
+                        constraints.maxHeight * 0.6,
+                        math.max(0.0, constraints.maxHeight - 180),
+                      );
+                      return Column(
+                        key: const Key('play-layout'),
+                        children: [
+                          SizedBox(
+                            key: const Key('fixed-region'),
+                            height: topHeight,
+                            child: Column(
+                              children: [
+                                SizedBox(
+                                  height: 48,
+                                  child: Row(
+                                    children: [
+                                      _viewTab(0, '地図', Icons.map_outlined),
+                                      _viewTab(
+                                        1,
+                                        '戦績',
+                                        Icons.emoji_events_outlined,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: IndexedStack(
+                                    index: tab,
+                                    children: [_map(), _records()],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(child: _controls()),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ],
@@ -325,433 +377,244 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: tab,
-        onDestinationSelected:
-            g.quiz != null ? null : (i) => setState(() => tab = i),
-        backgroundColor: ink,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            selectedIcon: Icon(Icons.explore),
-            label: '進軍',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            label: '地域図鑑',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.emoji_events_outlined),
-            label: '戦績',
-          ),
-        ],
-      ),
     );
   }
 
-  Widget _stats() {
-    final g = game!;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
-      child: Row(
-        children: [
-          Expanded(
-            child: _stat(
-              '領土',
-              number(g.owned.length),
-              ' / ${number(atlas!.towns.length)}',
-            ),
-          ),
-          Expanded(child: _stat('人口', number(g.population), ' 人')),
-          Expanded(child: _stat('制圧', g.mastered.length.toString(), ' / 39')),
-        ],
-      ),
-    );
-  }
-
-  Widget _stat(String label, String value, String unit) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(label, style: const TextStyle(color: Colors.white60, fontSize: 13)),
-      const SizedBox(height: 3),
-      FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text.rich(
-          TextSpan(
-            text: value,
-            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800),
-            children: [
-              TextSpan(
-                text: unit,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.white54,
-                  fontWeight: FontWeight.normal,
-                ),
-              ),
-            ],
-          ),
+  Widget _viewTab(int index, String label, IconData icon) => Expanded(
+    child: Semantics(
+      selected: tab == index,
+      child: TextButton.icon(
+        onPressed:
+            game!.quiz != null ? null : () => setState(() => tab = index),
+        style: TextButton.styleFrom(
+          foregroundColor: tab == index ? mint : Colors.white54,
+          backgroundColor: tab == index ? panel : ink,
+          shape: const RoundedRectangleBorder(),
+          minimumSize: const Size(0, 48),
         ),
-      ),
-    ],
-  );
-  Widget _campaign() => LayoutBuilder(
-    builder: (context, c) {
-      if (c.maxWidth > 850) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(flex: 6, child: _map()),
-              const SizedBox(width: 18),
-              Expanded(flex: 4, child: SingleChildScrollView(child: _detail())),
-            ],
-          ),
-        );
-      }
-      return ListView(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-        children: [
-          SizedBox(height: 380, child: _map()),
-          const SizedBox(height: 14),
-          _detail(),
-        ],
-      );
-    },
-  );
-  Widget _map() => ClipRRect(
-    borderRadius: BorderRadius.circular(22),
-    child: ColoredBox(
-      color: const Color(0xFF122B32),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    cityFilter == null
-                        ? '奈良県 · 市区町村'
-                        : '奈良県  /  ${atlas!.cities[cityFilter]}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                IconButton(
-                  tooltip: '市町村・町を探す',
-                  onPressed: _search,
-                  icon: const Icon(Icons.search),
-                ),
-                IconButton(
-                  tooltip: '県全域を表示',
-                  onPressed: () => _selectCity(null),
-                  icon: const Icon(Icons.zoom_out_map),
-                ),
-                IconButton(
-                  tooltip: '本拠地へ',
-                  onPressed:
-                      game!.home == null
-                          ? null
-                          : () {
-                            _select(game!.home!);
-                            setState(() {
-                              cityFilter = atlas!.towns[game!.home]!.cityId;
-                              mapFocus++;
-                            });
-                          },
-                  icon: const Icon(Icons.home_outlined),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TerritoryMap(
-              atlas: atlas!,
-              game: game!,
-              selected: selected,
-              cityId: cityFilter,
-              focusVersion: mapFocus,
-              onSelected: _select,
-              onCitySelected: _selectCity,
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.all(12),
-            child: Wrap(
-              spacing: 16,
-              runSpacing: 8,
-              children: [
-                _Legend(mint, '自領'),
-                _Legend(gold, '攻略可能'),
-                _Legend(Color(0xFF43616A), '未接続'),
-                Text(
-                  'ピンチで拡大・ドラッグで移動',
-                  style: TextStyle(fontSize: 12, color: Colors.white60),
-                ),
-              ],
-            ),
-          ),
-        ],
+        icon: Icon(icon, size: 20),
+        label: Text(label),
       ),
     ),
   );
-  Widget _detail() {
-    final g = game!;
-    if (selected == null) {
-      return _card(
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              g.home == null ? '旅のはじまり' : '進軍先を選ぶ',
-              style: TextStyle(color: mint, fontSize: 13, letterSpacing: 2),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              g.home == null ? 'あなたの本拠地を\n決めましょう。' : '市区町村から\n町へ。',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                height: 1.4,
+
+  Widget _controls() {
+    final tip =
+        visibleFact?.text ??
+        (cityFilter == null ? '市区町村を選び、次に町から本拠地を選びましょう。' : '町を選んで本拠地を決めましょう。');
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      child: Column(
+        children: [
+          SizedBox(
+            key: const Key('tips-region'),
+            height: 44,
+            width: double.infinity,
+            child: Tooltip(
+              message: tip,
+              child: Text(
+                tip,
+                key: const Key('tip-text'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  color: Colors.white70,
+                ),
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              cityFilter == null
-                  ? '市区町村を地図または検索から選び、次に町を選んでください。'
-                  : g.home == null
-                  ? '${atlas!.cities[cityFilter]}の町を選び、本拠地を決めてください。'
-                  : '${atlas!.cities[cityFilter]}の町を選び、進軍してください。',
-              style: TextStyle(height: 1.7, color: Colors.white70),
+          ),
+          const SizedBox(height: 8),
+          Expanded(child: _actionPanel()),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionPanel() {
+    final g = game!;
+    final town = selected == null ? null : atlas!.towns[selected];
+    if (town == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Center(
+              child: Text(
+                g.home == null ? '旅のはじまり' : '攻略する町を選んでください',
+                style: const TextStyle(color: mint),
+              ),
             ),
-            const SizedBox(height: 20),
-            if (g.home == null) _difficulty(),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _search,
-              icon: const Icon(Icons.search),
-              label: Text(g.home == null ? '地名から本拠地を探す' : '市区町村・町を探す'),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              '初めてなら、攻略対象の少ない町村がおすすめ。',
-              style: TextStyle(fontSize: 13, color: Colors.white54),
-            ),
-          ],
-        ),
+          ),
+          FilledButton.icon(
+            onPressed: _search,
+            icon: const Icon(Icons.search),
+            label: Text(g.home == null ? '地名から本拠地を探す' : '攻略先を探す'),
+          ),
+        ],
       );
     }
-    final t = atlas!.towns[selected]!;
-    final own = g.owned.contains(t.id), can = g.canAttack(t.id);
-    final count =
-        atlas!.byCity[t.cityId]!.where((x) => g.owned.contains(x.id)).length;
-    final total = atlas!.byCity[t.cityId]!.length;
+    if (g.home == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _difficulty(),
+          const SizedBox(height: 8),
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () {
+                g.setHome(town.id);
+                setState(() {});
+                _save();
+              },
+              icon: const Icon(Icons.flag),
+              label: const Text('ここを本拠地にする'),
+            ),
+          ),
+        ],
+      );
+    }
+    if (g.owned.contains(town.id)) {
+      final quizAvailable =
+          g.cityOwned(town.cityId) && !g.mastered.contains(town.cityId);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Expanded(
+            child: Center(
+              child: Text('この地域はあなたの領土です', style: TextStyle(color: mint)),
+            ),
+          ),
+          FilledButton.icon(
+            onPressed:
+                quizAvailable
+                    ? () {
+                      g.startQuiz(town.cityId, DateTime.now());
+                      setState(() {});
+                      _save();
+                    }
+                    : _search,
+            icon: Icon(quizAvailable ? Icons.quiz_outlined : Icons.search),
+            label: Text(quizAvailable ? '地域クイズに挑戦' : '攻略先を探す'),
+          ),
+        ],
+      );
+    }
+    final can = g.canAttack(town.id);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _card(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${atlas!.cities[t.cityId]}  /  町',
-                      style: const TextStyle(
-                        color: Colors.white60,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    own
-                        ? (t.id == g.home ? '本拠地' : '自領')
-                        : g.home == null
-                        ? '本拠地候補'
-                        : can
-                        ? '攻略可能'
-                        : '未接続',
-                    style: TextStyle(
-                      color:
-                          own
-                              ? mint
-                              : can
-                              ? gold
-                              : Colors.white54,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                t.name,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _stat('人口 · 2020年', number(t.population), ' 人'),
-                  ),
-                  Expanded(
-                    child: _stat('面積', t.area.toStringAsFixed(2), ' km²'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              if (g.home == null) ...[
-                _difficulty(),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      g.setHome(t.id);
-                      setState(() {});
-                      _save();
-                    },
-                    icon: const Icon(Icons.flag),
-                    label: const Text('ここを本拠地にする'),
-                  ),
-                ),
-              ] else if (own) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: mint.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.verified_outlined, color: mint),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'この地域はあなたの領土です',
-                          style: TextStyle(color: mint),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (g.cityOwned(t.cityId) && !g.mastered.contains(t.cityId))
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: FilledButton(
-                      onPressed: () {
-                        g.startQuiz(t.cityId, DateTime.now());
-                        setState(() {});
-                        _save();
-                      },
-                      child: const Text('地域クイズに挑戦'),
-                    ),
-                  ),
-              ] else ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      '攻略の進み具合',
-                      style: TextStyle(fontSize: 13, color: Colors.white60),
-                    ),
-                    Text(
-                      '${g.progress[t.id] ?? 0} / ${g.requiredTaps(t)} TAP',
-                      style: const TextStyle(
-                        color: gold,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                LinearProgressIndicator(
-                  value: (g.progress[t.id] ?? 0) / g.requiredTaps(t),
-                  minHeight: 6,
-                  borderRadius: BorderRadius.circular(8),
-                  color: gold,
-                  backgroundColor: Colors.white10,
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 76,
-                  child: FilledButton.icon(
-                    key: const Key('attack'),
-                    onPressed: can ? _attack : null,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: gold,
-                      foregroundColor: ink,
-                    ),
-                    icon: Icon(can ? Icons.touch_app : Icons.lock_outline),
-                    label: Text(
-                      can ? 'タップで進軍 · 1人' : '隣接する自領が必要です',
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 20),
-              Text(
-                '${atlas!.cities[t.cityId]}の領土  $count / $total',
-                style: const TextStyle(fontSize: 13, color: Colors.white60),
-              ),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: count / total,
-                minHeight: 4,
-                color: mint,
-                backgroundColor: Colors.white10,
-              ),
-            ],
-          ),
+        Text(
+          '${g.progress[town.id] ?? 0} / ${g.requiredTaps(town)} TAP',
+          key: const Key('attack-progress'),
+          style: const TextStyle(color: gold, fontSize: 14),
+          textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 12),
-        _factCard(),
-        if (g.message.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text(
-              g.message,
-              style: const TextStyle(color: gold, height: 1.6),
-              key: const Key('game-message'),
+        const SizedBox(height: 6),
+        LinearProgressIndicator(
+          value: (g.progress[town.id] ?? 0) / g.requiredTaps(town),
+          minHeight: 4,
+          color: gold,
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: FilledButton.icon(
+            key: const Key('attack'),
+            onPressed: can ? _attack : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: gold,
+              foregroundColor: ink,
             ),
-          ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            children: [
-              Icon(
-                store!.error != null
-                    ? Icons.error_outline
-                    : Icons.cloud_done_outlined,
-                size: 14,
-                color: Colors.white38,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  store!.error != null
-                      ? '保存未完了'
-                      : store!.saving
-                      ? '保存中…'
-                      : 'この端末に自動保存',
-                  style: const TextStyle(fontSize: 12, color: Colors.white38),
-                ),
-              ),
-            ],
+            icon: Icon(can ? Icons.touch_app : Icons.lock_outline),
+            label: Text(can ? 'タップで進軍 · 1人' : '隣接する自領が必要です'),
           ),
         ),
-        const SizedBox(height: 12),
       ],
     );
   }
 
+  Widget _map() => LayoutBuilder(
+    builder:
+        (context, constraints) => ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: ColoredBox(
+            color: const Color(0xFF122B32),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          cityFilter == null
+                              ? '奈良県 · 市区町村'
+                              : '奈良県  /  ${atlas!.cities[cityFilter]}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: '市町村・町を探す',
+                        onPressed: _search,
+                        icon: const Icon(Icons.search),
+                      ),
+                      IconButton(
+                        tooltip: '県全域を表示',
+                        onPressed: () => _selectCity(null),
+                        icon: const Icon(Icons.zoom_out_map),
+                      ),
+                      IconButton(
+                        tooltip: '本拠地へ',
+                        onPressed:
+                            game!.home == null
+                                ? null
+                                : () {
+                                  _select(game!.home!);
+                                  setState(() {
+                                    cityFilter =
+                                        atlas!.towns[game!.home]!.cityId;
+                                    mapFocus++;
+                                  });
+                                },
+                        icon: const Icon(Icons.home_outlined),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: TerritoryMap(
+                    atlas: atlas!,
+                    game: game!,
+                    selected: selected,
+                    cityId: cityFilter,
+                    focusVersion: mapFocus,
+                    onSelected: _select,
+                    onCitySelected: _selectCity,
+                  ),
+                ),
+                if (constraints.maxHeight >= 210)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Wrap(
+                      spacing: 16,
+                      runSpacing: 8,
+                      children: [
+                        _Legend(mint, '自領'),
+                        _Legend(gold, '攻略可能'),
+                        _Legend(Color(0xFF43616A), '未接続'),
+                        Text(
+                          'ピンチで拡大・ドラッグで移動',
+                          style: TextStyle(fontSize: 12, color: Colors.white60),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+  );
   Widget _difficulty() => DropdownButtonFormField<Difficulty>(
     value: game!.difficulty,
     decoration: const InputDecoration(labelText: '難易度'),
@@ -768,57 +631,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (d != null) setState(() => game!.difficulty = d);
     },
   );
-  Widget _factCard() {
-    final f = visibleFact!;
-    final facts = atlas!.facts[f.cityId]!;
-    return _card(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_stories_outlined, color: mint, size: 19),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '土地の記憶 · ${f.category}',
-                  style: const TextStyle(color: mint, fontSize: 13),
-                ),
-              ),
-              Text(
-                '${factIndex % facts.length + 1}/${facts.length}',
-                style: const TextStyle(fontSize: 12, color: Colors.white54),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(f.text, style: const TextStyle(height: 1.7, fontSize: 16)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  '読んだ情報がクイズに登場',
-                  style: TextStyle(fontSize: 12, color: Colors.white54),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    factIndex++;
-                    _rememberVisibleFact();
-                  });
-                  _save();
-                },
-                child: const Text('次の情報'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _quiz() {
     final q = game!.quiz!;
     final seconds = math.max(
@@ -903,73 +715,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _almanac() => ListView(
-    padding: const EdgeInsets.all(20),
-    children: [
-      const Text(
-        '地域図鑑',
-        style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 8),
-      const Text('進軍中に出会った、土地の記憶。', style: TextStyle(color: Colors.white60)),
-      const SizedBox(height: 20),
-      if (game!.seen.isEmpty) const Text('町を選ぶと地域情報が見つかります。'),
-      ...atlas!.facts.entries
-          .where((e) => e.value.any((f) => game!.seen.contains(f.id)))
-          .map(
-            (entry) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _card(
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      atlas!.cities[entry.key]!,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: mint,
-                      ),
-                    ),
-                    ...entry.value
-                        .where((f) => game!.seen.contains(f.id))
-                        .map(
-                          (f) => Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  f.category,
-                                  style: const TextStyle(
-                                    color: gold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  f.text,
-                                  style: const TextStyle(height: 1.7),
-                                ),
-                                const SizedBox(height: 6),
-                                SelectableText(
-                                  f.source,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.white54,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-    ],
-  );
   Widget _records() => ListView(
     padding: const EdgeInsets.all(20),
     children: [
@@ -986,7 +731,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _card(
         Column(
           children: [
-            _record('現在の領土面積', '${game!.area.toStringAsFixed(2)} km²'),
             _record('累計タップ数', number(game!.totalTaps)),
             _record('訪れた領土', number(game!.everOwned.length)),
             _record('クイズ正解', number(game!.wins)),
@@ -1095,7 +839,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1. 市区町村を選び、次に町から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略\n3. 「土地の記憶」を読み、知識を蓄積\n4. 市町村の全領土獲得でクイズに挑戦\n5. 正解で市町村制圧。失敗で一部領土を失う',
+                    '1. 市区町村を選び、次に町から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略\n3. 地域tipsを読み、知識を蓄積（10タップごとに切替）\n4. 市町村の全領土獲得でクイズに挑戦\n5. 正解で市町村制圧。失敗で一部領土を失う',
                     style: TextStyle(height: 2),
                   ),
                   const SizedBox(height: 20),
