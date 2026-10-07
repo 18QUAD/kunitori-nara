@@ -1,6 +1,6 @@
 {{flutter_js}}
 {{flutter_build_config}}
 for (const build of _flutter.buildConfig.builds) {
-  if (build.mainJsPath) build.mainJsPath += '?v=regional-header-names-v1';
+  if (build.mainJsPath) build.mainJsPath += '?v=derived-city-progress-v1';
 }
 _flutter.loader.load({config: {canvasKitBaseUrl: 'canvaskit/'}});

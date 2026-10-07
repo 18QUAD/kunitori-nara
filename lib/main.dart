@@ -362,7 +362,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      '${city == null ? '市区町村未選択' : atlas!.cities[city]!} ${city == null ? "— / —" : "${g.cityTapsComplete ? number(g.cityTaps[city] ?? 0) : "不明"} / ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}"}',
+                      '${city == null ? '市区町村未選択' : atlas!.cities[city]!} ${city == null ? "— / —" : "${number(g.currentCityTaps(city))} / ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}"}',
                       key: const Key('city-progress'),
                       style: const TextStyle(fontSize: 12),
                     ),
