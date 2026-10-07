@@ -87,6 +87,15 @@ void main() {
     await tester.tap(find.text('ここを本拠地にする'));
     await tester.pumpAndSettle();
     expect(find.text('この地域はあなたの領土です'), findsOneWidget);
+    final homeTown =
+        tester
+            .widget<TerritoryMap>(find.byType(TerritoryMap))
+            .atlas
+            .towns['292010010']!;
+    expect(
+      tester.widget<Text>(find.byKey(const Key('attack-progress'))).data,
+      '${number(homeTown.population)} / ${number(homeTown.population)}',
+    );
     await tester.tap(find.byKey(const Key('map-home')));
     await tester.pumpAndSettle();
     expectCenteredOn(tester, '292010010');

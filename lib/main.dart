@@ -347,7 +347,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 if (town != null) ...[
                   const SizedBox(width: 8),
                   Text(
-                    '${number(g.progress[town.id] ?? 0)} / ${number(town.population)}',
+                    '${number(g.owned.contains(town.id) ? town.population : g.progress[town.id] ?? 0)} / ${number(town.population)}',
                     key: const Key('attack-progress'),
                     style: const TextStyle(color: gold, fontSize: 13),
                   ),

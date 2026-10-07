@@ -345,13 +345,6 @@ class _MapPainter extends CustomPainter {
           e.value,
           Paint()..color = Colors.white.withValues(alpha: 0.2),
         );
-        canvas.drawPath(
-          e.value,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2 / zoom
-            ..color = Colors.white,
-        );
       }
       final box = bounds[e.key]!;
       final label = TextPainter(
@@ -387,6 +380,17 @@ class _MapPainter extends CustomPainter {
         );
         canvas.drawCircle(p, 2 / zoom, Paint()..color = Colors.white);
       }
+    }
+    // Draw selection last so neighboring fills and borders cannot cover it.
+    final selectedPath = overview ? null : paths[selected];
+    if (selectedPath != null && atlas.towns[selected]!.cityId == cityId) {
+      canvas.drawPath(
+        selectedPath,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2 / zoom
+          ..color = Colors.white,
+      );
     }
   }
 
