@@ -218,34 +218,40 @@ class _TerritoryMapState extends State<TerritoryMap> {
             bottom: 8,
             child: SizedBox(
               width: 48,
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.navigation_outlined,
-                      size: 22,
-                      color: Colors.white54,
-                    ),
-                    const Text(
-                      'N',
-                      style: TextStyle(fontSize: 12, color: Colors.white54),
-                    ),
-                    const SizedBox(height: 8),
-                    ...widget.controls.expand(
-                      (control) => [control, const SizedBox(height: 6)],
-                    ),
-                    IconButton.filledTonal(
-                      tooltip: '拡大',
-                      onPressed: () => _zoom(1.7),
-                      icon: const Icon(Icons.add),
-                    ),
-                    const SizedBox(height: 6),
-                    IconButton.filledTonal(
-                      tooltip: '縮小',
-                      onPressed: () => _zoom(1 / 1.7),
-                      icon: const Icon(Icons.remove),
-                    ),
-                  ],
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topRight,
+                child: SizedBox(
+                  width: 48,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.navigation_outlined,
+                        size: 22,
+                        color: Colors.white54,
+                      ),
+                      const Text(
+                        'N',
+                        style: TextStyle(fontSize: 12, color: Colors.white54),
+                      ),
+                      const SizedBox(height: 8),
+                      ...widget.controls.expand(
+                        (control) => [control, const SizedBox(height: 6)],
+                      ),
+                      IconButton.filledTonal(
+                        tooltip: '拡大',
+                        onPressed: () => _zoom(1.7),
+                        icon: const Icon(Icons.add),
+                      ),
+                      const SizedBox(height: 6),
+                      IconButton.filledTonal(
+                        tooltip: '縮小',
+                        onPressed: () => _zoom(1 / 1.7),
+                        icon: const Icon(Icons.remove),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

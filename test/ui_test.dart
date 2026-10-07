@@ -5,6 +5,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kunitori/main.dart';
 import 'package:kunitori/territory_map.dart';
 
+void expectMapControlsInside(WidgetTester tester) {
+  final map = tester.getRect(find.byType(TerritoryMap));
+  for (final label in ['市町村・町を探す', '県全域を表示', '本拠地へ', '拡大', '縮小']) {
+    final control = tester.getRect(find.byTooltip(label));
+    expect(map.contains(control.topLeft), isTrue, reason: label);
+    expect(map.contains(control.bottomRight), isTrue, reason: label);
+  }
+}
+
 void main() {
   testWidgets('phone layout loads, search selects a home, campaign saves', (
     tester,
@@ -36,6 +45,7 @@ void main() {
       closeTo(fixed.height - 48, 1),
     );
     expect(tester.widget<Text>(find.byKey(const Key('tip-text'))).maxLines, 2);
+    expectMapControlsInside(tester);
     expect(tester.takeException(), isNull);
     await tester.tap(find.byTooltip('市町村・町を探す'));
     await tester.pumpAndSettle();
@@ -94,6 +104,7 @@ void main() {
     expect(tester.takeException(), isNull);
     tester.view.physicalSize = const Size(844, 390);
     await tester.pumpAndSettle();
+    expectMapControlsInside(tester);
     expect(tester.takeException(), isNull);
     tester.view.physicalSize = const Size(390, 844);
     await tester.pumpAndSettle();
