@@ -17,6 +17,26 @@ void main() {
           as Map<String, dynamic>,
     );
   });
+  test('regional tap counts survive reload and reject inactive taps', () {
+    final g = Game(atlas);
+    final home = atlas.towns.values.firstWhere((t) => t.neighbors.isNotEmpty);
+    g.setHome(home.id);
+    final target = atlas.towns[home.neighbors.first]!;
+    g.tap(home.id, now);
+    expect(g.cityTaps, isEmpty);
+    g.tap(target.id, now);
+    expect(g.cityTaps[target.cityId], 1);
+    final restored = Game.restore(atlas, jsonDecode(jsonEncode(g.toJson())));
+    expect(restored.cityTaps[target.cityId], 1);
+    expect(restored.cityTapsComplete, isTrue);
+    final legacy =
+        g.toJson()
+          ..remove('cityTaps')
+          ..remove('cityTapsComplete');
+    final migrated = Game.restore(atlas, legacy);
+    expect(migrated.totalTaps, 1);
+    expect(migrated.cityTapsComplete, isFalse);
+  });
   test('full Nara data has symmetric boundary adjacency and is connected', () {
     expect(atlas.cities.length, 39);
     expect(atlas.sourceTowns.length, 3078);

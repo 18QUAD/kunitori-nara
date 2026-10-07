@@ -299,15 +299,67 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       appBar: AppBar(
         backgroundColor: ink,
         titleSpacing: 24,
-        title: Tooltip(
-          message: location,
-          child: Text(
-            location,
-            key: const Key('current-location'),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+        toolbarHeight: 88,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Tooltip(
+                    message: location,
+                    child: Text(
+                      location,
+                      key: const Key('current-location'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                if (town != null) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '${number(g.progress[town.id] ?? 0)} / ${number(town.population)}',
+                    key: const Key('attack-progress'),
+                    style: const TextStyle(color: gold, fontSize: 13),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '市区町村 ${city == null ? "— / —" : "${g.cityTapsComplete ? number(g.cityTaps[city] ?? 0) : "不明"} / ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}"}',
+                      key: const Key('city-progress'),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      '都道府県 ${number(g.totalTaps)} / ${number(atlas!.towns.values.fold<int>(0, (sum, t) => sum + t.population))}',
+                      key: const Key('prefecture-progress'),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -518,13 +570,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          '${g.progress[town.id] ?? 0} / ${g.requiredTaps(town)} TAP',
-          key: const Key('attack-progress'),
-          style: const TextStyle(color: gold, fontSize: 14),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 6),
         LinearProgressIndicator(
           value: (g.progress[town.id] ?? 0) / g.requiredTaps(town),
           minHeight: 4,

@@ -92,6 +92,22 @@ void main() {
       timedTip,
     );
     expect(map.game.progress[target.id], 10);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('attack-progress'))).data,
+      startsWith('10 / '),
+    );
+    expect(
+      tester.widget<Text>(find.byKey(const Key('city-progress'))).data,
+      startsWith('市区町村 10 / '),
+    );
+    expect(
+      tester.widget<Text>(find.byKey(const Key('prefecture-progress'))).data,
+      '都道府県 10 / 1,324,473',
+    );
+    expect(
+      tester.getRect(find.byKey(const Key('attack-progress'))).bottom,
+      lessThan(fixed.top),
+    );
     expect(tester.getRect(find.byKey(const Key('fixed-region'))), fixed);
     await tester.tap(find.text('戦績'));
     await tester.pumpAndSettle();
@@ -120,6 +136,8 @@ void main() {
     await tester.scrollUntilVisible(find.text('大和への第一歩'), 150);
     expect(find.text('大和への第一歩'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('最初からやり直す'), 150);
+    await tester.ensureVisible(find.text('最初からやり直す'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('最初からやり直す'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('キャンセル'));

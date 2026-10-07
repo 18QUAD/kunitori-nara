@@ -290,6 +290,8 @@ class Game {
       everOwned = {},
       titles = {};
   final Map<String, int> progress = {};
+  final Map<String, int> cityTaps = {};
+  bool cityTapsComplete = true;
   int totalTaps = 0, wins = 0, losses = 0;
   Quiz? quiz;
   String message = '';
@@ -322,6 +324,8 @@ class Game {
   bool tap(String id, DateTime now) {
     if (!canAttack(id)) return false;
     totalTaps++;
+    final city = atlas.towns[id]!.cityId;
+    cityTaps[city] = (cityTaps[city] ?? 0) + 1;
     progress[id] = (progress[id] ?? 0) + 1;
     if (totalTaps >= 100) titles.add('百の足跡');
     if (totalTaps >= 1000) titles.add('千里の旅人');
@@ -415,6 +419,8 @@ class Game {
     'titles': titles.toList(),
     'progress': progress,
     'totalTaps': totalTaps,
+    'cityTaps': cityTaps,
+    'cityTapsComplete': cityTapsComplete,
     'wins': wins,
     'losses': losses,
     'quiz': quiz?.toJson(),
@@ -495,6 +501,15 @@ class Game {
       throw const FormatException('対応していないタップ方式です。');
     }
     g.totalTaps = j['totalTaps'] as int;
+    g.cityTapsComplete = j['cityTapsComplete'] as bool? ?? (g.totalTaps == 0);
+    if (j['cityTaps'] != null) {
+      g.cityTaps.addAll(Map<String, int>.from(j['cityTaps']));
+      if (g.cityTaps.entries.any(
+        (e) => !atlas.cities.containsKey(e.key) || e.value < 0,
+      )) {
+        throw const FormatException('市区町村のタップ数が不正です。');
+      }
+    }
     g.wins = j['wins'] as int;
     g.losses = j['losses'] as int;
     if (j['quiz'] != null) {
