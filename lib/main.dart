@@ -938,6 +938,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  const SelectableText(
+                    '起伏：国土地理院の標高タイルを加工して作成。約63m間隔の標高から陰影を生成しています。色は領土の状態、明暗は地形の起伏です。山のボタンで表示を切り替えられます。\nhttps://maps.gsi.go.jp/development/ichiran.html#dem',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.7,
+                      color: Colors.white54,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   const Text(
                     'このMVPの範囲',
                     style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),

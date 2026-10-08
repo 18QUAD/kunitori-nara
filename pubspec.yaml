@@ -59,6 +59,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/data/nara.json
+    - assets/data/nara_relief.png
+    - assets/data/nara_relief.json
     - assets/fonts/OFL.txt
   fonts:
     - family: NotoSansJP

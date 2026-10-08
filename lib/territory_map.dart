@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'game.dart';
+import 'relief.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -32,17 +33,47 @@ class _TerritoryMapState extends State<TerritoryMap> {
   late Map<String, Path> cityPaths;
   late Map<String, Rect> cityBounds;
   Size? viewport;
+  Relief? relief;
+  bool showRelief = true;
+  bool reliefFailed = false;
+  late Offset Function(math.Point<double>) project;
+  late Path prefecturePath;
+
+  Future<void> _loadRelief() async {
+    try {
+      final loaded = await Relief.load();
+      if (!mounted) {
+        loaded.image.dispose();
+        return;
+      }
+      setState(() => relief = loaded);
+    } catch (_) {
+      if (mounted) setState(() => reliefFailed = true);
+    }
+  }
+
+  Rect? get reliefBounds {
+    final data = relief;
+    if (data == null) return null;
+    return Rect.fromPoints(
+      project(math.Point(data.west, data.north)),
+      project(math.Point(data.east, data.south)),
+    );
+  }
+
   static const mapSize = Size(1100, 1500);
   @override
   void initState() {
     super.initState();
     _buildPaths();
     _buildCities();
+    _loadRelief();
   }
 
   @override
   void dispose() {
     controller.dispose();
+    relief?.image.dispose();
     super.dispose();
   }
 
@@ -63,8 +94,11 @@ class _TerritoryMapState extends State<TerritoryMap> {
     );
     final dx = (mapSize.width - (maxX - minX) * 0.826 * scale) / 2,
         dy = (mapSize.height - (maxY - minY) * scale) / 2;
-    Offset project(math.Point<double> p) =>
-        Offset(dx + (p.x - minX) * 0.826 * scale, dy + (maxY - p.y) * scale);
+    project =
+        (p) => Offset(
+          dx + (p.x - minX) * 0.826 * scale,
+          dy + (maxY - p.y) * scale,
+        );
     paths = {};
     bounds = {};
     for (final t in widget.atlas.towns.values) {
@@ -97,6 +131,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
       cityPaths[city.key] = outline;
       cityBounds[city.key] = outline.getBounds();
     }
+    prefecturePath = _union(cityPaths.values.toList());
   }
 
   Path _union(List<Path> parts) {
@@ -223,12 +258,37 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       widget.selected,
                       controller,
                       widget.cityId,
+                      showRelief ? relief : null,
+                      reliefBounds,
+                      widget.cityId == null
+                          ? prefecturePath
+                          : cityPaths[widget.cityId]!,
                     ),
                   ),
                 ),
               ),
             ),
           ),
+          if (showRelief)
+            Positioned(
+              left: 8,
+              right: 68,
+              bottom: 6,
+              child: IgnorePointer(
+                child: Text(
+                  reliefFailed
+                      ? '起伏を読み込めませんでした'
+                      : relief == null
+                      ? '起伏を読み込み中…'
+                      : '起伏：国土地理院の標高タイルを加工',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.white70,
+                    shadows: [Shadow(color: Colors.black, blurRadius: 3)],
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             right: 8,
             top: 8,
@@ -265,6 +325,30 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         ...widget.controls.expand(
                           (control) => [control, const SizedBox(height: 6)],
                         ),
+                        IconButton.filledTonal(
+                          tooltip:
+                              reliefFailed
+                                  ? '起伏を再読み込み'
+                                  : showRelief
+                                  ? '起伏を非表示'
+                                  : '起伏を表示',
+                          isSelected: showRelief && !reliefFailed,
+                          onPressed: () {
+                            if (reliefFailed) {
+                              setState(() => reliefFailed = false);
+                              _loadRelief();
+                            } else {
+                              setState(() => showRelief = !showRelief);
+                            }
+                          },
+                          icon: Icon(
+                            reliefFailed
+                                ? Icons.refresh
+                                : Icons.terrain_outlined,
+                          ),
+                          selectedIcon: const Icon(Icons.terrain),
+                        ),
+                        const SizedBox(height: 6),
                         IconButton.filledTonal(
                           tooltip: '拡大',
                           onPressed: () => _zoom(1.7),
@@ -321,6 +405,9 @@ class _MapPainter extends CustomPainter {
     this.selected,
     this.transform,
     this.cityId,
+    this.relief,
+    this.reliefBounds,
+    this.reliefClip,
   ) : super(repaint: transform);
   final TransformationController transform;
   final Map<String, Path> paths;
@@ -328,6 +415,9 @@ class _MapPainter extends CustomPainter {
   final Atlas atlas;
   final Game game;
   final String? selected, cityId;
+  final Relief? relief;
+  final Rect? reliefBounds;
+  final Path reliefClip;
   @override
   void paint(Canvas canvas, Size size) {
     final zoom = transform.value.getMaxScaleOnAxis();
@@ -366,6 +456,30 @@ class _MapPainter extends CustomPainter {
                   ? const Color(0xFFEEC47C)
                   : const Color(0xFF43616A),
       );
+    }
+    final terrain = relief;
+    final terrainRect = reliefBounds;
+    if (terrain != null && terrainRect != null) {
+      canvas.save();
+      canvas.clipPath(reliefClip);
+      canvas.drawImageRect(
+        terrain.image,
+        Rect.fromLTWH(
+          0,
+          0,
+          terrain.image.width.toDouble(),
+          terrain.image.height.toDouble(),
+        ),
+        terrainRect,
+        Paint()
+          ..blendMode = BlendMode.modulate
+          ..filterQuality = FilterQuality.medium,
+      );
+      canvas.restore();
+    }
+    // Borders, labels and selection remain above the terrain.
+    for (final e in paths.entries) {
+      if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
       canvas.drawPath(e.value, stroke);
       if (!overview && e.key == selected) {
         canvas.drawPath(
