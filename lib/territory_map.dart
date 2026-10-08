@@ -584,7 +584,13 @@ class _MapPainter extends CustomPainter {
         );
       }
     }
-    water?.paintLabels(canvas, reliefClip, zoom, occupiedLabels);
+    water?.paintLabels(
+      canvas,
+      reliefClip,
+      zoom,
+      occupiedLabels,
+      municipal: !overview,
+    );
     mountains?.paintLabels(canvas, reliefClip, zoom, occupiedLabels);
     if (game.home != null) {
       final town = atlas.towns[game.home]!;

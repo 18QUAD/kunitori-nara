@@ -1,10 +1,29 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show PictureRecorder;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/water.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  test('municipal names avoid town labels even below overview zoom cutoff', () {
+    final layer = WaterLayer(Path(), Path(), [
+      WaterLabel('初瀬川', const Offset(100, 100), detail: true),
+    ]);
+    final clip = Path()..addRect(const Rect.fromLTWH(0, 0, 300, 300));
+    final occupied = [const Rect.fromLTWH(95, 95, 10, 10)];
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    layer.paintLabels(canvas, clip, 0.5, occupied);
+    expect(occupied.length, 1);
+    layer.paintLabels(canvas, clip, 0.5, occupied, municipal: true);
+    expect(occupied.length, 2);
+    expect(occupied.last.overlaps(occupied.first), isFalse);
+    expect(clip.contains(occupied.last.center), isTrue);
+    recorder.endRecording().dispose();
+  });
+
   test(
     'water polygons preserve islands and use the supplied map projection',
     () {
@@ -55,6 +74,10 @@ void main() {
     expect(layer.rivers.getBounds().isEmpty, isFalse);
     final names = layer.labels.map((l) => l.name).toSet();
     expect(names, containsAll(['大和（初瀬）川', '吉野川', '十津川', '北山川', '池原貯水池']));
+    expect(
+      layer.labels.where((l) => l.detail).map((l) => l.name),
+      containsAll(['纒向川', '寺川', '粟原川']),
+    );
     final bounds = layer.areas.getBounds().expandToInclude(
       layer.rivers.getBounds(),
     );
