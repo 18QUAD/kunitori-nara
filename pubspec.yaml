@@ -61,6 +61,7 @@ flutter:
     - assets/data/nara.json
     - assets/data/nara_relief.png
     - assets/data/nara_relief.json
+    - assets/data/nara_water.json
     - assets/fonts/OFL.txt
   fonts:
     - family: NotoSansJP

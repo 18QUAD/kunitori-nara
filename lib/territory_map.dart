@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'game.dart';
 import 'relief.dart';
+import 'water.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -33,6 +34,19 @@ class _TerritoryMapState extends State<TerritoryMap> {
   late Map<String, Path> cityPaths;
   late Map<String, Rect> cityBounds;
   Size? viewport;
+  WaterLayer? water;
+  bool showWater = true;
+  bool waterFailed = false;
+
+  Future<void> _loadWater() async {
+    try {
+      final loaded = await WaterLayer.load(project);
+      if (mounted) setState(() => water = loaded);
+    } catch (_) {
+      if (mounted) setState(() => waterFailed = true);
+    }
+  }
+
   Relief? relief;
   bool showRelief = true;
   bool reliefFailed = false;
@@ -68,6 +82,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
     _buildPaths();
     _buildCities();
     _loadRelief();
+    _loadWater();
   }
 
   @override
@@ -259,6 +274,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       controller,
                       widget.cityId,
                       showRelief ? relief : null,
+                      showWater ? water : null,
                       reliefBounds,
                       widget.cityId == null
                           ? prefecturePath
@@ -269,23 +285,42 @@ class _TerritoryMapState extends State<TerritoryMap> {
               ),
             ),
           ),
-          if (showRelief)
+          if (showRelief || showWater)
             Positioned(
               left: 8,
               right: 68,
               bottom: 6,
               child: IgnorePointer(
-                child: Text(
-                  reliefFailed
-                      ? '起伏を読み込めませんでした'
-                      : relief == null
-                      ? '起伏を読み込み中…'
-                      : '起伏：国土地理院の標高タイルを加工',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.white70,
-                    shadows: [Shadow(color: Colors.black, blurRadius: 3)],
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (showRelief)
+                      Text(
+                        reliefFailed
+                            ? '起伏を読み込めませんでした'
+                            : relief == null
+                            ? '起伏を読み込み中…'
+                            : '起伏：国土地理院の標高タイルを加工',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white70,
+                          shadows: [Shadow(color: Colors.black, blurRadius: 3)],
+                        ),
+                      ),
+                    if (showWater)
+                      Text(
+                        waterFailed
+                            ? '川・湖を読み込めませんでした'
+                            : water == null
+                            ? '川・湖を読み込み中…'
+                            : '川・湖：国土地理院ベクトルタイル提供実験を加工',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white70,
+                          shadows: [Shadow(color: Colors.black, blurRadius: 3)],
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -350,6 +385,28 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         ),
                         const SizedBox(height: 6),
                         IconButton.filledTonal(
+                          tooltip:
+                              waterFailed
+                                  ? '川・湖を再読み込み'
+                                  : showWater
+                                  ? '川・湖を非表示'
+                                  : '川・湖を表示',
+                          isSelected: showWater && !waterFailed,
+                          onPressed: () {
+                            if (waterFailed) {
+                              setState(() => waterFailed = false);
+                              _loadWater();
+                            } else {
+                              setState(() => showWater = !showWater);
+                            }
+                          },
+                          icon: Icon(
+                            waterFailed ? Icons.refresh : Icons.water_outlined,
+                          ),
+                          selectedIcon: const Icon(Icons.water),
+                        ),
+                        const SizedBox(height: 6),
+                        IconButton.filledTonal(
                           tooltip: '拡大',
                           onPressed: () => _zoom(1.7),
                           icon: const Icon(Icons.add),
@@ -406,6 +463,7 @@ class _MapPainter extends CustomPainter {
     this.transform,
     this.cityId,
     this.relief,
+    this.water,
     this.reliefBounds,
     this.reliefClip,
   ) : super(repaint: transform);
@@ -416,6 +474,7 @@ class _MapPainter extends CustomPainter {
   final Game game;
   final String? selected, cityId;
   final Relief? relief;
+  final WaterLayer? water;
   final Rect? reliefBounds;
   final Path reliefClip;
   @override
@@ -477,7 +536,9 @@ class _MapPainter extends CustomPainter {
       );
       canvas.restore();
     }
-    // Borders, labels and selection remain above the terrain.
+    water?.paint(canvas, reliefClip, zoom);
+    final occupiedLabels = <Rect>[];
+    // Borders, labels and selection remain above the terrain and water.
     for (final e in paths.entries) {
       if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
       canvas.drawPath(e.value, stroke);
@@ -504,12 +565,20 @@ class _MapPainter extends CustomPainter {
       if (overview ||
           e.key == selected ||
           (label.width < box.width && label.height < box.height)) {
+        occupiedLabels.add(
+          Rect.fromCenter(
+            center: box.center,
+            width: label.width + 4 / zoom,
+            height: label.height + 4 / zoom,
+          ),
+        );
         label.paint(
           canvas,
           box.center - Offset(label.width / 2, label.height / 2),
         );
       }
     }
+    water?.paintLabels(canvas, reliefClip, zoom, occupiedLabels);
     if (game.home != null) {
       final town = atlas.towns[game.home]!;
       if (overview || town.cityId == cityId) {
