@@ -35,7 +35,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
   late Map<String, Rect> cityBounds;
   Size? viewport;
   WaterLayer? water;
-  bool showWater = true;
+  bool showGeography = true;
   bool waterFailed = false;
 
   Future<void> _loadWater() async {
@@ -48,7 +48,6 @@ class _TerritoryMapState extends State<TerritoryMap> {
   }
 
   Relief? relief;
-  bool showRelief = true;
   bool reliefFailed = false;
   late Offset Function(math.Point<double>) project;
   late Path prefecturePath;
@@ -273,8 +272,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       widget.selected,
                       controller,
                       widget.cityId,
-                      showRelief ? relief : null,
-                      showWater ? water : null,
+                      showGeography ? relief : null,
+                      showGeography ? water : null,
                       reliefBounds,
                       widget.cityId == null
                           ? prefecturePath
@@ -285,7 +284,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
               ),
             ),
           ),
-          if (showRelief || showWater)
+          if (showGeography)
             Positioned(
               left: 8,
               right: 68,
@@ -294,32 +293,30 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (showRelief)
-                      Text(
-                        reliefFailed
-                            ? '起伏を読み込めませんでした'
-                            : relief == null
-                            ? '起伏を読み込み中…'
-                            : '起伏：国土地理院の標高タイルを加工',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.white70,
-                          shadows: [Shadow(color: Colors.black, blurRadius: 3)],
-                        ),
+                    Text(
+                      reliefFailed
+                          ? '起伏を読み込めませんでした'
+                          : relief == null
+                          ? '起伏を読み込み中…'
+                          : '起伏：国土地理院の標高タイルを加工',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.white70,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 3)],
                       ),
-                    if (showWater)
-                      Text(
-                        waterFailed
-                            ? '川・湖を読み込めませんでした'
-                            : water == null
-                            ? '川・湖を読み込み中…'
-                            : '川・湖：国土地理院ベクトルタイル提供実験を加工',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.white70,
-                          shadows: [Shadow(color: Colors.black, blurRadius: 3)],
-                        ),
+                    ),
+                    Text(
+                      waterFailed
+                          ? '川・湖を読み込めませんでした'
+                          : water == null
+                          ? '川・湖を読み込み中…'
+                          : '川・湖：国土地理院ベクトルタイル提供実験を加工',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.white70,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 3)],
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -362,48 +359,22 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         ),
                         IconButton.filledTonal(
                           tooltip:
-                              reliefFailed
-                                  ? '起伏を再読み込み'
-                                  : showRelief
-                                  ? '起伏を非表示'
-                                  : '起伏を表示',
-                          isSelected: showRelief && !reliefFailed,
+                              showGeography ? '起伏・川・池・湖を非表示' : '起伏・川・池・湖を表示',
+                          isSelected: showGeography,
                           onPressed: () {
-                            if (reliefFailed) {
+                            setState(() => showGeography = !showGeography);
+                            // Retry failed layers when the shared overlay is enabled.
+                            if (showGeography && reliefFailed) {
                               setState(() => reliefFailed = false);
                               _loadRelief();
-                            } else {
-                              setState(() => showRelief = !showRelief);
                             }
-                          },
-                          icon: Icon(
-                            reliefFailed
-                                ? Icons.refresh
-                                : Icons.terrain_outlined,
-                          ),
-                          selectedIcon: const Icon(Icons.terrain),
-                        ),
-                        const SizedBox(height: 6),
-                        IconButton.filledTonal(
-                          tooltip:
-                              waterFailed
-                                  ? '川・湖を再読み込み'
-                                  : showWater
-                                  ? '川・湖を非表示'
-                                  : '川・湖を表示',
-                          isSelected: showWater && !waterFailed,
-                          onPressed: () {
-                            if (waterFailed) {
+                            if (showGeography && waterFailed) {
                               setState(() => waterFailed = false);
                               _loadWater();
-                            } else {
-                              setState(() => showWater = !showWater);
                             }
                           },
-                          icon: Icon(
-                            waterFailed ? Icons.refresh : Icons.water_outlined,
-                          ),
-                          selectedIcon: const Icon(Icons.water),
+                          icon: const Icon(Icons.terrain_outlined),
+                          selectedIcon: const Icon(Icons.terrain),
                         ),
                         const SizedBox(height: 6),
                         IconButton.filledTonal(

@@ -7,7 +7,7 @@ import 'package:kunitori/game.dart';
 import 'package:kunitori/territory_map.dart';
 
 void main() {
-  testWidgets('GSI layers load and toggle independently without moving map', (
+  testWidgets('GSI layers load and toggle together without moving map', (
     tester,
   ) async {
     final atlas = Atlas.fromJson(
@@ -46,13 +46,6 @@ void main() {
     expect(withRelief.relief, isNotNull);
     expect(withRelief.water, isNotNull);
     final originalWater = withRelief.water;
-    await tester.tap(find.byTooltip('川・湖を非表示'));
-    await tester.pumpAndSettle();
-    expect(painter().water, isNull);
-    expect(painter().relief, same(withRelief.relief));
-    await tester.tap(find.byTooltip('川・湖を表示'));
-    await tester.pumpAndSettle();
-    expect(painter().water, same(originalWater));
     final Rect terrainRect = withRelief.reliefBounds;
     for (final Rect box in (withRelief.bounds as Map<String, Rect>).values) {
       expect(terrainRect.contains(box.topLeft), isTrue);
@@ -61,14 +54,15 @@ void main() {
     final originalTransform = Matrix4.copy(
       viewer.transformationController!.value,
     );
-    await tester.tap(find.byTooltip('起伏を非表示'));
+    await tester.tap(find.byTooltip('起伏・川・池・湖を非表示'));
     await tester.pumpAndSettle();
     expect(painter().relief, isNull);
-    expect(painter().water, same(originalWater));
+    expect(painter().water, isNull);
     expect(viewer.transformationController!.value, originalTransform);
-    await tester.tap(find.byTooltip('起伏を表示'));
+    await tester.tap(find.byTooltip('起伏・川・池・湖を表示'));
     await tester.pumpAndSettle();
     expect(painter().relief, same(withRelief.relief));
+    expect(painter().water, same(originalWater));
     expect(game.owned, isEmpty);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
