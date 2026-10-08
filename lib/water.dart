@@ -64,12 +64,12 @@ class WaterLayer {
     ]);
   }
 
-  void paint(Canvas canvas, Path clip, double zoom) {
+  void paint(Canvas canvas, Path clip, double zoom, {bool municipal = false}) {
     canvas.save();
     canvas.clipPath(clip);
-    final detail = (zoom / 0.65).clamp(0.5, 1.0);
+    final detail = (zoom / 0.65).clamp(0.5, 1.0) * (municipal ? 1.0 : 0.6);
     // River centerlines and narrow water polygons share a minimum screen width
-    // in both prefectural and municipal maps.
+    // in both maps. Prefectural views use thinner strokes for their denser network.
     for (final path in [areas, rivers]) {
       canvas.drawPath(
         path,

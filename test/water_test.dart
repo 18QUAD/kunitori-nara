@@ -30,6 +30,7 @@ void main() {
             canvas,
             Path()..addRect(Rect.fromLTWH(0, 0, 40 / zoom, 40 / zoom)),
             zoom,
+            municipal: true,
           );
           final picture = recorder.endRecording();
           final image = await picture.toImage(40, 40);
