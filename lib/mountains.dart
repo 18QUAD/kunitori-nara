@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'map_label.dart';
 
 class MountainLabel {
   MountainLabel(this.name, this.point);
@@ -77,9 +78,8 @@ class MountainLayer {
           style: TextStyle(
             fontFamily: 'NotoSansJP',
             fontSize: 11 / zoom,
-            color: const Color(0xFFFFDE9A),
+            color: const Color(0xFFFFF1C2),
             fontWeight: FontWeight.bold,
-            shadows: const [Shadow(color: Color(0xFF102A32), blurRadius: 3)],
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -91,7 +91,12 @@ class MountainLayer {
       );
       if (occupied.any((r) => r.overlaps(rect))) continue;
       occupied.add(rect);
-      text.paint(canvas, label.point - Offset(text.width / 2, text.height / 2));
+      paintMapLabel(
+        canvas,
+        text,
+        label.point - Offset(text.width / 2, text.height / 2),
+        zoom,
+      );
     }
   }
 }

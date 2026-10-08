@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'map_label.dart';
 
 class WaterLabel {
   WaterLabel(this.name, this.point, {this.detail = false});
@@ -102,9 +103,8 @@ class WaterLayer {
           style: TextStyle(
             fontFamily: 'NotoSansJP',
             fontSize: 11 / zoom,
-            color: const Color(0xFF8EDBFF),
+            color: const Color(0xFFBDEEFF),
             fontWeight: FontWeight.bold,
-            shadows: const [Shadow(color: Color(0xFF102A32), blurRadius: 3)],
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -132,7 +132,12 @@ class WaterLayer {
         }
         occupied.add(rect);
         placed.putIfAbsent(label.name, () => []).add(center);
-        text.paint(canvas, center - Offset(text.width / 2, text.height / 2));
+        paintMapLabel(
+          canvas,
+          text,
+          center - Offset(text.width / 2, text.height / 2),
+          zoom,
+        );
         break;
       }
     }
