@@ -76,7 +76,7 @@ class WaterLayer {
         Paint()
           ..color = const Color(0xFF123D59)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.5 * detail / zoom
+          ..strokeWidth = 2.5 * detail / zoom
           ..strokeJoin = StrokeJoin.round
           ..strokeCap = StrokeCap.round,
       );
@@ -86,7 +86,7 @@ class WaterLayer {
       Paint()
         ..color = const Color(0xFF79D9FF)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2 * detail / zoom
+        ..strokeWidth = 1.5 * detail / zoom
         ..strokeJoin = StrokeJoin.round,
     );
     canvas.drawPath(areas, Paint()..color = const Color(0xFF79D9FF));
@@ -95,7 +95,7 @@ class WaterLayer {
       Paint()
         ..color = const Color(0xFF79D9FF)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2 * detail / zoom
+        ..strokeWidth = 1.5 * detail / zoom
         ..strokeJoin = StrokeJoin.round
         ..strokeCap = StrokeCap.round,
     );
