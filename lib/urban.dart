@@ -7,7 +7,9 @@ import 'package:flutter/services.dart';
 class UrbanLayer {
   UrbanLayer(this.areas);
   final Path areas;
-  static const color = Color(0x85F3B7CC);
+  // Cool lavender stays distinct from the warm gold used for reachable land.
+  static const legendColor = Color(0xFFB6A0F5);
+  static const color = Color(0x85B6A0F5);
 
   static Future<UrbanLayer> load(
     Offset Function(math.Point<double>) project,

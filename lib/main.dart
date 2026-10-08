@@ -957,7 +957,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '市街地：国土交通省 国土数値情報「土地利用細分メッシュ」（2021年）の建物用地（0700）を抽出・結合し、奈良県境で切り抜いて薄ピンクで表示しています。約100mメッシュの住宅・商業施設・工場などを含む分類で、人口集中地区（DID）とは異なります。\nhttps://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-L03-b-v3_1.html',
+                    '市街地：国土交通省 国土数値情報「土地利用細分メッシュ」（2021年）の建物用地（0700）を抽出・結合し、奈良県境で切り抜いて淡い青紫で表示しています。約100mメッシュの住宅・商業施設・工場などを含む分類で、人口集中地区（DID）とは異なります。\nhttps://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-L03-b-v3_1.html',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,

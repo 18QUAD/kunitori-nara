@@ -351,7 +351,10 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       ),
                     const Text(
                       '■ 市街地（建物用地）',
-                      style: TextStyle(fontSize: 10, color: Color(0xFFF3B7CC)),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: UrbanLayer.legendColor,
+                      ),
                     ),
                     if (urbanFailed || urban == null)
                       Text(
