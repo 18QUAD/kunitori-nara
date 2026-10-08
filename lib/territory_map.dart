@@ -32,6 +32,7 @@ class TerritoryMap extends StatefulWidget {
 class _TerritoryMapState extends State<TerritoryMap> {
   final controller = TransformationController();
   late Map<String, Path> paths;
+  late Map<String, Path> townOutlines;
   late Map<String, Rect> bounds;
   late Map<String, Path> cityPaths;
   late Map<String, Path> cityOutlines;
@@ -130,6 +131,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
           dy + (maxY - p.y) * scale,
         );
     paths = {};
+    townOutlines = {};
     bounds = {};
     for (final t in widget.atlas.towns.values) {
       final parts = <Path>[];
@@ -149,6 +151,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
       }
       final path = _union(parts);
       paths[t.id] = path;
+      townOutlines[t.id] = exteriorOutline(path);
       bounds[t.id] = path.getBounds();
     }
   }
@@ -284,7 +287,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                   child: CustomPaint(
                     painter: _MapPainter(
                       widget.cityId == null ? cityPaths : paths,
-                      widget.cityId == null ? cityOutlines : paths,
+                      widget.cityId == null ? cityOutlines : townOutlines,
                       widget.cityId == null ? cityBounds : bounds,
                       widget.atlas,
                       widget.game,

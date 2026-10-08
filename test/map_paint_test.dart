@@ -85,7 +85,12 @@ void main() {
       final atlas = Atlas.fromJson(
         jsonDecode(File('assets/data/nara.json').readAsStringSync()),
       );
-      final towns = atlas.byCity.values.first.take(3).toList();
+      final city = atlas.cities.entries.firstWhere((e) => e.value == '桜井市').key;
+      final sakurai = atlas.byCity[city]!.firstWhere((t) => t.name == '桜井');
+      final towns = [
+        sakurai,
+        ...atlas.byCity[city]!.where((t) => t.id != sakurai.id).take(2),
+      ];
       final game = Game(atlas)..attackTarget = towns[1].id;
       await tester.pumpWidget(
         MaterialApp(
@@ -107,12 +112,19 @@ void main() {
       final canvasWidget = detector.child as SizedBox;
       final dynamic painter = (canvasWidget.child as CustomPaint).painter;
       final paths = painter.paths as Map<String, Path>;
+      final outlines = painter.outlines as Map<String, Path>;
       final bounds = painter.bounds as Map<String, Rect>;
+      // The selected town in the reported screenshot has internal gap contours.
+      expect(paths[sakurai.id]!.computeMetrics().length, greaterThan(1));
+      expect(outlines[sakurai.id]!.computeMetrics().length, 1);
+      expect(outlines[sakurai.id]!.getBounds(), paths[sakurai.id]!.getBounds());
       paths.clear();
+      outlines.clear();
       bounds.clear();
       for (var i = 0; i < 3; i++) {
         final rect = Rect.fromLTWH(i * 100.0, 0, 100, 100);
         paths[towns[i].id] = Path()..addRect(rect);
+        outlines[towns[i].id] = Path()..addRect(rect);
         bounds[towns[i].id] = rect;
       }
       viewer.transformationController!.value = Matrix4.identity();
