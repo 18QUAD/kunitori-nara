@@ -82510,7 +82510,7 @@ b6.P(0,o.h(0,m==null?n.a(m):m).f)}b6.UP(r)
 l=$.a2().aT()
 l.sdN(B.aO)
 l.sac(B.k)
-l.seg(1/b2)
+l.seg(0.5/b2)
 for(q=b0.c,n=A.j(q).i("bR<1,2>"),m=new A.bR(q,n).ga3(0),k=!b4,j=b6.git(b6),i=t.s,h=p.f;m.t();){g=m.d
 g.toString
 if(k&&o.h(0,g.a).c!==b3)continue
@@ -82598,7 +82598,7 @@ b7.jN(a5,2/b2,r)}}a6=A.ag(b5)
 for(b5=[h,s.e],a7=0;a7<2;++a7){a8=o.h(0,b5[a7])
 if(a8==null)continue
 if(b4)a6.F(0,a8.c)
-else if(a8.c===b3)a6.F(0,a8.a)}for(b3=A.bV(a6,a6.r,a6.$ti.c),b5=3/b2,s=b3.$ti.c;b3.t();){r=b3.d
+else if(a8.c===b3)a6.F(0,a8.a)}for(b3=A.bV(a6,a6.r,a6.$ti.c),b5=2/b2,s=b3.$ti.c;b3.t();){r=b3.d
 a9=q.h(0,r==null?s.a(r):r)
 if(a9==null)continue
 r=$.a2().aT()
