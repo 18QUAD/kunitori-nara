@@ -75,12 +75,29 @@ python tools/import_nara.py
 原本は`data/raw/`にキャッシュ（Git対象外）。生成レポートは`assets/data/import_report.json`。
 地図データと日本語フォントは同梱し、Androidではネット接続不要。
 
-地域tipsには、20市町村の公式資料から整理した人口以外の90件を収録しています。
-攻略中の町がある場合は、その市町村の情報を優先し、続いて県共通の情報を表示します。
+地域tipsには、全39市町村に各30件、計1,170件を収録しています。
+自治体公式資料の既存90件を残し、日本語版Wikipediaの57記事から要約・編集した1,080件を追加しました。
+攻略中の町がある場合は、その市町村の情報を優先し、続いて既存の文化・県共通の情報を表示します。
 攻略中でない場合は選択した町・市町村（未選択なら本拠地）の情報を表示します。
-人口関係の情報はtipsに表示しません。旧保存・クイズとの互換性のため既存の情報IDは保持しています。
-追加90件は閲覧用で、クイズには既存の設問付き情報を使用します。
-出典URLは `lib/regional_tips.dart` の各項目に記録しています。全39市町村の記事を網羅する段階ではありません。
+tipsをタップすると全文・出典を表示し、確認中は自動切替を停止します。
+人口関係の情報はtipsに表示しません。既存の情報ID・保存データを保持しています。
+地域tipsは閲覧用で、クイズには既存の設問付き情報を使用します。
+
+Wikipedia由来のtipsは、日本語版Wikipediaの各記事の執筆者による内容を要約・編集したもので、
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)に従って提供します。
+各tipsの出典は参照した記事の固定版URLで、記事の履歴から執筆者を確認できます。
+出典一覧・取得日・取得HTMLのSHA-256は `data/tips/wikipedia_sources.json`、編集原稿は `data/tips/wikipedia.tsv` に記録しています。
+公式資料の出典は `lib/regional_tips.dart`、Wikipediaの出典は `lib/wikipedia_tips.dart` の各項目にあります。
+Wikipedia取得日は2026年10月8日（UTC）。伝承・諸説は断定せず、営業情報・人口など変動しやすい内容を避けています。
+記事や関連記事を読み、短文として個別に編集したデータを同梱するため、プレイ中のネット接続は不要です。
+
+原稿変更後の生成・検証：
+
+```sh
+python tools/import_wikipedia_tips.py
+dart format lib/wikipedia_tips.dart
+python tools/import_wikipedia_tips.py --check
+```
 
 - [奈良県・商工業](https://www.pref.nara.lg.jp/n002/1360.html)
 - [文化庁・法隆寺地域の仏教建造物](https://kunishitei.bunka.go.jp/heritage/detail/911/1)

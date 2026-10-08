@@ -1,3 +1,5 @@
+import 'wikipedia_tips.dart';
+
 // Regional tips reviewed against official municipal pages; sources below.
 // Population information is excluded.
 const regionalTips = <Map<String, String>>[
@@ -649,4 +651,5 @@ const regionalTips = <Map<String, String>>[
     "source":
         "https://www.city.sakurai.lg.jp/sosiki/koushitsu/gyouseikeieika/shinogaiyou/public/1391655115302.html",
   },
+  ...wikipediaTips,
 ];

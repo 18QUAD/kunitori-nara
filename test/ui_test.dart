@@ -95,6 +95,28 @@ void main() {
     await tester.tap(find.text('ここを本拠地にする'));
     await tester.pumpAndSettle();
     expect(find.text('この地域はあなたの領土です'), findsOneWidget);
+    final displayedTip =
+        tester.widget<Text>(find.byKey(const Key('tip-text'))).data!;
+    await tester.tap(find.byKey(const Key('tip-details-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('tip-details-dialog')), findsOneWidget);
+    expect(find.widgetWithText(SelectableText, displayedTip), findsOneWidget);
+    final source =
+        tester
+            .widget<SelectableText>(find.byKey(const Key('tip-source')))
+            .data!;
+    expect(Uri.parse(source).host, 'ja.wikipedia.org');
+    expect(Uri.parse(source).queryParameters['oldid'], isNotEmpty);
+    expect(find.textContaining('CC BY-SA 4.0'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 10));
+    expect(
+      tester.widget<Text>(find.byKey(const Key('tip-text'))).data,
+      displayedTip,
+    );
+    await tester.tap(find.widgetWithText(TextButton, '閉じる'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('tip-details-dialog')), findsNothing);
+    expect(tester.takeException(), isNull);
     final homeTown =
         tester
             .widget<TerritoryMap>(find.byType(TerritoryMap))

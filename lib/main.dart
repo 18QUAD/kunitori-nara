@@ -539,8 +539,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Widget _controls() {
+    final fact = visibleFact;
     final tip =
-        visibleFact?.text ??
+        fact?.text ??
         (cityFilter == null ? '市区町村を選び、次に町から本拠地を選びましょう。' : '町を選んで本拠地を決めましょう。');
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -551,16 +552,34 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             height: 44,
             width: double.infinity,
             child: Tooltip(
-              message: tip,
-              child: Text(
-                tip,
-                key: const Key('tip-text'),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
-                  color: Colors.white,
+              message: fact == null ? tip : 'タップで全文と出典を表示',
+              child: InkWell(
+                key: const Key('tip-details-button'),
+                onTap: fact == null ? null : () => _showTipDetails(fact),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        tip,
+                        key: const Key('tip-text'),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    if (fact != null) ...[
+                      const SizedBox(width: 6),
+                      const Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: Colors.white54,
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
@@ -570,6 +589,56 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         ],
       ),
     );
+  }
+
+  Future<void> _showTipDetails(LocalFact fact) async {
+    tipsTimer?.cancel();
+    final source = Uri.tryParse(fact.source);
+    final wikipedia = source?.host == 'ja.wikipedia.org';
+    final title = source?.queryParameters['title']?.replaceAll('_', ' ');
+    try {
+      await showDialog<void>(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              key: const Key('tip-details-dialog'),
+              scrollable: true,
+              title: Text('${atlas!.cities[fact.cityId]}・${fact.category}'),
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SelectableText(
+                    fact.text,
+                    style: const TextStyle(height: 1.7),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(wikipedia ? '出典：Wikipedia「$title」の執筆者' : '出典'),
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    fact.source,
+                    key: const Key('tip-source'),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  if (wikipedia) ...[
+                    const SizedBox(height: 12),
+                    const SelectableText(
+                      '記事をアプリ向けに要約・編集しています。\nCC BY-SA 4.0\nhttps://creativecommons.org/licenses/by-sa/4.0/\n出典は参照した版へのURLです。記事の履歴から執筆者を確認できます。',
+                      style: TextStyle(fontSize: 12, height: 1.6),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('閉じる'),
+                ),
+              ],
+            ),
+      );
+    } finally {
+      if (mounted) _startTipsTimer();
+    }
   }
 
   Widget _actionPanel() {
@@ -1016,6 +1085,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
+                  const SelectableText(
+                    '地域tips：全39市町村に各30件。自治体公式資料の90件に、日本語版Wikipediaの各記事の執筆者による内容を要約・編集した1,080件を追加しています。tipsをタップすると全文と個別の出典を確認できます。\nWikipedia由来のtips：CC BY-SA 4.0\nhttps://creativecommons.org/licenses/by-sa/4.0/',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.7,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   const Text(
                     '奈良県39市町村。2020年国勢調査の3,078町丁字を、丁目・小字をまとめた町・大字単位に統合しています。人口・面積を合算し、統合後の隣接関係を使います。描画用境界のみ簡略化しています。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
