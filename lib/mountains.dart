@@ -10,10 +10,11 @@ class MountainLabel {
   final Offset point;
 }
 
-/// GSI mountain annotation positions; these do not represent surveyed summits.
+/// Annotation positions and independently sourced summit coordinates.
 class MountainLayer {
-  MountainLayer(this.labels);
+  MountainLayer(this.labels, {this.summits = const []});
   final List<MountainLabel> labels;
+  final List<MountainLabel> summits;
   static const overviewNames = [
     '八経ヶ岳',
     '大台ヶ原山',
@@ -65,10 +66,48 @@ class MountainLayer {
       final order = priority(a).compareTo(priority(b));
       return order == 0 ? a.name.compareTo(b.name) : order;
     });
-    return MountainLayer(labels);
+    return MountainLayer(
+      labels,
+      summits: [
+        for (final s in (json['summits'] as List? ?? const []))
+          MountainLabel(
+            s['name'] as String,
+            project(
+              math.Point(
+                (s['point'][0] as num).toDouble(),
+                (s['point'][1] as num).toDouble(),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   void paintLabels(Canvas canvas, Path clip, double zoom, List<Rect> occupied) {
+    // Never infer a summit from a cartographic label position.
+    canvas.save();
+    canvas.clipPath(clip);
+    for (final summit in summits) {
+      if (!clip.contains(summit.point)) continue;
+      final p = summit.point;
+      final marker =
+          Path()
+            ..moveTo(p.dx, p.dy - 5 / zoom)
+            ..lineTo(p.dx + 4.5 / zoom, p.dy + 3.5 / zoom)
+            ..lineTo(p.dx - 4.5 / zoom, p.dy + 3.5 / zoom)
+            ..close();
+      canvas.drawPath(marker, Paint()..color = const Color(0xFFFFF1C2));
+      canvas.drawPath(
+        marker,
+        Paint()
+          ..color = const Color(0xFF101C2B)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5 / zoom
+          ..strokeJoin = StrokeJoin.round,
+      );
+      occupied.add(marker.getBounds().inflate(2 / zoom));
+    }
+    canvas.restore();
     for (final label in labels) {
       if (zoom < 0.65 && !overviewNames.contains(label.name)) continue;
       if (!clip.contains(label.point)) continue;
@@ -84,19 +123,31 @@ class MountainLayer {
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      final rect = Rect.fromCenter(
-        center: label.point,
-        width: text.width + 8 / zoom,
-        height: text.height + 4 / zoom,
-      );
-      if (occupied.any((r) => r.overlaps(rect))) continue;
-      occupied.add(rect);
-      paintMapLabel(
-        canvas,
-        text,
-        label.point - Offset(text.width / 2, text.height / 2),
-        zoom,
-      );
+      // Move only the text when a summit or another label occupies its anchor.
+      for (final offset in [
+        Offset.zero,
+        Offset(0, -(text.height / 2 + 10 / zoom)),
+        Offset(0, text.height / 2 + 10 / zoom),
+        Offset(text.width / 2 + 10 / zoom, 0),
+        Offset(-(text.width / 2 + 10 / zoom), 0),
+      ]) {
+        final center = label.point + offset;
+        if (!clip.contains(center)) continue;
+        final rect = Rect.fromCenter(
+          center: center,
+          width: text.width + 8 / zoom,
+          height: text.height + 4 / zoom,
+        );
+        if (occupied.any((r) => r.overlaps(rect))) continue;
+        occupied.add(rect);
+        paintMapLabel(
+          canvas,
+          text,
+          center - Offset(text.width / 2, text.height / 2),
+          zoom,
+        );
+        break;
+      }
     }
   }
 }

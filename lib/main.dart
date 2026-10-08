@@ -948,7 +948,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '川・湖・山名：国土地理院ベクトルタイル提供実験を加工して作成（提供元の更新情報：2026年7月1日時点）。地表の河川・水路、湖・貯水池を青色で表示し、拡大すると川名を表示します。起伏と共通の山のボタンで切り替えられます。山名も同じデータの注記から取得し、淡い黄色で表示します。地下水路・枯れ川は含みません。\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment',
+                    '川・湖・山名：国土地理院ベクトルタイル提供実験を加工して作成（提供元の更新情報：2026年7月1日時点）。地表の河川・水路、湖・貯水池を青色で表示し、拡大すると川名を表示します。起伏と共通の山のボタンで切り替えられます。山名も同じデータの注記から取得し、淡い黄色で表示します。山頂▲は国土地理院「日本の主な山岳」の公式座標から、同梱の奈良県境界内にある25地点を表示します。県境付近で境界外となる山や未収録の山には▲を表示しません。地下水路・枯れ川は含みません。\nhttps://maps.gsi.go.jp/overlay/mount1003/mount1003.geojson\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
