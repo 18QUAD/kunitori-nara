@@ -64,16 +64,28 @@ class WaterLayer {
     ]);
   }
 
-  void paint(Canvas canvas, Path clip, double zoom) {
+  void paint(Canvas canvas, Path clip, double zoom, {bool municipal = false}) {
     canvas.save();
     canvas.clipPath(clip);
     canvas.drawPath(areas, Paint()..color = const Color(0xFF53B8E6));
+    if (municipal) {
+      // A dark casing separates water from green/gold territories and relief.
+      canvas.drawPath(
+        rivers,
+        Paint()
+          ..color = const Color(0xFF16465B)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3.8 / zoom
+          ..strokeJoin = StrokeJoin.round
+          ..strokeCap = StrokeCap.round,
+      );
+    }
     canvas.drawPath(
       rivers,
       Paint()
-        ..color = const Color(0xFF71C9EE)
+        ..color = municipal ? const Color(0xFF8ADFFF) : const Color(0xFF71C9EE)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = (zoom < 0.5 ? 0.65 : 1.1) / zoom
+        ..strokeWidth = (municipal ? 2.2 : (zoom < 0.5 ? 0.65 : 1.1)) / zoom
         ..strokeJoin = StrokeJoin.round
         ..strokeCap = StrokeCap.round,
     );
