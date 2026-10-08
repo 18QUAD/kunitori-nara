@@ -543,7 +543,7 @@ class _MapPainter extends CustomPainter {
       );
       canvas.restore();
     }
-    water?.paint(canvas, reliefClip, zoom, municipal: !overview);
+    water?.paint(canvas, reliefClip, zoom);
     final occupiedLabels = <Rect>[];
     // Borders, labels and selection remain above the terrain and water.
     for (final e in paths.entries) {

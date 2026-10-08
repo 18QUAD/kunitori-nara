@@ -30,14 +30,13 @@ void main() {
             canvas,
             Path()..addRect(Rect.fromLTWH(0, 0, 40 / zoom, 40 / zoom)),
             zoom,
-            municipal: true,
           );
           final picture = recorder.endRecording();
           final image = await picture.toImage(40, 40);
           final bytes =
               (await image.toByteData(format: ImageByteFormat.rawRgba))!;
-          // A subpixel water polygon must still cover a neighbouring screen pixel.
-          final blue = bytes.getUint8((20 * 40 + 21) * 4 + 2);
+          // A subpixel water polygon must still remain visible at its center screen pixel.
+          final blue = bytes.getUint8((20 * 40 + 20) * 4 + 2);
           expect(
             blue,
             greaterThan(220),

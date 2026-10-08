@@ -64,43 +64,38 @@ class WaterLayer {
     ]);
   }
 
-  void paint(Canvas canvas, Path clip, double zoom, {bool municipal = false}) {
+  void paint(Canvas canvas, Path clip, double zoom) {
     canvas.save();
     canvas.clipPath(clip);
-    if (municipal) {
-      // Many rivers are narrow water polygons rather than centerlines.
-      // Give both geometries a minimum screen width, including when zoomed out.
-      for (final path in [areas, rivers]) {
-        canvas.drawPath(
-          path,
-          Paint()
-            ..color = const Color(0xFF123D59)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 5 / zoom
-            ..strokeJoin = StrokeJoin.round
-            ..strokeCap = StrokeCap.round,
-        );
-      }
+    final detail = (zoom / 0.65).clamp(0.5, 1.0);
+    // River centerlines and narrow water polygons share a minimum screen width
+    // in both prefectural and municipal maps.
+    for (final path in [areas, rivers]) {
       canvas.drawPath(
-        areas,
+        path,
         Paint()
-          ..color = const Color(0xFF79D9FF)
+          ..color = const Color(0xFF123D59)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3 / zoom
-          ..strokeJoin = StrokeJoin.round,
+          ..strokeWidth = 3.5 * detail / zoom
+          ..strokeJoin = StrokeJoin.round
+          ..strokeCap = StrokeCap.round,
       );
     }
     canvas.drawPath(
       areas,
       Paint()
-        ..color = municipal ? const Color(0xFF79D9FF) : const Color(0xFF53B8E6),
+        ..color = const Color(0xFF79D9FF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2 * detail / zoom
+        ..strokeJoin = StrokeJoin.round,
     );
+    canvas.drawPath(areas, Paint()..color = const Color(0xFF79D9FF));
     canvas.drawPath(
       rivers,
       Paint()
-        ..color = municipal ? const Color(0xFF79D9FF) : const Color(0xFF71C9EE)
+        ..color = const Color(0xFF79D9FF)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = (municipal ? 3 : (zoom < 0.5 ? 0.65 : 1.1)) / zoom
+        ..strokeWidth = 2 * detail / zoom
         ..strokeJoin = StrokeJoin.round
         ..strokeCap = StrokeCap.round,
     );
