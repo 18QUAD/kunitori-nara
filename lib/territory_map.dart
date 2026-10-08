@@ -492,7 +492,7 @@ class _MapPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..color = Colors.white
-          ..strokeWidth = 1 / zoom;
+          ..strokeWidth = 0.5 / zoom;
     for (final e in paths.entries) {
       if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
       final ids = overview ? atlas.byCity[e.key]!.map((t) => t.id) : [e.key];
@@ -612,7 +612,7 @@ class _MapPainter extends CustomPainter {
         path,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3 / zoom
+          ..strokeWidth = 2 / zoom
           ..color = const Color(0xFFFF3B30),
       );
     }

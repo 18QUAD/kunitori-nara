@@ -109,23 +109,25 @@ void main() {
       }
       viewer.transformationController!.value = Matrix4.identity();
       final recorder = ui.PictureRecorder();
-      painter.paint(Canvas(recorder), const Size(300, 100));
+      // Render at 4x so subpixel white borders have fully covered pixels.
+      painter.paint(Canvas(recorder)..scale(4), const Size(300, 100));
       final picture = recorder.endRecording();
       await tester.runAsync(() async {
-        final image = await picture.toImage(300, 100);
+        final image = await picture.toImage(1200, 400);
         final bytes =
             (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
         // Selection and campaign strokes survive shared white borders.
         for (final point in [const Offset(100, 10), const Offset(150, 99)]) {
-          final pixel = (point.dy.toInt() * 300 + point.dx.toInt()) * 4;
+          final pixel =
+              (point.dy.toInt() * 4 * 1200 + point.dx.toInt() * 4) * 4;
           expect(bytes.getUint8(pixel), greaterThanOrEqualTo(245));
           expect(bytes.getUint8(pixel + 1), lessThan(90));
           expect(bytes.getUint8(pixel + 2), lessThan(90));
         }
         // A neutral town keeps its white boundary.
-        final pixel = (10 * 300 + 299) * 4;
+        final pixel = (40 * 1200 + 1199) * 4;
         for (var channel = 0; channel < 3; channel++) {
-          expect(bytes.getUint8(pixel + channel), greaterThanOrEqualTo(140));
+          expect(bytes.getUint8(pixel + channel), greaterThanOrEqualTo(245));
         }
         image.dispose();
       });
