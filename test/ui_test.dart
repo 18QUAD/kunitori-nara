@@ -8,7 +8,13 @@ import 'package:kunitori/territory_map.dart';
 
 void expectMapControlsInside(WidgetTester tester) {
   final map = tester.getRect(find.byType(TerritoryMap));
-  for (final label in ['市町村・町を探す', '県全域を表示', '起伏・山名・川・池・湖を非表示', '拡大', '縮小']) {
+  for (final label in [
+    '市町村・町を探す',
+    '県全域を表示',
+    '起伏・市街地・山名・川・池・湖を非表示',
+    '拡大',
+    '縮小',
+  ]) {
     final control = tester.getRect(find.byTooltip(label));
     expect(map.contains(control.topLeft), isTrue, reason: label);
     expect(map.contains(control.bottomRight), isTrue, reason: label);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'game.dart';
 import 'relief.dart';
 import 'water.dart';
+import 'urban.dart';
 import 'mountains.dart';
 import 'map_outline.dart';
 import 'map_label.dart';
@@ -64,6 +65,18 @@ class _TerritoryMapState extends State<TerritoryMap> {
     }
   }
 
+  UrbanLayer? urban;
+  bool urbanFailed = false;
+
+  Future<void> _loadUrban() async {
+    try {
+      final loaded = await UrbanLayer.load(project);
+      if (mounted) setState(() => urban = loaded);
+    } catch (_) {
+      if (mounted) setState(() => urbanFailed = true);
+    }
+  }
+
   Relief? relief;
   bool reliefFailed = false;
   late Offset Function(math.Point<double>) project;
@@ -99,6 +112,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
     _buildCities();
     _loadRelief();
     _loadWater();
+    _loadUrban();
     _loadMountains();
   }
 
@@ -297,6 +311,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       widget.cityId,
                       showGeography ? relief : null,
                       showGeography ? water : null,
+                      showGeography ? urban : null,
                       showGeography ? mountains : null,
                       reliefBounds,
                       widget.cityId == null
@@ -329,6 +344,18 @@ class _TerritoryMapState extends State<TerritoryMap> {
                     if (mountainsFailed || mountains == null)
                       Text(
                         mountainsFailed ? '山名を読み込めませんでした' : '山名を読み込み中…',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    const Text(
+                      '■ 市街地（建物用地）',
+                      style: TextStyle(fontSize: 10, color: Color(0xFFF3B7CC)),
+                    ),
+                    if (urbanFailed || urban == null)
+                      Text(
+                        urbanFailed ? '市街地を読み込めませんでした' : '市街地を読み込み中…',
                         style: const TextStyle(
                           fontSize: 10,
                           color: Colors.white70,
@@ -386,8 +413,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         IconButton.filledTonal(
                           tooltip:
                               showGeography
-                                  ? '起伏・山名・川・池・湖を非表示'
-                                  : '起伏・山名・川・池・湖を表示',
+                                  ? '起伏・市街地・山名・川・池・湖を非表示'
+                                  : '起伏・市街地・山名・川・池・湖を表示',
                           isSelected: showGeography,
                           onPressed: () {
                             setState(() => showGeography = !showGeography);
@@ -399,6 +426,10 @@ class _TerritoryMapState extends State<TerritoryMap> {
                             if (showGeography && mountainsFailed) {
                               setState(() => mountainsFailed = false);
                               _loadMountains();
+                            }
+                            if (showGeography && urbanFailed) {
+                              setState(() => urbanFailed = false);
+                              _loadUrban();
                             }
                             if (showGeography && waterFailed) {
                               setState(() => waterFailed = false);
@@ -468,6 +499,7 @@ class _MapPainter extends CustomPainter {
     this.cityId,
     this.relief,
     this.water,
+    this.urban,
     this.mountains,
     this.reliefBounds,
     this.reliefClip,
@@ -481,6 +513,7 @@ class _MapPainter extends CustomPainter {
   final String? selected, cityId;
   final Relief? relief;
   final WaterLayer? water;
+  final UrbanLayer? urban;
   final MountainLayer? mountains;
   final Rect? reliefBounds;
   final Path reliefClip;
@@ -543,6 +576,7 @@ class _MapPainter extends CustomPainter {
       );
       canvas.restore();
     }
+    urban?.paint(canvas, reliefClip);
     water?.paint(canvas, reliefClip);
     final occupiedLabels = <Rect>[];
     // Borders, labels and selection remain above the terrain and water.

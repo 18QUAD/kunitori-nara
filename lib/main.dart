@@ -939,7 +939,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '起伏：国土地理院の標高タイルを加工して作成。約63m間隔の標高から陰影を生成しています。色は領土の状態、明暗は地形の起伏です。山のボタンで起伏・山名・川・池・湖をまとめて切り替えられます。\nhttps://maps.gsi.go.jp/development/ichiran.html#dem',
+                    '起伏：国土地理院の標高タイルを加工して作成。約63m間隔の標高から陰影を生成しています。色は領土の状態、明暗は地形の起伏です。山のボタンで起伏・市街地・山名・川・池・湖をまとめて切り替えられます。\nhttps://maps.gsi.go.jp/development/ichiran.html#dem',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
@@ -949,6 +949,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   const SizedBox(height: 20),
                   const SelectableText(
                     '川・湖・山名：国土地理院ベクトルタイル提供実験を加工して作成（提供元の更新情報：2026年7月1日時点）。地表の河川・水路、湖・貯水池を青色で表示し、拡大すると川名を表示します。起伏と共通の山のボタンで切り替えられます。山名も同じデータの注記から取得し、淡い黄色で表示します。山頂マークは表示しません。地下水路・枯れ川は含みません。\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.7,
+                      color: Colors.white54,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const SelectableText(
+                    '市街地：国土交通省 国土数値情報「土地利用細分メッシュ」（2021年）の建物用地（0700）を抽出・結合し、奈良県境で切り抜いて薄ピンクで表示しています。約100mメッシュの住宅・商業施設・工場などを含む分類で、人口集中地区（DID）とは異なります。\nhttps://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-L03-b-v3_1.html',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
