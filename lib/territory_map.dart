@@ -491,7 +491,7 @@ class _MapPainter extends CustomPainter {
     final stroke =
         Paint()
           ..style = PaintingStyle.stroke
-          ..color = const Color(0xFF102A32)
+          ..color = Colors.white
           ..strokeWidth = 1 / zoom;
     for (final e in paths.entries) {
       if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
@@ -594,15 +594,26 @@ class _MapPainter extends CustomPainter {
         canvas.drawCircle(p, 2 / zoom, Paint()..color = Colors.white);
       }
     }
-    // Draw selection last so neighboring fills and borders cannot cover it.
-    final selectedPath = overview ? null : paths[selected];
-    if (selectedPath != null && atlas.towns[selected]!.cityId == cityId) {
+    // Keep both the selection and active campaign above all other map layers.
+    final highlighted = <String>{};
+    for (final id in [selected, game.attackTarget]) {
+      final town = atlas.towns[id];
+      if (town == null) continue;
+      if (overview) {
+        highlighted.add(town.cityId);
+      } else if (town.cityId == cityId) {
+        highlighted.add(town.id);
+      }
+    }
+    for (final id in highlighted) {
+      final path = paths[id];
+      if (path == null) continue;
       canvas.drawPath(
-        selectedPath,
+        path,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2 / zoom
-          ..color = Colors.white,
+          ..strokeWidth = 3 / zoom
+          ..color = const Color(0xFFFF3B30),
       );
     }
   }
