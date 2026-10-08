@@ -79,6 +79,7 @@ void main() {
       for (var i = 0; i < 5; i++) {
         expect(find.text('橿原市 · 制圧クイズ ${i + 1} / 5問'), findsOneWidget);
         expect(find.byType(OutlinedButton), findsNWidgets(4));
+        expect(find.text('制圧成功'), findsNothing);
         final answer = game.quiz!.answer;
         await tester.ensureVisible(find.widgetWithText(OutlinedButton, answer));
         await tester.tap(find.widgetWithText(OutlinedButton, answer));
@@ -87,7 +88,13 @@ void main() {
       expect(game.quiz, isNull);
       expect(game.mastered, contains('29205'));
       expect(game.wins, 1);
-      expect(find.textContaining('5問全問正解！'), findsOneWidget);
+      expect(find.text('5問全問正解！'), findsOneWidget);
+      expect(find.text('制圧成功'), findsOneWidget);
+      expect(find.text('橿原市'), findsWidgets);
+      await tester.tap(find.text('地図へ戻る'));
+      await tester.pumpAndSettle();
+      expect(find.text('制圧成功'), findsNothing);
+      expect(find.byType(TerritoryMap), findsOneWidget);
       final prefs = await SharedPreferences.getInstance();
       final restored = Game.restore(
         atlas,

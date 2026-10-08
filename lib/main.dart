@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
+import 'conquest_success.dart';
 import 'save_store.dart';
 import 'territory_map.dart';
 
@@ -786,10 +787,25 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   child: OutlinedButton(
                     onPressed: () {
                       if (!identical(game!.quiz, q)) return;
-                      game!.answer(answer, DateTime.now());
+                      final correct = game!.answer(answer, DateTime.now());
                       setState(() {});
                       _save();
-                      if (game!.quiz == null) _showQuizOutcome();
+                      if (game!.quiz == null) {
+                        if (correct == true) {
+                          unawaited(
+                            showDialog<void>(
+                              context: context,
+                              barrierDismissible: false,
+                              builder:
+                                  (_) => ConquestSuccess(
+                                    cityName: atlas!.cities[q.cityId]!,
+                                  ),
+                            ),
+                          );
+                        } else {
+                          _showQuizOutcome();
+                        }
+                      }
                     },
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.all(16),
