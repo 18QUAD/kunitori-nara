@@ -82756,7 +82756,7 @@ ho(a,b,c){var s,r,q,p,o,n,m,l
 a.dd()
 a.tl(b)
 s=B.c.f1(c/0.65,0.5,1)
-for(r=this.b,q=this.a,p=[r,q],o=3.5*s/c,n=0;n<2;++n){m=p[n]
+for(r=this.b,q=this.a,p=[r,q],o=2.5*s/c,n=0;n<2;++n){m=p[n]
 l=$.a0().aO()
 l.saa(B.CF)
 l.sd8(B.au)
@@ -82767,7 +82767,7 @@ a.dv(m,l)}p=$.a0()
 o=p.aO()
 o.saa(B.iS)
 o.sd8(B.au)
-l=2*s/c
+l=1.5*s/c
 o.sdr(l)
 o.smO(B.d_)
 a.dv(r,o)
