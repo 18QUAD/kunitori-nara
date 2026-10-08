@@ -43,6 +43,14 @@ void main() {
     }
 
     final dynamic withRelief = painter();
+    // Sakurai's merged census geometry contains many tiny internal gaps.
+    // Display outlines must suppress them without changing fill/hit geometry.
+    final city = atlas.cities.entries.firstWhere((e) => e.value == '桜井市').key;
+    final Path fill = withRelief.paths[city];
+    final Path outline = withRelief.outlines[city];
+    expect(fill.computeMetrics().length, greaterThan(100));
+    expect(outline.computeMetrics().length, 1);
+    expect(outline.getBounds(), fill.getBounds());
     expect(withRelief.relief, isNotNull);
     expect(withRelief.water, isNotNull);
     expect(withRelief.mountains, isNotNull);

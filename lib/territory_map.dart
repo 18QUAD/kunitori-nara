@@ -4,6 +4,7 @@ import 'game.dart';
 import 'relief.dart';
 import 'water.dart';
 import 'mountains.dart';
+import 'map_outline.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -33,6 +34,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
   late Map<String, Path> paths;
   late Map<String, Rect> bounds;
   late Map<String, Path> cityPaths;
+  late Map<String, Path> cityOutlines;
   late Map<String, Rect> cityBounds;
   Size? viewport;
   MountainLayer? mountains;
@@ -153,10 +155,12 @@ class _TerritoryMapState extends State<TerritoryMap> {
 
   void _buildCities() {
     cityPaths = {};
+    cityOutlines = {};
     cityBounds = {};
     for (final city in widget.atlas.byCity.entries) {
       final outline = _union(city.value.map((t) => paths[t.id]!).toList());
       cityPaths[city.key] = outline;
+      cityOutlines[city.key] = exteriorOutline(outline);
       cityBounds[city.key] = outline.getBounds();
     }
     prefecturePath = _union(cityPaths.values.toList());
@@ -280,6 +284,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                   child: CustomPaint(
                     painter: _MapPainter(
                       widget.cityId == null ? cityPaths : paths,
+                      widget.cityId == null ? cityOutlines : paths,
                       widget.cityId == null ? cityBounds : bounds,
                       widget.atlas,
                       widget.game,
@@ -456,6 +461,7 @@ Color townFillColor(Town town, Game game, {required bool reachable}) {
 class _MapPainter extends CustomPainter {
   _MapPainter(
     this.paths,
+    this.outlines,
     this.bounds,
     this.atlas,
     this.game,
@@ -470,6 +476,7 @@ class _MapPainter extends CustomPainter {
   ) : super(repaint: transform);
   final TransformationController transform;
   final Map<String, Path> paths;
+  final Map<String, Path> outlines;
   final Map<String, Rect> bounds;
   final Atlas atlas;
   final Game game;
@@ -543,7 +550,7 @@ class _MapPainter extends CustomPainter {
     // Borders, labels and selection remain above the terrain and water.
     for (final e in paths.entries) {
       if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
-      canvas.drawPath(e.value, stroke);
+      canvas.drawPath(outlines[e.key]!, stroke);
       if (!overview && e.key == selected) {
         canvas.drawPath(
           e.value,
@@ -606,7 +613,7 @@ class _MapPainter extends CustomPainter {
       }
     }
     for (final id in highlighted) {
-      final path = paths[id];
+      final path = outlines[id];
       if (path == null) continue;
       canvas.drawPath(
         path,

@@ -176,3 +176,5 @@ python tools/import_water.py
 # import_water.py と同じ Python 依存パッケージ・タイルキャッシュを利用
 python tools/import_mountains.py
 ```
+
+市町村表示の白い境界線・赤い攻略枠は外周のみを描画し、町境界の結合で生じた内部の隙間の輪郭を除いています。離れた領域の外周は保持します。塗り・地域選択・町表示の境界・攻略判定は元の形状を使います。
