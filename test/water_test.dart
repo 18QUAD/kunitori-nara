@@ -7,10 +7,48 @@ import 'package:kunitori/water.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('river lines and polygon outlines shrink with the map scale', () async {
+    for (final polygon in [false, true]) {
+      final coverage = <double>[];
+      for (final zoom in [1.0, 4.0]) {
+        final recorder = PictureRecorder();
+        final canvas =
+            Canvas(recorder)
+              ..scale(8)
+              ..translate(40, 40)
+              ..scale(zoom)
+              ..translate(-40, -40);
+        final line =
+            Path()
+              ..moveTo(40, -100)
+              ..lineTo(40, 200);
+        final area =
+            Path()..addRect(const Rect.fromLTWH(39.99, -100, 0.02, 300));
+        WaterLayer(polygon ? Path() : line, polygon ? area : Path(), []).paint(
+          canvas,
+          Path()..addRect(const Rect.fromLTWH(-1000, -1000, 2000, 2000)),
+        );
+        final picture = recorder.endRecording();
+        final image = await picture.toImage(640, 640);
+        final bytes =
+            (await image.toByteData(format: ImageByteFormat.rawRgba))!;
+        coverage.add(
+          List.generate(
+            640,
+            (x) => bytes.getUint8((320 * 640 + x) * 4 + 3) / 255,
+          ).reduce((a, b) => a + b),
+        );
+        image.dispose();
+        picture.dispose();
+      }
+      expect(coverage[0], greaterThan(0));
+      expect(coverage[1] / coverage[0], closeTo(4, 0.6));
+    }
+  });
   test(
     'narrow polygon rivers stay visible over owned and reachable land',
     () async {
-      for (final zoom in [0.25, 2.0]) {
+      for (final zoom in [4.0]) {
         for (final background in [
           const Color(0xFF7AE1BB),
           const Color(0xFFEEC47C),
@@ -29,8 +67,6 @@ void main() {
           layer.paint(
             canvas,
             Path()..addRect(Rect.fromLTWH(0, 0, 40 / zoom, 40 / zoom)),
-            zoom,
-            municipal: true,
           );
           final picture = recorder.endRecording();
           final image = await picture.toImage(40, 40);

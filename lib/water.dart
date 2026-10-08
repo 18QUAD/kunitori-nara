@@ -64,19 +64,18 @@ class WaterLayer {
     ]);
   }
 
-  void paint(Canvas canvas, Path clip, double zoom, {bool municipal = false}) {
+  void paint(Canvas canvas, Path clip) {
     canvas.save();
     canvas.clipPath(clip);
-    final detail = (zoom / 0.65).clamp(0.5, 1.0) * (municipal ? 1.0 : 0.6);
-    // River centerlines and narrow water polygons share a minimum screen width
-    // in both maps. Prefectural views use thinner strokes for their denser network.
+    // Widths are in map coordinates, so the canvas transform scales the water
+    // and its outline together. At 4x these appear as 1.5px and 2.5px strokes.
     for (final path in [areas, rivers]) {
       canvas.drawPath(
         path,
         Paint()
           ..color = const Color(0xFF123D59)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5 * detail / zoom
+          ..strokeWidth = 0.625
           ..strokeJoin = StrokeJoin.round
           ..strokeCap = StrokeCap.round,
       );
@@ -86,7 +85,7 @@ class WaterLayer {
       Paint()
         ..color = const Color(0xFF79D9FF)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5 * detail / zoom
+        ..strokeWidth = 0.375
         ..strokeJoin = StrokeJoin.round,
     );
     canvas.drawPath(areas, Paint()..color = const Color(0xFF79D9FF));
@@ -95,7 +94,7 @@ class WaterLayer {
       Paint()
         ..color = const Color(0xFF79D9FF)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5 * detail / zoom
+        ..strokeWidth = 0.375
         ..strokeJoin = StrokeJoin.round
         ..strokeCap = StrokeCap.round,
     );
