@@ -349,13 +349,6 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           color: Colors.white70,
                         ),
                       ),
-                    const Text(
-                      '■ 市街地（建物用地）',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: UrbanLayer.legendColor,
-                      ),
-                    ),
                     if (urbanFailed || urban == null)
                       Text(
                         urbanFailed ? '市街地を読み込めませんでした' : '市街地を読み込み中…',
