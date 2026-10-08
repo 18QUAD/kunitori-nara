@@ -920,7 +920,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '地図と統計',
+                    '地図・統計と出典',
                     style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
@@ -948,7 +948,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '川・湖：国土地理院ベクトルタイル提供実験を加工して作成（提供元の更新情報：2026年7月1日時点）。地表の河川・水路、湖・貯水池を青色で表示し、拡大すると川名を表示します。起伏と共通の山のボタンで切り替えられます。山名も同じデータの注記から取得し、淡い黄色で表示します。地下水路・枯れ川は含みません。\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment',
+                    '川・湖・山名：国土地理院ベクトルタイル提供実験を加工して作成（提供元の更新情報：2026年7月1日時点）。地表の河川・水路、湖・貯水池を青色で表示し、拡大すると川名を表示します。起伏と共通の山のボタンで切り替えられます。山名も同じデータの注記から取得し、淡い黄色で表示します。地下水路・枯れ川は含みません。\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,

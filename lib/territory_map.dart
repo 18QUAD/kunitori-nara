@@ -313,18 +313,15 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      reliefFailed
-                          ? '起伏を読み込めませんでした'
-                          : relief == null
-                          ? '起伏を読み込み中…'
-                          : '起伏：国土地理院の標高タイルを加工',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Colors.white70,
-                        shadows: [Shadow(color: Colors.black, blurRadius: 3)],
+                    if (reliefFailed || relief == null)
+                      Text(
+                        reliefFailed ? '起伏を読み込めませんでした' : '起伏を読み込み中…',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white70,
+                          shadows: [Shadow(color: Colors.black, blurRadius: 3)],
+                        ),
                       ),
-                    ),
                     if (mountainsFailed || mountains == null)
                       Text(
                         mountainsFailed ? '山名を読み込めませんでした' : '山名を読み込み中…',
@@ -333,18 +330,15 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           color: Colors.white70,
                         ),
                       ),
-                    Text(
-                      waterFailed
-                          ? '川・湖を読み込めませんでした'
-                          : water == null
-                          ? '川・湖を読み込み中…'
-                          : '川・湖・山名：国土地理院ベクトルタイル提供実験を加工',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Colors.white70,
-                        shadows: [Shadow(color: Colors.black, blurRadius: 3)],
+                    if (waterFailed || water == null)
+                      Text(
+                        waterFailed ? '川・湖を読み込めませんでした' : '川・湖を読み込み中…',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white70,
+                          shadows: [Shadow(color: Colors.black, blurRadius: 3)],
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
