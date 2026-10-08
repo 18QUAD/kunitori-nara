@@ -41,7 +41,11 @@ class KunitoriApp extends StatelessWidget {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(48, 52),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          textStyle: const TextStyle(
+            fontFamily: 'NotoSansJP',
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -72,6 +76,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   int factIndex = 0, mapFocus = 0, mapCenter = 0;
   Timer? timer, tipsTimer;
   bool corrupt = false;
+  bool _quizPromptOpen = false;
   @override
   void initState() {
     super.initState();
@@ -111,16 +116,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       };
       selected = g.attackTarget ?? g.home;
       if (selected != null) cityFilter = data.towns[selected]!.cityId;
-      g.expire(DateTime.now());
+      final expiredOnLoad = g.expire(DateTime.now());
       _rememberVisibleFact();
       setState(() {});
       _startTipsTimer();
+      if (expiredOnLoad) _showQuizOutcome();
       if (g.home != null) _save();
       timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
         if (!mounted || game!.quiz == null) return;
         final expired = game!.expire(DateTime.now());
         setState(() {});
-        if (expired) _save();
+        if (expired) {
+          _save();
+          _showQuizOutcome();
+        }
       });
     } catch (_) {
       if (mounted) {
@@ -139,10 +148,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (game == null) return;
     if (state == AppLifecycleState.resumed) {
-      game!.expire(DateTime.now());
+      final expired = game!.expire(DateTime.now());
       setState(() {});
+      if (expired) _showQuizOutcome();
     }
     _save();
+  }
+
+  void _showQuizOutcome() {
+    final message = game!.message;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 7)),
+      );
+    });
   }
 
   void _save() {
@@ -241,7 +261,51 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
     _startTipsTimer();
     _save();
+    if (g.canStartQuizAt(id)) unawaited(_confirmQuiz(id));
     return true;
+  }
+
+  Future<void> _confirmQuiz(String townId) async {
+    final g = game!;
+    if (_quizPromptOpen || !g.canStartQuizAt(townId)) return;
+    _quizPromptOpen = true;
+    final town = atlas!.towns[townId]!;
+    final office = atlas!.offices[town.cityId]!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('${atlas!.cities[town.cityId]}の制圧クイズ'),
+            content: Text(
+              '${office.name}（${town.name}）から挑戦します。\n4択5問に全問正解でクリア。制限時間は1問${g.difficulty.seconds}秒です。\n不正解・時間切れで、この役所所在地の支配を失います。本拠地の場合も対象です。\n開始前のキャンセルでは領土を失いません。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('クイズを開始'),
+              ),
+            ],
+          ),
+    );
+    _quizPromptOpen = false;
+    if (!mounted || confirmed != true || game != g) return;
+    setState(() => g.startQuizAt(townId, DateTime.now()));
+    _save();
+  }
+
+  void _focusOffice(String city) {
+    final townId = atlas!.officeTownIds[city]!;
+    setState(() {
+      cityFilter = city;
+      selected = townId;
+      mapFocus++;
+      mapCenter++;
+    });
+    _select(townId);
   }
 
   void _focusCampaign() {
@@ -551,27 +615,37 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       );
     }
     if (g.owned.contains(town.id)) {
-      final quizAvailable =
+      final quizAvailable = g.canStartQuizAt(town.id);
+      final cityReady =
           g.cityOwned(town.cityId) && !g.mastered.contains(town.cityId);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Expanded(
+          Expanded(
             child: Center(
-              child: Text('この地域はあなたの領土です', style: TextStyle(color: mint)),
+              child: Text(
+                cityReady
+                    ? '${atlas!.offices[town.cityId]!.name}のある${atlas!.towns[atlas!.officeTownIds[town.cityId]]!.name}をタップして制圧クイズに挑戦できます。'
+                    : 'この地域はあなたの領土です',
+                style: const TextStyle(color: mint),
+              ),
             ),
           ),
           FilledButton.icon(
             onPressed:
                 quizAvailable
-                    ? () {
-                      g.startQuiz(town.cityId, DateTime.now());
-                      setState(() {});
-                      _save();
-                    }
+                    ? () => _confirmQuiz(town.id)
+                    : cityReady
+                    ? () => _focusOffice(town.cityId)
                     : _search,
             icon: Icon(quizAvailable ? Icons.quiz_outlined : Icons.search),
-            label: Text(quizAvailable ? '地域クイズに挑戦' : '攻略先を探す'),
+            label: Text(
+              quizAvailable
+                  ? '制圧クイズに挑戦'
+                  : cityReady
+                  ? '役所所在地へ'
+                  : '攻略先を探す',
+            ),
           ),
         ],
       );
@@ -676,7 +750,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ),
               const SizedBox(height: 16),
               Text(
-                '${atlas!.cities[q.cityId]} · 制圧クイズ',
+                '${atlas!.cities[q.cityId]} · 制圧クイズ ${q.correctCount + 1} / 5問',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: gold,
@@ -711,9 +785,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: OutlinedButton(
                     onPressed: () {
+                      if (!identical(game!.quiz, q)) return;
                       game!.answer(answer, DateTime.now());
                       setState(() {});
                       _save();
+                      if (game!.quiz == null) _showQuizOutcome();
                     },
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.all(16),
@@ -725,7 +801,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ),
               const SizedBox(height: 8),
               const Text(
-                '不正解・時間切れで、この市町村の領土の約10%を失います。本拠地は失いません。アプリを閉じても時間は進みます。',
+                '5問全問正解でクリア。不正解・時間切れで役所所在地の支配を失います（本拠地も対象）。アプリを閉じても時間は進みます。',
                 style: TextStyle(
                   color: Colors.white54,
                   fontSize: 13,
@@ -910,7 +986,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1. 市区町村を選び、次に町から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略（境界は白、選択・攻略中の枠は赤）\n3. 地域tipsを読み、知識を蓄積（5秒ごとに切替）\n4. 市町村の全領土獲得でクイズに挑戦\n5. 正解で市町村制圧。失敗で一部領土を失う',
+                    '1. 市区町村を選び、次に町から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略（境界は白、選択・攻略中の枠は赤）\n3. 地域tipsを読み、知識を蓄積（5秒ごとに切替）\n4. 市町村の全領土獲得後、役所・役場のある町をタップ。開始前はキャンセル可\n5. 4択5問すべて正解で市町村制圧。失敗・時間切れで役所所在地の支配を失う（本拠地も対象）',
                     style: TextStyle(height: 2),
                   ),
                   const SizedBox(height: 20),
@@ -965,13 +1041,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  const SelectableText(
+                    '役所・役場：国土交通省「市町村役場等及び公的集会施設」（2022年）の本庁舎を基に、国土地理院ベクトルタイルの役所記号の座標と自治体公式所在地を照合・加工。明日香村は橘の新庁舎に対応。分庁舎・支所は含みません。\nhttps://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P05-v3_0.html\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.7,
+                      color: Colors.white54,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   const Text(
                     'このMVPの範囲',
                     style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    '県全域・市町村への移動と町の選択に対応。全国・地方の地図、主要道路ルート、対戦、ランキング、広告は今後の拡張です。保存は端末内のみで、アンインストールやブラウザのデータ削除では失われます。クイズ中にアプリを閉じても締切時刻は変わりません。',
+                    '市役所は二重丸、町村役場は丸の地図記号で表示します。県全域・市町村への移動と町の選択に対応。全国・地方の地図、主要道路ルート、対戦、ランキング、広告は今後の拡張です。保存は端末内のみで、アンインストールやブラウザのデータ削除では失われます。クイズ中にアプリを閉じても締切時刻は変わりません。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 24),

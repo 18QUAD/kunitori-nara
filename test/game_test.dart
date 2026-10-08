@@ -385,43 +385,68 @@ void main() {
     for (var i = 0; i < g.requiredTaps(last); i++) {
       g.tap(last.id, now);
     }
+    expect(
+      g.quiz,
+      isNull,
+      reason: 'Capturing the final town must not start a quiz',
+    );
+    expect(g.canStartQuizAt(atlas.officeTownIds[city.key]!), isTrue);
+    g.startQuizAt(atlas.officeTownIds[city.key]!, now);
     expect(g.quiz, isNotNull);
     return g;
   }
 
   test(
-    'city completion uses a seen fact; correct answer certifies control once',
+    'five distinct four-choice questions certify control only on the fifth answer',
     () {
       final g = completeCity();
       final q = g.quiz!;
-      expect(g.seen, contains(q.factId));
-      expect(q.choices.toSet().length, 4);
+      expect([q, ...q.remaining].map((q) => q.factId).toSet(), hasLength(5));
+      expect(
+        [q, ...q.remaining].every((q) => q.choices.toSet().length == 4),
+        isTrue,
+      );
       expect(g.canAttack(atlas.towns.keys.first), false);
-      expect(g.answer(q.answer, now.add(const Duration(seconds: 1))), true);
+      for (var i = 0; i < 5; i++) {
+        expect(g.quiz!.correctCount, i);
+        expect(
+          g.answer(g.quiz!.answer, now.add(Duration(seconds: i + 1))),
+          true,
+        );
+        expect(g.mastered.contains(q.cityId), i == 4);
+        expect(g.wins, i == 4 ? 1 : 0);
+      }
       expect(g.mastered, contains(q.cityId));
       expect(g.wins, 1);
       expect(g.answer(q.answer, now), null);
       expect(g.wins, 1);
     },
   );
-  test('failure removes territory, preserves home and lifetime progress', () {
-    final g = completeCity();
-    final before = g.owned.length;
-    final ever = g.everOwned.length;
-    g.totalTaps = 1000;
-    g.titles.add('千里の旅人');
-    expect(g.answer('wrong', now), false);
-    expect(g.owned.length, lessThan(before));
-    expect(g.owned, contains(g.home));
-    expect(g.everOwned.length, ever);
-    expect(g.totalTaps, 1000);
-    expect(g.titles, contains('千里の旅人'));
-  });
+  test(
+    'failure removes exactly the office territory and preserves lifetime progress',
+    () {
+      final g = completeCity();
+      final before = {...g.owned};
+      final officeTown = atlas.officeTownIds[g.quiz!.cityId]!;
+      final ever = g.everOwned.length;
+      g.totalTaps = 1000;
+      g.titles.add('千里の旅人');
+      expect(g.answer('wrong', now), false);
+      expect(before.difference(g.owned), {officeTown});
+      expect(g.canAttack(officeTown), isTrue);
+      expect(g.everOwned.length, ever);
+      expect(g.totalTaps, 1000);
+      expect(g.titles, contains('千里の旅人'));
+    },
+  );
   test(
     'legacy district quiz updates to towns without extending its deadline',
     () {
       final g = completeCity();
-      final old = g.toJson()..remove('territoryUnit');
+      final old =
+          g.toJson()
+            ..remove('territoryUnit')
+            ..remove('quizRule');
       final ids =
           g.owned
               .expand((id) => atlas.membersByTown[id]!.map((t) => t.id))
@@ -429,6 +454,10 @@ void main() {
       old['owned'] = ids;
       old['everOwned'] = ids;
       final q = old['quiz'] as Map<String, dynamic>;
+      q.remove('remaining');
+      q.remove('correctCount');
+      q['factId'] = '${g.quiz!.cityId}:count';
+      old['seen'] = [q['factId']];
       final count =
           atlas.sourceTowns.values
               .where((t) => t.cityId == g.quiz!.cityId)
@@ -454,8 +483,19 @@ void main() {
     g.owned.addAll(towns.map((t) => t.id));
     g.everOwned.addAll(g.owned);
     g.seen.add('29453:largest');
-    g.startQuiz('29453', now);
-    final saved = g.toJson();
+    g.startQuizAt(atlas.officeTownIds['29453']!, now);
+    final fact = atlas.facts['29453']!.firstWhere(
+      (f) => f.id.endsWith(':largest'),
+    );
+    g.quiz = Quiz(
+      cityId: '29453',
+      factId: fact.id,
+      question: fact.question,
+      answer: fact.answer,
+      choices: [fact.answer, ...fact.decoys.take(3)],
+      deadline: g.quiz!.deadline,
+    );
+    final saved = g.toJson()..remove('quizRule');
     final q = saved['quiz'] as Map<String, dynamic>;
     q['answer'] = '大字${g.quiz!.answer}';
     q['choices'] = g.quiz!.choices.map((name) => '大字$name').toList();

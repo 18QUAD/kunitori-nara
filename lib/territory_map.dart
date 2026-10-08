@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'game.dart';
 import 'relief.dart';
 import 'water.dart';
@@ -7,6 +8,7 @@ import 'urban.dart';
 import 'mountains.dart';
 import 'map_outline.dart';
 import 'map_label.dart';
+import 'office_symbols.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -40,6 +42,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
   late Map<String, Path> cityOutlines;
   late Map<String, Rect> cityBounds;
   Size? viewport;
+  late Map<String, Offset> officePoints;
   MountainLayer? mountains;
   bool mountainsFailed = false;
 
@@ -110,6 +113,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
     super.initState();
     _buildPaths();
     _buildCities();
+    officePoints = {
+      for (final o in widget.atlas.offices.values) o.cityId: project(o.point),
+    };
     _loadRelief();
     _loadWater();
     _loadUrban();
@@ -247,6 +253,11 @@ class _TerritoryMapState extends State<TerritoryMap> {
           ..scale(scale);
   }
 
+  void _selectOffice(String city) {
+    if (widget.cityId == null) widget.onCitySelected(city);
+    widget.onSelected(widget.atlas.officeTownIds[city]!);
+  }
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, c) {
@@ -270,6 +281,25 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 behavior: HitTestBehavior.opaque,
                 onTapUp: (details) {
                   final point = details.localPosition;
+                  final zoom = controller.value.getMaxScaleOnAxis();
+                  final offices =
+                      officePoints.entries
+                          .where(
+                            (e) =>
+                                (widget.cityId == null ||
+                                    e.key == widget.cityId) &&
+                                (e.value - point).distance * zoom <= 14,
+                          )
+                          .toList()
+                        ..sort(
+                          (a, b) => (a.value - point).distance.compareTo(
+                            (b.value - point).distance,
+                          ),
+                        );
+                  if (offices.isNotEmpty) {
+                    _selectOffice(offices.first.key);
+                    return;
+                  }
                   final hits =
                       (widget.cityId == null ? cityBounds : bounds).entries
                           .where(
@@ -309,6 +339,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       widget.selected,
                       controller,
                       widget.cityId,
+                      officePoints,
+                      _selectOffice,
                       showGeography ? relief : null,
                       showGeography ? water : null,
                       showGeography ? urban : null,
@@ -493,6 +525,8 @@ class _MapPainter extends CustomPainter {
     this.selected,
     this.transform,
     this.cityId,
+    this.officePoints,
+    this.onOfficeSelected,
     this.relief,
     this.water,
     this.urban,
@@ -507,6 +541,8 @@ class _MapPainter extends CustomPainter {
   final Atlas atlas;
   final Game game;
   final String? selected, cityId;
+  final Map<String, Offset> officePoints;
+  final ValueChanged<String> onOfficeSelected;
   final Relief? relief;
   final WaterLayer? water;
   final UrbanLayer? urban;
@@ -574,7 +610,11 @@ class _MapPainter extends CustomPainter {
     }
     urban?.paint(canvas, reliefClip);
     water?.paint(canvas, reliefClip);
-    final occupiedLabels = <Rect>[];
+    final occupiedLabels = <Rect>[
+      for (final e in officePoints.entries)
+        if (overview || e.key == cityId)
+          Rect.fromCircle(center: e.value, radius: 11 / zoom),
+    ];
     // Borders, labels and selection remain above the terrain and water.
     for (final e in paths.entries) {
       if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
@@ -601,9 +641,18 @@ class _MapPainter extends CustomPainter {
       if (overview ||
           e.key == selected ||
           (label.width < box.width && label.height < box.height)) {
+        var labelCenter = box.center;
+        final labelRect = Rect.fromCenter(
+          center: labelCenter,
+          width: label.width + 4 / zoom,
+          height: label.height + 4 / zoom,
+        );
+        if (occupiedLabels.any((r) => r.overlaps(labelRect))) {
+          labelCenter += Offset(0, 18 / zoom);
+        }
         occupiedLabels.add(
           Rect.fromCenter(
-            center: box.center,
+            center: labelCenter,
             width: label.width + 4 / zoom,
             height: label.height + 4 / zoom,
           ),
@@ -611,7 +660,7 @@ class _MapPainter extends CustomPainter {
         paintMapLabel(
           canvas,
           label,
-          box.center - Offset(label.width / 2, label.height / 2),
+          labelCenter - Offset(label.width / 2, label.height / 2),
           zoom,
         );
       }
@@ -658,7 +707,43 @@ class _MapPainter extends CustomPainter {
           ..color = const Color(0xFFFF3B30),
       );
     }
+    for (final office in atlas.offices.values) {
+      if (!overview && office.cityId != cityId) continue;
+      paintOfficeSymbol(
+        canvas,
+        officePoints[office.cityId]!,
+        zoom,
+        isCity: office.isCity,
+        ready: game.canStartQuizAt(atlas.officeTownIds[office.cityId]!),
+      );
+    }
   }
+
+  @override
+  SemanticsBuilderCallback get semanticsBuilder => (size) {
+    final zoom = transform.value.getMaxScaleOnAxis();
+    return [
+      for (final office in atlas.offices.values)
+        if (cityId == null || office.cityId == cityId)
+          CustomPainterSemantics(
+            key: ValueKey('office-${office.cityId}'),
+            rect: Rect.fromCircle(
+              center: officePoints[office.cityId]!,
+              radius: 14 / zoom,
+            ),
+            properties: SemanticsProperties(
+              label:
+                  '${office.name}（${atlas.towns[atlas.officeTownIds[office.cityId]]!.name}）',
+              button: true,
+              onTap: () => onOfficeSelected(office.cityId),
+              textDirection: TextDirection.ltr,
+            ),
+          ),
+    ];
+  };
+
+  @override
+  bool shouldRebuildSemantics(covariant _MapPainter oldDelegate) => true;
 
   @override
   bool shouldRepaint(covariant _MapPainter oldDelegate) => true;

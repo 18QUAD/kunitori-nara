@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'regional_tips.dart';
+import 'municipal_offices.dart';
+import 'municipal_office.dart';
 
 enum Difficulty {
   casual('旅人', 25),
@@ -140,6 +142,14 @@ class Atlas {
       }
       town.neighbors.remove(town.id);
     }
+    for (final office in municipalOffices) {
+      final townId = sourceToTown[office.sourceTownId];
+      if (townId == null || towns[townId]!.cityId != office.cityId) {
+        throw FormatException('役所所在地が地図と一致しません: ${office.name}');
+      }
+      offices[office.cityId] = office;
+      officeTownIds[office.cityId] = townId;
+    }
     for (final city in cities.entries) {
       final ts = byCity[city.key]!;
       final population = ts.fold(0, (s, t) => s + t.population);
@@ -151,7 +161,7 @@ class Atlas {
           '${city.key}:count',
           city.key,
           '地理',
-          '${city.value}の攻略対象は$n町。すべての領土を獲得すると地域クイズが始まります。',
+          '${city.value}の攻略対象は$n町。すべての領土を獲得したら、役所・役場のある町をタップして制圧クイズに挑戦できます。',
           '${city.value}の攻略対象は何町？',
           '$n町',
           ['${n + 1}町', '${max(0, n - 1)}町', '${n + 10}町'],
@@ -209,6 +219,13 @@ class Atlas {
   static const censusSource = 'https://geoshape.ex.nii.ac.jp/ka/';
   static String _withoutChome(String name) =>
       name.replaceFirst(RegExp(r'[一二三四五六七八九十百0-9０-９]+丁目$'), '');
+  final Map<String, MunicipalOffice> offices = {};
+  final Map<String, String> officeTownIds = {};
+  MunicipalOffice? officeForTown(String id) {
+    final city = towns[id]?.cityId;
+    return officeTownIds[city] == id ? offices[city] : null;
+  }
+
   final Map<String, Town> sourceTowns = {};
   final Map<String, String> sourceToTown = {};
   final Map<String, List<Town>> membersByTown = {};
@@ -266,25 +283,51 @@ String number(num value) => value.round().toString().replaceAllMapped(
   (m) => '${m[1]},',
 );
 
-class Quiz {
-  Quiz({
-    required this.cityId,
+class QuizQuestion {
+  const QuizQuestion({
     required this.factId,
     required this.question,
     required this.answer,
     required this.choices,
-    required this.deadline,
   });
-  final String cityId, factId, question, answer;
+  final String factId, question, answer;
   final List<String> choices;
-  final DateTime deadline;
   Map<String, dynamic> toJson() => {
-    'cityId': cityId,
     'factId': factId,
     'question': question,
     'answer': answer,
     'choices': choices,
+  };
+  factory QuizQuestion.fromJson(Map<String, dynamic> j) => QuizQuestion(
+    factId: j['factId'],
+    question: j['question'],
+    answer: j['answer'],
+    choices: List<String>.from(j['choices']),
+  );
+}
+
+class Quiz extends QuizQuestion {
+  Quiz({
+    required this.cityId,
+    required super.factId,
+    required super.question,
+    required super.answer,
+    required super.choices,
+    required this.deadline,
+    this.correctCount = 0,
+    this.remaining = const [],
+  });
+  final String cityId;
+  final DateTime deadline;
+  final int correctCount;
+  final List<QuizQuestion> remaining;
+  @override
+  Map<String, dynamic> toJson() => {
+    ...super.toJson(),
+    'cityId': cityId,
     'deadline': deadline.toIso8601String(),
+    'correctCount': correctCount,
+    'remaining': remaining.map((q) => q.toJson()).toList(),
   };
   factory Quiz.fromJson(Map<String, dynamic> j) => Quiz(
     cityId: j['cityId'],
@@ -293,6 +336,11 @@ class Quiz {
     answer: j['answer'],
     choices: List<String>.from(j['choices']),
     deadline: DateTime.parse(j['deadline']),
+    correctCount: j['correctCount'] ?? 0,
+    remaining: [
+      for (final q in j['remaining'] ?? [])
+        QuizQuestion.fromJson(Map<String, dynamic>.from(q)),
+    ],
   );
 }
 
@@ -318,7 +366,12 @@ class Game {
   bool isReachable(String id) =>
       home != null &&
       !owned.contains(id) &&
-      (atlas.towns[id]?.neighbors.any(owned.contains) ?? false);
+      ((atlas.towns[id]?.neighbors.any(owned.contains) ?? false) ||
+          (everOwned.contains(id) &&
+              atlas.officeForTown(id) != null &&
+              atlas.byCity[atlas.towns[id]!.cityId]!.every(
+                (t) => t.id == id || owned.contains(t.id),
+              )));
   bool canAttack(String id) =>
       quiz == null &&
       isReachable(id) &&
@@ -404,64 +457,91 @@ class Game {
     if (everOwned.length >= 100) titles.add('大和の開拓者');
     message = '${town.name}を獲得しました！';
     if (cityOwned(town.cityId) && !mastered.contains(town.cityId)) {
-      startQuiz(town.cityId, now);
+      message =
+          '${atlas.cities[town.cityId]}の全領土を獲得。${atlas.offices[town.cityId]!.name}のある町をタップして制圧クイズに挑戦できます。';
     }
     return true;
   }
 
-  void startQuiz(String city, DateTime now) {
-    if (quiz != null || !cityOwned(city) || mastered.contains(city)) return;
-    final pool =
-        atlas.facts[city]!
-            .where((f) => f.quizEligible && seen.contains(f.id))
-            .toList();
-    if (pool.isEmpty) return;
-    final fact = pool[random.nextInt(pool.length)];
-    final decoys = [...fact.decoys];
+  bool canStartQuizAt(String townId) {
+    final town = atlas.towns[townId];
+    return town != null &&
+        quiz == null &&
+        atlas.officeTownIds[town.cityId] == townId &&
+        cityOwned(town.cityId) &&
+        !mastered.contains(town.cityId);
+  }
+
+  QuizQuestion _makeQuestion(LocalFact fact) {
+    final decoys =
+        fact.decoys.where((a) => a != fact.answer).toSet().toList()
+          ..shuffle(random);
     while (decoys.length < 3) {
       decoys.add('該当する地域なし ${decoys.length + 1}');
     }
     if (difficulty == Difficulty.casual) decoys[2] = '鹿がすべて決めている';
-    final choices = [fact.answer, ...decoys.take(3)]..shuffle(random);
-    quiz = Quiz(
-      cityId: city,
+    return QuizQuestion(
       factId: fact.id,
       question: fact.question,
       answer: fact.answer,
-      choices: choices,
-      deadline: now.add(Duration(seconds: difficulty.seconds)),
+      choices: [fact.answer, ...decoys.take(3)]..shuffle(random),
     );
-    message = '${atlas.cities[city]}の全領土を獲得。地域クイズで制圧を確定！';
+  }
+
+  // Only the office territory can open a new challenge; taking the last town never starts it.
+  void startQuizAt(String townId, DateTime now) {
+    if (!canStartQuizAt(townId)) return;
+    final city = atlas.towns[townId]!.cityId;
+    final pool =
+        atlas.facts[city]!.where((f) => f.quizEligible).toList()
+          ..shuffle(random);
+    if (pool.length < 5) throw StateError('制圧クイズには異なる5問が必要です');
+    final questions = pool.take(5).map(_makeQuestion).toList();
+    final first = questions.first;
+    quiz = Quiz(
+      cityId: city,
+      factId: first.factId,
+      question: first.question,
+      answer: first.answer,
+      choices: first.choices,
+      deadline: now.add(Duration(seconds: difficulty.seconds)),
+      remaining: questions.skip(1).toList(),
+    );
+    message = '${atlas.cities[city]}の制圧クイズ。4択5問すべてに正解するとクリア！';
   }
 
   bool? answer(String? choice, DateTime now) {
     final q = quiz;
     if (q == null) return null;
     final correct = now.isBefore(q.deadline) && choice == q.answer;
+    if (correct && q.remaining.isNotEmpty) {
+      final next = q.remaining.first;
+      quiz = Quiz(
+        cityId: q.cityId,
+        factId: next.factId,
+        question: next.question,
+        answer: next.answer,
+        choices: next.choices,
+        correctCount: q.correctCount + 1,
+        remaining: q.remaining.skip(1).toList(),
+        deadline: now.add(Duration(seconds: difficulty.seconds)),
+      );
+      return true;
+    }
     quiz = null;
     if (correct) {
       wins++;
       mastered.add(q.cityId);
       titles.add('大和の知恵者');
-      message = '正解！ ${atlas.cities[q.cityId]}を制圧しました。';
+      message = '5問全問正解！ ${atlas.cities[q.cityId]}を制圧しました。';
     } else {
       losses++;
-      final candidates =
-          atlas.byCity[q.cityId]!
-              .where((t) => owned.contains(t.id) && t.id != home)
-              .toList()
-            ..shuffle(random);
-      final count = min(
-        candidates.length,
-        max(1, (atlas.byCity[q.cityId]!.length * 0.1).ceil()),
-      );
-      for (final town in candidates.take(count)) {
-        owned.remove(town.id);
-        progress.remove(town.id);
-      }
+      final officeTown = atlas.officeTownIds[q.cityId]!;
+      owned.remove(officeTown);
+      progress.remove(officeTown);
       mastered.remove(q.cityId);
       message =
-          '${choice == null ? '時間切れ' : '不正解'}。正解は「${q.answer}」。$count領土を失いました。本拠地と累計実績は保持されます。';
+          '${choice == null ? '時間切れ' : '不正解'}。正解は「${q.answer}」。${atlas.offices[q.cityId]!.name}所在地の${atlas.towns[officeTown]!.name}の支配を失いました。再攻略して挑戦できます。';
     }
     if (attackTarget != null && !isReachable(attackTarget!)) {
       _resumePendingTarget();
@@ -479,6 +559,7 @@ class Game {
 
   Map<String, dynamic> toJson() => {
     'version': 1,
+    'quizRule': 'office-five-v1',
     'dataset': 'nara-2020-v1',
     'tapRule': 'population-v1',
     'territoryUnit': 'town-v1',
@@ -545,6 +626,10 @@ class Game {
   factory Game.restore(Atlas atlas, Map<String, dynamic> j) {
     if (j['version'] != 1 || j['dataset'] != 'nara-2020-v1') {
       throw const FormatException('対応していない保存データです。');
+    }
+    final legacyQuiz = j['quizRule'] == null;
+    if (!legacyQuiz && j['quizRule'] != 'office-five-v1') {
+      throw const FormatException('対応していないクイズ方式です。');
     }
     final g = Game(atlas);
     g.difficulty = Difficulty.values.firstWhere(
@@ -630,7 +715,11 @@ class Game {
         g.totalTaps < 0 ||
         g.wins < 0 ||
         g.losses < 0 ||
-        (g.home != null && !g.owned.contains(g.home)) ||
+        (g.home != null &&
+            (!validIds.contains(g.home) ||
+                !g.everOwned.contains(g.home) ||
+                (!g.owned.contains(g.home) &&
+                    (legacyQuiz || atlas.officeForTown(g.home!) == null)))) ||
         (g.home == null && (g.owned.isNotEmpty || g.quiz != null)) ||
         g.mastered.any((c) => !g.cityOwned(c)) ||
         g.progress.entries.any(
@@ -654,7 +743,7 @@ class Game {
       final matching = fs?.where((f) => f.id == q.factId).toList();
       if (matching == null ||
           matching.length != 1 ||
-          !g.seen.contains(q.factId) ||
+          (legacyQuiz && !g.seen.contains(q.factId)) ||
           !g.cityOwned(q.cityId) ||
           g.mastered.contains(q.cityId) ||
           matching.single.answer != q.answer ||
@@ -663,6 +752,45 @@ class Game {
           q.choices.toSet().length != 4 ||
           !q.choices.contains(q.answer)) {
         throw const FormatException('クイズの保存データに不整合があります。');
+      }
+    }
+    if (g.quiz != null) {
+      final q = g.quiz!;
+      if (legacyQuiz) {
+        // Keep the current question and its original deadline; append four distinct questions.
+        final pool =
+            atlas.facts[q.cityId]!
+                .where((f) => f.quizEligible && f.id != q.factId)
+                .toList();
+        g.quiz = Quiz(
+          cityId: q.cityId,
+          factId: q.factId,
+          question: q.question,
+          answer: q.answer,
+          choices: q.choices,
+          deadline: q.deadline,
+          remaining: pool.take(4).map(g._makeQuestion).toList(),
+        );
+      }
+      final current = g.quiz!;
+      final questions = <QuizQuestion>[current, ...current.remaining];
+      if (current.correctCount < 0 ||
+          current.correctCount > 4 ||
+          current.correctCount + questions.length != 5 ||
+          questions.map((q) => q.factId).toSet().length != questions.length ||
+          questions.any((question) {
+            final matching =
+                atlas.facts[current.cityId]!
+                    .where((f) => f.id == question.factId && f.quizEligible)
+                    .toList();
+            return matching.length != 1 ||
+                matching.single.question != question.question ||
+                matching.single.answer != question.answer ||
+                question.choices.length != 4 ||
+                question.choices.toSet().length != 4 ||
+                !question.choices.contains(question.answer);
+          })) {
+        throw const FormatException('5問クイズの保存データに不整合があります。');
       }
     }
     return g;

@@ -1,0 +1,62 @@
+{
+  "official_urls": {
+    "29201": "https://www.city.nara.lg.jp/",
+    "29202": "https://www.city.yamatotakada.nara.jp/",
+    "29203": "https://www.city.yamatokoriyama.lg.jp/",
+    "29204": "https://www.city.tenri.nara.jp/",
+    "29205": "https://www.city.kashihara.nara.jp/",
+    "29206": "https://www.city.sakurai.lg.jp/",
+    "29207": "https://www.city.gojo.lg.jp/",
+    "29208": "https://www.city.gose.nara.jp/",
+    "29209": "https://www.city.ikoma.lg.jp/",
+    "29210": "https://www.city.kashiba.lg.jp/",
+    "29211": "https://www.city.katsuragi.nara.jp/",
+    "29212": "https://www.city.uda.nara.jp/",
+    "29322": "https://www.vill.yamazoe.nara.jp/",
+    "29342": "https://www.town.heguri.nara.jp/",
+    "29343": "https://www.town.sango.nara.jp/",
+    "29344": "https://www.town.ikaruga.nara.jp/",
+    "29345": "https://www.town.ando.nara.jp/",
+    "29361": "https://www.town.kawanishi.nara.jp/",
+    "29362": "https://www.town.miyake.lg.jp/",
+    "29363": "https://www.town.tawaramoto.nara.jp/",
+    "29385": "https://www.vill.soni.nara.jp/",
+    "29386": "https://www.vill.mitsue.nara.jp/",
+    "29401": "https://www.town.takatori.nara.jp/",
+    "29402": "https://www.asukamura.jp/",
+    "29424": "https://www.town.kanmaki.nara.jp/",
+    "29425": "https://www.town.oji.nara.jp/",
+    "29426": "https://www.town.koryo.nara.jp/",
+    "29427": "https://www.town.kawai.nara.jp/",
+    "29441": "https://www.town.yoshino.nara.jp/",
+    "29442": "https://www.town.oyodo.lg.jp/",
+    "29443": "https://www.town.shimoichi.lg.jp/",
+    "29444": "https://www.vill.kurotaki.nara.jp/",
+    "29446": "https://www.vill.tenkawa.nara.jp/",
+    "29447": "https://www.vill.nosegawa.nara.jp/",
+    "29449": "https://www.vill.totsukawa.lg.jp/",
+    "29450": "https://www.vill.shimokitayama.nara.jp/",
+    "29451": "https://www.vill.kamikitayama.nara.jp/",
+    "29452": "https://www.vill.kawakami.nara.jp/",
+    "29453": "https://www.vill.higashiyoshino.nara.jp/"
+  },
+  "overrides": {
+    "29402": {
+      "seed": [
+        135.8126134,
+        34.4705523
+      ],
+      "address": "明日香村大字橘21番地",
+      "source": "https://www.asukamura.jp/info_access.html"
+    },
+    "29450": {
+      "address": "下北山村寺垣内1002",
+      "source": "https://www.vill.shimokitayama.nara.jp/"
+    }
+  },
+  "address_check_date": "2026-10-08",
+  "address_check_unavailable": [
+    "29212",
+    "29361"
+  ]
+}

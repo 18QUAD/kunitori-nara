@@ -63,6 +63,7 @@ flutter:
     - assets/data/nara_relief.json
     - assets/data/nara_water.json
     - assets/data/nara_urban.json
+    - assets/data/nara_offices.json
     - assets/data/nara_mountains.json
     - assets/fonts/OFL.txt
   fonts:
