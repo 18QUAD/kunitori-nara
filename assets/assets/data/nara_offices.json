@@ -1,0 +1,602 @@
+{
+  "metadata": {
+    "source": "https://nlftp.mlit.go.jp/ksj/gml/data/P05/P05-22/P05-22_29_GML.zip",
+    "sha256": "356170463ec02be04c7c985ec10d1da450f57c0ca4162fb730eb74b33c3a528c",
+    "specification": "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P05-v3_0.html",
+    "positionSource": "国土地理院ベクトルタイル提供実験 市役所3205・町村役場3206を加工",
+    "retrievedAt": "2026-10-08T10:15:53.691156+00:00",
+    "addressCheckDate": "2026-10-08",
+    "addressCheckUnavailable": [
+      "29212",
+      "29361"
+    ],
+    "processing": "本庁舎のみ。公式所在地と地理院の役所記号を照合。記号座標を国勢調査の町境界に包含判定。分庁舎・支所は対象外。"
+  },
+  "offices": [
+    {
+      "cityId": "29201",
+      "name": "奈良市役所",
+      "address": "奈良市二条大路南1-1-1",
+      "point": [
+        135.80473244190216,
+        34.68502833363989
+      ],
+      "sourceTownId": "29201454001",
+      "sourceTownName": "二条大路南一丁目",
+      "officialUrl": "https://www.city.nara.lg.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14372/6507.pbf",
+      "coordinateSourceSha256": "ccb7955ce9e64fcbaad073d3cf1e7b5690ea9b3dcebd49360029da1328ec9b96",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29202",
+      "name": "大和高田市役所",
+      "address": "大和高田市大字大中98-4",
+      "point": [
+        135.73739290237427,
+        34.51573330201429
+      ],
+      "sourceTownId": "292020190",
+      "sourceTownName": "大字大中",
+      "officialUrl": "https://www.city.yamatotakada.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14369/6516.pbf",
+      "coordinateSourceSha256": "65406e3003aa1046ddba3f32855130df981108a66729878839f6094a55faeb4f",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29203",
+      "name": "大和郡山市役所",
+      "address": "大和郡山市北郡山町248-4",
+      "point": [
+        135.78270077705383,
+        34.64944940423534
+      ],
+      "sourceTownId": "292030020",
+      "sourceTownName": "北郡山町",
+      "officialUrl": "https://www.city.yamatokoriyama.lg.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14371/6509.pbf",
+      "coordinateSourceSha256": "b5aa4d291c56a2972dc22867e508e3ce97bd8ba74846f8a951a2b05633b340e2",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29204",
+      "name": "天理市役所",
+      "address": "天理市川原城町605",
+      "point": [
+        135.83730518817902,
+        34.59661318196843
+      ],
+      "sourceTownId": "292040150",
+      "sourceTownName": "川原城町",
+      "officialUrl": "https://www.city.tenri.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14374/6512.pbf",
+      "coordinateSourceSha256": "0f97cb2399cfdc9832b092a557119c03477a89265fe01ffe770a54c4b6c8fb7d",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29205",
+      "name": "橿原市役所",
+      "address": "橿原市八木町1-1-18",
+      "point": [
+        135.79265713691711,
+        34.509403445640714
+      ],
+      "sourceTownId": "29205041001",
+      "sourceTownName": "八木町一丁目",
+      "officialUrl": "https://www.city.kashihara.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14372/6516.pbf",
+      "coordinateSourceSha256": "4a5855b44dc829451c23e556ecec39b0639b83e8c13a7c643fd62855ecd591b2",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29206",
+      "name": "桜井市役所",
+      "address": "桜井市大字粟殿432-1",
+      "point": [
+        135.84270179271698,
+        34.51875661120081
+      ],
+      "sourceTownId": "29206003015",
+      "sourceTownName": "大字粟殿",
+      "officialUrl": "https://www.city.sakurai.lg.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14374/6516.pbf",
+      "coordinateSourceSha256": "a47e8143cf9ebd1c50379a62b4cc5bdf397401dc8f18682eca810e7c818f6968",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29207",
+      "name": "五條市役所",
+      "address": "五條市岡口1-3-1",
+      "point": [
+        135.6955772638321,
+        34.356302033854334
+      ],
+      "sourceTownId": "29207011001",
+      "sourceTownName": "岡口一丁目",
+      "officialUrl": "https://www.city.gojo.lg.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14367/6525.pbf",
+      "coordinateSourceSha256": "5b96ce16506d26dc6596e977a0696513dd9d96bcbcb01a61a4b3f9ec7f62510f",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29208",
+      "name": "御所市役所",
+      "address": "御所市1-3",
+      "point": [
+        135.7401341199875,
+        34.46332953979228
+      ],
+      "sourceTownId": "292080810",
+      "sourceTownName": "名称未設定",
+      "officialUrl": "https://www.city.gose.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14369/6519.pbf",
+      "coordinateSourceSha256": "8112185128bedd04fde38fae8b42cdcd19c595877e4e3c73018fc7b4f9d0626d",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29209",
+      "name": "生駒市役所",
+      "address": "生駒市東新町8-38",
+      "point": [
+        135.70052325725555,
+        34.69191821972423
+      ],
+      "sourceTownId": "292095240",
+      "sourceTownName": "東新町",
+      "officialUrl": "https://www.city.ikoma.lg.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14367/6506.pbf",
+      "coordinateSourceSha256": "005fb52f300d142a6d3d05dc908ce5937d3e7bd880dd3f0b326d87f090a4719d",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29210",
+      "name": "香芝市役所",
+      "address": "香芝市本町1397",
+      "point": [
+        135.69913387298584,
+        34.54125118207269
+      ],
+      "sourceTownId": "292100130",
+      "sourceTownName": "本町",
+      "officialUrl": "https://www.city.kashiba.lg.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14367/6515.pbf",
+      "coordinateSourceSha256": "91ff83b4739ed3447dabb5cfb6653585e9e7b03872940876604c0412b77af9a5",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29211",
+      "name": "葛城市役所",
+      "address": "葛城市柿本166",
+      "point": [
+        135.726358294487,
+        34.4888236704053
+      ],
+      "sourceTownId": "292110130",
+      "sourceTownName": "柿本",
+      "officialUrl": "https://www.city.katsuragi.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14369/6517.pbf",
+      "coordinateSourceSha256": "e5c557522034e10b3729def8741251a2bbf8af5529ef8412fa1cb5288a5ab057",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29212",
+      "name": "宇陀市役所",
+      "address": "宇陀市榛原下井足17-3",
+      "point": [
+        135.95233976840973,
+        34.5280247568714
+      ],
+      "sourceTownId": "292120990",
+      "sourceTownName": "榛原下井足",
+      "officialUrl": "https://www.city.uda.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14379/6515.pbf",
+      "coordinateSourceSha256": "4de52dcb457556fae1fe4584e3f602c3fbe6e32d5c15cd2715c84aa5ab01771c",
+      "symbolCode": 3205
+    },
+    {
+      "cityId": "29322",
+      "name": "山添村役場",
+      "address": "山添村大字大西151",
+      "point": [
+        136.0433954000473,
+        34.68096117912192
+      ],
+      "sourceTownId": "293220080",
+      "sourceTownName": "大字大西",
+      "officialUrl": "https://www.vill.yamazoe.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14383/6507.pbf",
+      "coordinateSourceSha256": "6134abc98837df596ef075e0f07453faedab0487253de888cd653f9f2e51a362",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29342",
+      "name": "平群町役場",
+      "address": "平群町吉新1-1-1",
+      "point": [
+        135.7007485628128,
+        34.62916911165345
+      ],
+      "sourceTownId": "29342010001",
+      "sourceTownName": "吉新一丁目",
+      "officialUrl": "https://www.town.heguri.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14367/6510.pbf",
+      "coordinateSourceSha256": "9c46af417a6dcbea85c2f3e82373264d16ee3213e8886be0e8712e1b60c8b353",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29343",
+      "name": "三郷町役場",
+      "address": "三郷町勢野西1-1-1",
+      "point": [
+        135.69559335708618,
+        34.6001369376715
+      ],
+      "sourceTownId": "29343001001",
+      "sourceTownName": "勢野西一丁目",
+      "officialUrl": "https://www.town.sango.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14367/6511.pbf",
+      "coordinateSourceSha256": "f61519955ae7c49474ef055c868ccd2cb47bd21cf27c434fae821a984ea38424",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29344",
+      "name": "斑鳩町役場",
+      "address": "斑鳩町法隆寺西3-7-12",
+      "point": [
+        135.7307732105255,
+        34.60889269078858
+      ],
+      "sourceTownId": "29344028003",
+      "sourceTownName": "法隆寺西三丁目",
+      "officialUrl": "https://www.town.ikaruga.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14369/6511.pbf",
+      "coordinateSourceSha256": "9f3d511f286e6cc047249c3ac7742421347a3abed8b33e8854b988090196e203",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29345",
+      "name": "安堵町役場",
+      "address": "安堵町大字東安堵958",
+      "point": [
+        135.75678527355194,
+        34.60653936930228
+      ],
+      "sourceTownId": "293450010",
+      "sourceTownName": "大字東安堵",
+      "officialUrl": "https://www.town.ando.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14370/6511.pbf",
+      "coordinateSourceSha256": "e2dbfbf5bc7cf3f235d3088cc5d81b0fa23f89740f415525b289dd2c984927c7",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29361",
+      "name": "川西町役場",
+      "address": "川西町大字結崎28-1",
+      "point": [
+        135.77411770820618,
+        34.58439810478861
+      ],
+      "sourceTownId": "29361001001",
+      "sourceTownName": "大字結崎中村",
+      "officialUrl": "https://www.town.kawanishi.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14371/6512.pbf",
+      "coordinateSourceSha256": "bbc7ddf69b2ec45ad1591fbe52f4cc3daee8be04b9d87ba14ed7cdd9f717cc35",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29362",
+      "name": "三宅町役場",
+      "address": "三宅町伴堂689",
+      "point": [
+        135.773184299469,
+        34.57370954345924
+      ],
+      "sourceTownId": "293620010",
+      "sourceTownName": "大字伴堂",
+      "officialUrl": "https://www.town.miyake.lg.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14371/6513.pbf",
+      "coordinateSourceSha256": "07f329d65bd26657790a0897cc988ff7ca58e2608e4a0e373728cc9c8800705e",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29363",
+      "name": "田原本町役場",
+      "address": "田原本町890-1",
+      "point": [
+        135.79494774341583,
+        34.5566668380575
+      ],
+      "sourceTownId": "293630010",
+      "sourceTownName": "郭内",
+      "officialUrl": "https://www.town.tawaramoto.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14372/6514.pbf",
+      "coordinateSourceSha256": "0a8c0c7c9446e907ab3843f6f108a8b6aab508f4ea02666467239fe36ec4b903",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29385",
+      "name": "曽爾村役場",
+      "address": "曽爾村大字今井495-1",
+      "point": [
+        136.12452149391174,
+        34.51038478168379
+      ],
+      "sourceTownId": "293850050",
+      "sourceTownName": "大字今井",
+      "officialUrl": "https://www.vill.soni.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14387/6516.pbf",
+      "coordinateSourceSha256": "faafafbc6f674cb96717e7721f9e4c3e39fd0e944d8259c5be58dea5d901f8d5",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29386",
+      "name": "御杖村役場",
+      "address": "御杖村大字菅野368",
+      "point": [
+        136.16610646247864,
+        34.487948198912285
+      ],
+      "sourceTownId": "29386002004",
+      "sourceTownName": "大字菅野西川",
+      "officialUrl": "https://www.vill.mitsue.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14389/6518.pbf",
+      "coordinateSourceSha256": "2e59750a976c64c30223ac84d9252d411f7dbea2aead7f6d814f9192a986c21d",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29401",
+      "name": "高取町役場",
+      "address": "高取町大字観覚寺990-1",
+      "point": [
+        135.7931613922119,
+        34.449502405962896
+      ],
+      "sourceTownId": "294010060",
+      "sourceTownName": "大字観覚寺",
+      "officialUrl": "https://www.town.takatori.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14372/6520.pbf",
+      "coordinateSourceSha256": "9ccdab093c90823a5c86836d7daf3dc2761af5cebe2b328d4c22e2c5721ae72d",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29402",
+      "name": "明日香村役場",
+      "address": "明日香村大字橘21番地",
+      "point": [
+        135.81251084804535,
+        34.47053855734697
+      ],
+      "sourceTownId": "294020280",
+      "sourceTownName": "大字橘",
+      "officialUrl": "https://www.asukamura.jp/info_access.html",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14372/6518.pbf",
+      "coordinateSourceSha256": "df4072649ae0a680c601ca325a2461946893811800b5079870b72b5f4e334c7c",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29424",
+      "name": "上牧町役場",
+      "address": "上牧町大字上牧3350",
+      "point": [
+        135.716814994812,
+        34.56277222108308
+      ],
+      "sourceTownId": "294240013",
+      "sourceTownName": "大字上牧",
+      "officialUrl": "https://www.town.kanmaki.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14368/6513.pbf",
+      "coordinateSourceSha256": "bd6ef492f5decac956ff8181561efba998812a22e84e5a8b6029b3d364b0a484",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29425",
+      "name": "王寺町役場",
+      "address": "王寺町王寺2-1-23",
+      "point": [
+        135.7065850496292,
+        34.59464369949796
+      ],
+      "sourceTownId": "29425002002",
+      "sourceTownName": "王寺二丁目",
+      "officialUrl": "https://www.town.oji.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14368/6512.pbf",
+      "coordinateSourceSha256": "1ad88f47a940cf360a1c37d9679aafaabfc9f4aeee2042604ba14624959a55c7",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29426",
+      "name": "広陵町役場",
+      "address": "広陵町大字南郷583-1",
+      "point": [
+        135.750852227211,
+        34.54277564329908
+      ],
+      "sourceTownId": "29426007005",
+      "sourceTownName": "大字南郷園",
+      "officialUrl": "https://www.town.koryo.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14370/6514.pbf",
+      "coordinateSourceSha256": "f7eaefe07d44745428319d0c46b79f2b881528e81840e82a61a80932d1b45165",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29427",
+      "name": "河合町役場",
+      "address": "河合町池部1-1-1",
+      "point": [
+        135.736802816391,
+        34.5783340607901
+      ],
+      "sourceTownId": "29427001101",
+      "sourceTownName": "池部一丁目",
+      "officialUrl": "https://www.town.kawai.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14369/6513.pbf",
+      "coordinateSourceSha256": "f2ef3058f218fc333e89b466f3cdd0dca1293f7b4d7dd58aeccd4f0bb6aa5419",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29441",
+      "name": "吉野町役場",
+      "address": "吉野町大字上市80-1",
+      "point": [
+        135.8576202392578,
+        34.396030116007715
+      ],
+      "sourceTownId": "29441001005",
+      "sourceTownName": "大字上市字上ノ町",
+      "officialUrl": "https://www.town.yoshino.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14375/6523.pbf",
+      "coordinateSourceSha256": "8fcd3ba0665f762db2254da86ef1bd26fe62bb8662b1e25589289f840b57548d",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29442",
+      "name": "大淀町役場",
+      "address": "大淀町大字桧垣本2090",
+      "point": [
+        135.7897388935089,
+        34.390625229308576
+      ],
+      "sourceTownId": "29442012002",
+      "sourceTownName": "大字檜垣本",
+      "officialUrl": "https://www.town.oyodo.lg.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14371/6523.pbf",
+      "coordinateSourceSha256": "226f27705e966930e523270db69b2cd1dce140d958460eec81a744e1a278e554",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29443",
+      "name": "下市町役場",
+      "address": "下市町大字下市1960",
+      "point": [
+        135.79208314418793,
+        34.361084746386126
+      ],
+      "sourceTownId": "29443001015",
+      "sourceTownName": "大字下市堀毛",
+      "officialUrl": "https://www.town.shimoichi.lg.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14372/6525.pbf",
+      "coordinateSourceSha256": "80bafc543a336f874fcda6ac177a0e4de6c01cdc93a2c3c54276c9dcf91099b6",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29444",
+      "name": "黒滝村役場",
+      "address": "黒滝村大字寺戸77",
+      "point": [
+        135.8522665500641,
+        34.30919102708288
+      ],
+      "sourceTownId": "294440060",
+      "sourceTownName": "大字寺戸",
+      "officialUrl": "https://www.vill.kurotaki.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14374/6527.pbf",
+      "coordinateSourceSha256": "ee86453a120221ab30dd2e201fc574a246676dcd5fae2df3e062010ca12c9f33",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29446",
+      "name": "天川村役場",
+      "address": "天川村沢谷60",
+      "point": [
+        135.8554047346115,
+        34.24150604936465
+      ],
+      "sourceTownId": "294460060",
+      "sourceTownName": "大字沢谷",
+      "officialUrl": "https://www.vill.tenkawa.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14374/6531.pbf",
+      "coordinateSourceSha256": "641af037eea13b490a37ecc80ad5de49e8dd31e4f1c0e4d52f16625ef5af5e1f",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29447",
+      "name": "野迫川村役場",
+      "address": "野迫川村大字北股84",
+      "point": [
+        135.63301742076874,
+        34.166194718706386
+      ],
+      "sourceTownId": "29447001001",
+      "sourceTownName": "大字北股上垣内",
+      "officialUrl": "https://www.vill.nosegawa.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14364/6535.pbf",
+      "coordinateSourceSha256": "1aebb3198c19db832825e96a6aa6a1a6a03d9bdc6cb0ad29219858ff8c7b04d1",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29449",
+      "name": "十津川村役場",
+      "address": "十津川村大字小原225-1",
+      "point": [
+        135.79221189022064,
+        33.98833136102012
+      ],
+      "sourceTownId": "294490240",
+      "sourceTownName": "大字小原",
+      "officialUrl": "https://www.vill.totsukawa.lg.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14372/6545.pbf",
+      "coordinateSourceSha256": "28927235b65bac20a2926bf2439b77ec173124be846aa08bb4c1f20bb68c7ace",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29450",
+      "name": "下北山村役場",
+      "address": "下北山村寺垣内1002",
+      "point": [
+        135.95512926578522,
+        34.005044981300614
+      ],
+      "sourceTownId": "294500060",
+      "sourceTownName": "寺垣内",
+      "officialUrl": "https://www.vill.shimokitayama.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14379/6544.pbf",
+      "coordinateSourceSha256": "057648c399661ed6a7679ff5288b4ea1b0e6af95e3a290e42841115c5c3cc076",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29451",
+      "name": "上北山村役場",
+      "address": "上北山村大字河合330",
+      "point": [
+        136.0002762079239,
+        34.13430634847311
+      ],
+      "sourceTownId": "294510020",
+      "sourceTownName": "大字河合",
+      "officialUrl": "https://www.vill.kamikitayama.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14381/6537.pbf",
+      "coordinateSourceSha256": "fdfc663396e1b6c7f2f9e17ef32b0339285116001036f3c2bf169e477605f845",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29452",
+      "name": "川上村役場",
+      "address": "川上村大字迫1335-7",
+      "point": [
+        135.95424950122833,
+        34.33825812289107
+      ],
+      "sourceTownId": "294520060",
+      "sourceTownName": "大字迫",
+      "officialUrl": "https://www.vill.kawakami.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14379/6526.pbf",
+      "coordinateSourceSha256": "8abb8c6543925d0b7d01bb3e143c27ff08b9728b386751d6bd29fe9c9956d830",
+      "symbolCode": 3206
+    },
+    {
+      "cityId": "29453",
+      "name": "東吉野村役場",
+      "address": "東吉野村大字小川99",
+      "point": [
+        135.96835255622864,
+        34.40346181856608
+      ],
+      "sourceTownId": "294530010",
+      "sourceTownName": "大字小川",
+      "officialUrl": "https://www.vill.higashiyoshino.nara.jp/",
+      "coordinateSource": "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/14/14380/6522.pbf",
+      "coordinateSourceSha256": "73facc6bcc9151c3de8386d25b80df827270c97442e9a5a383312cab0a072d0a",
+      "symbolCode": 3206
+    }
+  ]
+}
