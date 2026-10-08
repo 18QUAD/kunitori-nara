@@ -44,7 +44,7 @@ void main() {
           final source = Uri.parse(fact.source);
           expect(source.host, 'ja.wikipedia.org');
           expect(source.queryParameters['oldid'], isNotEmpty);
-          expect(fact.text.length, lessThanOrEqualTo(110));
+          expect(fact.text.length, lessThanOrEqualTo(40));
         }
       }
     },

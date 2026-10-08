@@ -6,7 +6,6 @@ Source revisions and attribution live in data/tips/wikipedia_sources.json.
 """
 import argparse
 from collections import Counter
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -32,19 +31,21 @@ def generate():
                 raise ValueError(f'Unknown municipality on line {line_number}: {city}')
             continue
         fields = line.split('\t')
-        if city is None or len(fields) not in (2, 3):
+        if city is None or len(fields) != 4:
             raise ValueError(f'Invalid row on line {line_number}')
-        category, text = fields[:2]
-        source = sources[fields[2] if len(fields) == 3 else city]
+        category, text, source_key, identifier = fields
+        source = sources[source_key]
+        if not re.fullmatch(rf'{city}:wikipedia:[0-9a-f]{{12}}', identifier):
+            raise ValueError(f'Invalid fixed ID on line {line_number}')
         url = urlparse(source['revisionUrl'])
         if url.scheme != 'https' or url.netloc != 'ja.wikipedia.org' or not parse_qs(url.query).get('oldid'):
             raise ValueError(f'Missing Wikipedia revision on line {line_number}')
-        if not category or not text or len(text) > 110 or '人口' in text or text in texts:
+        if not category or not text or len(text) > 40 or '人口' in text or text in texts:
             raise ValueError(f'Invalid or duplicated tip on line {line_number}: {text}')
         texts.add(text)
         counts[city] += 1
         entries.append({
-            'id': f'{city}:wikipedia:{hashlib.sha256(text.encode()).hexdigest()[:12]}',
+            'id': identifier,
             'cityId': city,
             'category': category,
             'text': text,

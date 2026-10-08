@@ -335,7 +335,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29202:wikipedia:a9ec83fee6f6",
     "cityId": "29202",
     "category": "産業",
-    "text": "江戸時代の高田は綿作とともに市場町として発展し、近代には紡績工場が設けられました。",
+    "text": "江戸時代の高田は綿作で栄え、近代には紡績工場も設けられました。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E5%A4%A7%E5%92%8C%E9%AB%98%E7%94%B0%E5%B8%82&oldid=111061323",
   },
@@ -1143,7 +1143,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29205:wikipedia:22742f04a506",
     "cityId": "29205",
     "category": "歴史",
-    "text": "橿原市では1995年に、藤原京をテーマとする「ロマントピア藤原京'95」が開かれました。",
+    "text": "橿原市では1995年、博覧会「ロマントピア藤原京'95」が開かれました。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E6%A9%BF%E5%8E%9F%E5%B8%82&oldid=110754152",
   },
@@ -1871,7 +1871,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29209:wikipedia:04e572c752a1",
     "cityId": "29209",
     "category": "交通史",
-    "text": "1986年の近鉄東大阪線開業により、生駒から地下鉄中央線への直通運転が始まりました。",
+    "text": "1986年、生駒から地下鉄中央線への直通運転が始まりました。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E7%94%9F%E9%A7%92%E5%B8%82&oldid=111307238",
   },
@@ -3615,7 +3615,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29345:wikipedia:9fc4f51f94ca",
     "cityId": "29345",
     "category": "歴史",
-    "text": "安堵村は1889年、東安堵・西安堵・笠目・窪田・岡崎の5村が合併して誕生しました。",
+    "text": "安堵村は1889年、東安堵・西安堵・笠目・窪田・岡崎の5村の合併で誕生。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E5%AE%89%E5%A0%B5%E7%94%BA&oldid=110211434",
   },
@@ -3791,7 +3791,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29345:wikipedia:13029d4f3484",
     "cityId": "29345",
     "category": "文化",
-    "text": "安堵町にある富本憲吉の生家は、宿泊施設「うぶすなの郷 TOMIMOTO」に活用されました。",
+    "text": "安堵町の富本憲吉の生家は、「うぶすなの郷 TOMIMOTO」に活用。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E5%AF%8C%E6%9C%AC%E6%86%B2%E5%90%89&oldid=105969722",
   },
@@ -3879,7 +3879,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29361:wikipedia:ad88e81480f5",
     "cityId": "29361",
     "category": "歴史",
-    "text": "川西村は1889年、結崎・下永・吐田・梅戸・唐院・保田の6村の合併で誕生しました。",
+    "text": "川西村は1889年、結崎・下永・吐田・梅戸・唐院・保田の6村の合併で誕生。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E5%B7%9D%E8%A5%BF%E7%94%BA_(%E5%A5%88%E8%89%AF%E7%9C%8C)&oldid=110513052",
   },
@@ -4095,7 +4095,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29362:wikipedia:768dce003dd6",
     "cityId": "29362",
     "category": "歴史",
-    "text": "三宅村は1889年、伴堂・但馬・上但馬・小柳・屏風・三河・石見の7村の合併で誕生しました。",
+    "text": "三宅村は1889年、伴堂や但馬など7村の合併で誕生しました。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E4%B8%89%E5%AE%85%E7%94%BA&oldid=111093823",
   },
@@ -4311,7 +4311,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29363:wikipedia:c7b53850b3d0",
     "cityId": "29363",
     "category": "歴史",
-    "text": "現在の田原本町は1956年、田原本町・多村・川東村・平野村・都村の合併で誕生しました。",
+    "text": "田原本町は1956年、田原本町・多村・川東村・平野村・都村の合併で誕生。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E7%94%B0%E5%8E%9F%E6%9C%AC%E7%94%BA&oldid=108987361",
   },
@@ -4823,7 +4823,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29386:wikipedia:60272d652dbb",
     "cityId": "29386",
     "category": "歴史",
-    "text": "御杖村と曽爾村は、2004年に合併協議会を設けましたが、2005年に解散しました。",
+    "text": "御杖村と曽爾村の合併協議会は、2004年に設立、翌年に解散しました。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E5%BE%A1%E6%9D%96%E6%9D%91&oldid=107994204",
   },
@@ -5655,7 +5655,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29424:wikipedia:8169de5866fb",
     "cityId": "29424",
     "category": "歴史",
-    "text": "1888年の合併案では、上牧村と下牧村は別々の村になる予定でしたが、両村は合同案を申し出ました。",
+    "text": "1888年、別々の村になる合併案に対し、上牧村と下牧村は合同を申し出ました。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E4%B8%8A%E7%89%A7%E7%94%BA&oldid=111267561",
   },
@@ -6055,7 +6055,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29426:wikipedia:615c977b8c31",
     "cityId": "29426",
     "category": "文化",
-    "text": "広陵町の竹取公園には、柔道の野村豊和・野村忠宏の栄誉をたたえる金メダルの塔があります。",
+    "text": "広陵町の竹取公園には、柔道の野村豊和・野村忠宏をたたえる金メダルの塔が。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E5%BA%83%E9%99%B5%E7%94%BA&oldid=108696598",
   },
@@ -6463,7 +6463,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29441:wikipedia:3d22f9718acd",
     "cityId": "29441",
     "category": "世界遺産",
-    "text": "吉野山は「紀伊山地の霊場と参詣道」の一部として、2004年に世界遺産となりました。",
+    "text": "吉野山は2004年、「紀伊山地の霊場と参詣道」の一部として世界遺産に登録。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E5%90%89%E9%87%8E%E7%94%BA&oldid=108817628",
   },
@@ -7343,7 +7343,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29449:wikipedia:303b37215f7a",
     "cityId": "29449",
     "category": "文化",
-    "text": "十津川村の方言は、近畿地方にありながら東京式アクセントを用いることで知られています。",
+    "text": "十津川村の方言は、近畿地方にありながら東京式アクセントを使います。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E5%8D%81%E6%B4%A5%E5%B7%9D%E6%9D%91&oldid=110950092",
   },
@@ -7695,7 +7695,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29442:wikipedia:30579243fff9",
     "cityId": "29442",
     "category": "歴史",
-    "text": "比曽寺の東塔は豊臣秀吉によって伏見城へ移され、後に滋賀県の園城寺へ移築されました。",
+    "text": "比曽寺の東塔は、豊臣秀吉が伏見城へ移築。その後、滋賀の園城寺へ移りました。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E4%B8%96%E5%B0%8A%E5%AF%BA_(%E5%A5%88%E8%89%AF%E7%9C%8C%E5%A4%A7%E6%B7%80%E7%94%BA)&oldid=106283480",
   },
@@ -8447,7 +8447,7 @@ const wikipediaTips = <Map<String, String>>[
     "id": "29453:wikipedia:58313596632c",
     "cityId": "29453",
     "category": "自然史",
-    "text": "1905年、東吉野村の鷲家口で、日本で最後とされるニホンオオカミが捕獲されました。",
+    "text": "1905年、東吉野村の鷲家口で、最後とされるニホンオオカミが捕獲されました。",
     "source":
         "https://ja.wikipedia.org/w/index.php?title=%E6%9D%B1%E5%90%89%E9%87%8E%E6%9D%91&oldid=110249313",
   },
