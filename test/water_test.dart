@@ -1,12 +1,54 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui' show PictureRecorder;
+import 'dart:ui' show PictureRecorder, ImageByteFormat;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/water.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'narrow polygon rivers stay visible over owned and reachable land',
+    () async {
+      for (final zoom in [0.25, 2.0]) {
+        for (final background in [
+          const Color(0xFF7AE1BB),
+          const Color(0xFFEEC47C),
+        ]) {
+          final recorder = PictureRecorder();
+          final canvas = Canvas(recorder);
+          canvas.drawColor(background, BlendMode.src);
+          canvas.scale(zoom);
+          final layer = WaterLayer(
+            Path(),
+            Path()..addRect(
+              Rect.fromLTWH(20.45 / zoom, 5 / zoom, 0.1 / zoom, 30 / zoom),
+            ),
+            [],
+          );
+          layer.paint(
+            canvas,
+            Path()..addRect(Rect.fromLTWH(0, 0, 40 / zoom, 40 / zoom)),
+            zoom,
+            municipal: true,
+          );
+          final picture = recorder.endRecording();
+          final image = await picture.toImage(40, 40);
+          final bytes =
+              (await image.toByteData(format: ImageByteFormat.rawRgba))!;
+          // A subpixel water polygon must still cover a neighbouring screen pixel.
+          final blue = bytes.getUint8((20 * 40 + 21) * 4 + 2);
+          expect(
+            blue,
+            greaterThan(220),
+            reason: 'zoom=$zoom background=$background',
+          );
+          image.dispose();
+          picture.dispose();
+        }
+      }
+    },
+  );
   test('municipal names avoid town labels even below overview zoom cutoff', () {
     final layer = WaterLayer(Path(), Path(), [
       WaterLabel('初瀬川', const Offset(100, 100), detail: true),
