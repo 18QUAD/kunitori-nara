@@ -1,0 +1,18 @@
+{
+  "west": 135.534696,
+  "south": 33.853953999999995,
+  "east": 136.235051,
+  "north": 34.786218000000005,
+  "width": 1020,
+  "height": 1644,
+  "zoom": 11,
+  "tiles": 40,
+  "source": "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  "attribution": "国土地理院の標高タイルを加工して作成",
+  "retrieved": "2026-10-08T00:31:33.286858+00:00",
+  "processing": "経緯度グリッドに再投影、北西光源・高度45度、陰影計算の高さ強調2倍",
+  "sampleSpacingMetres": 63.2,
+  "minElevation": 0.0,
+  "maxElevation": 1903.65,
+  "missingPixelsInsideNara": 0
+}
