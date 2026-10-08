@@ -5,6 +5,7 @@ import 'relief.dart';
 import 'water.dart';
 import 'mountains.dart';
 import 'map_outline.dart';
+import 'map_label.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -563,7 +564,6 @@ class _MapPainter extends CustomPainter {
             fontSize: 12 / zoom,
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -578,9 +578,11 @@ class _MapPainter extends CustomPainter {
             height: label.height + 4 / zoom,
           ),
         );
-        label.paint(
+        paintMapLabel(
           canvas,
+          label,
           box.center - Offset(label.width / 2, label.height / 2),
+          zoom,
         );
       }
     }
