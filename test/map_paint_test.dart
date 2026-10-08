@@ -45,6 +45,7 @@ void main() {
     final dynamic withRelief = painter();
     expect(withRelief.relief, isNotNull);
     expect(withRelief.water, isNotNull);
+    expect(withRelief.mountains, isNotNull);
     final originalWater = withRelief.water;
     final Rect terrainRect = withRelief.reliefBounds;
     for (final Rect box in (withRelief.bounds as Map<String, Rect>).values) {
@@ -54,15 +55,17 @@ void main() {
     final originalTransform = Matrix4.copy(
       viewer.transformationController!.value,
     );
-    await tester.tap(find.byTooltip('起伏・川・池・湖を非表示'));
+    await tester.tap(find.byTooltip('起伏・山名・川・池・湖を非表示'));
     await tester.pumpAndSettle();
     expect(painter().relief, isNull);
     expect(painter().water, isNull);
+    expect(painter().mountains, isNull);
     expect(viewer.transformationController!.value, originalTransform);
-    await tester.tap(find.byTooltip('起伏・川・池・湖を表示'));
+    await tester.tap(find.byTooltip('起伏・山名・川・池・湖を表示'));
     await tester.pumpAndSettle();
     expect(painter().relief, same(withRelief.relief));
     expect(painter().water, same(originalWater));
+    expect(painter().mountains, same(withRelief.mountains));
     expect(game.owned, isEmpty);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());

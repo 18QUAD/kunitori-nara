@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'game.dart';
 import 'relief.dart';
 import 'water.dart';
+import 'mountains.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -34,6 +35,18 @@ class _TerritoryMapState extends State<TerritoryMap> {
   late Map<String, Path> cityPaths;
   late Map<String, Rect> cityBounds;
   Size? viewport;
+  MountainLayer? mountains;
+  bool mountainsFailed = false;
+
+  Future<void> _loadMountains() async {
+    try {
+      final loaded = await MountainLayer.load(project);
+      if (mounted) setState(() => mountains = loaded);
+    } catch (_) {
+      if (mounted) setState(() => mountainsFailed = true);
+    }
+  }
+
   WaterLayer? water;
   bool showGeography = true;
   bool waterFailed = false;
@@ -82,6 +95,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
     _buildCities();
     _loadRelief();
     _loadWater();
+    _loadMountains();
   }
 
   @override
@@ -274,6 +288,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       widget.cityId,
                       showGeography ? relief : null,
                       showGeography ? water : null,
+                      showGeography ? mountains : null,
                       reliefBounds,
                       widget.cityId == null
                           ? prefecturePath
@@ -305,12 +320,20 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         shadows: [Shadow(color: Colors.black, blurRadius: 3)],
                       ),
                     ),
+                    if (mountainsFailed || mountains == null)
+                      Text(
+                        mountainsFailed ? '山名を読み込めませんでした' : '山名を読み込み中…',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white70,
+                        ),
+                      ),
                     Text(
                       waterFailed
                           ? '川・湖を読み込めませんでした'
                           : water == null
                           ? '川・湖を読み込み中…'
-                          : '川・湖：国土地理院ベクトルタイル提供実験を加工',
+                          : '川・湖・山名：国土地理院ベクトルタイル提供実験を加工',
                       style: const TextStyle(
                         fontSize: 10,
                         color: Colors.white70,
@@ -359,7 +382,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         ),
                         IconButton.filledTonal(
                           tooltip:
-                              showGeography ? '起伏・川・池・湖を非表示' : '起伏・川・池・湖を表示',
+                              showGeography
+                                  ? '起伏・山名・川・池・湖を非表示'
+                                  : '起伏・山名・川・池・湖を表示',
                           isSelected: showGeography,
                           onPressed: () {
                             setState(() => showGeography = !showGeography);
@@ -367,6 +392,10 @@ class _TerritoryMapState extends State<TerritoryMap> {
                             if (showGeography && reliefFailed) {
                               setState(() => reliefFailed = false);
                               _loadRelief();
+                            }
+                            if (showGeography && mountainsFailed) {
+                              setState(() => mountainsFailed = false);
+                              _loadMountains();
                             }
                             if (showGeography && waterFailed) {
                               setState(() => waterFailed = false);
@@ -435,6 +464,7 @@ class _MapPainter extends CustomPainter {
     this.cityId,
     this.relief,
     this.water,
+    this.mountains,
     this.reliefBounds,
     this.reliefClip,
   ) : super(repaint: transform);
@@ -446,6 +476,7 @@ class _MapPainter extends CustomPainter {
   final String? selected, cityId;
   final Relief? relief;
   final WaterLayer? water;
+  final MountainLayer? mountains;
   final Rect? reliefBounds;
   final Path reliefClip;
   @override
@@ -550,6 +581,7 @@ class _MapPainter extends CustomPainter {
       }
     }
     water?.paintLabels(canvas, reliefClip, zoom, occupiedLabels);
+    mountains?.paintLabels(canvas, reliefClip, zoom, occupiedLabels);
     if (game.home != null) {
       final town = atlas.towns[game.home]!;
       if (overview || town.cityId == cityId) {

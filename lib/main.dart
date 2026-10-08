@@ -939,7 +939,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '起伏：国土地理院の標高タイルを加工して作成。約63m間隔の標高から陰影を生成しています。色は領土の状態、明暗は地形の起伏です。山のボタンで起伏・川・池・湖をまとめて切り替えられます。\nhttps://maps.gsi.go.jp/development/ichiran.html#dem',
+                    '起伏：国土地理院の標高タイルを加工して作成。約63m間隔の標高から陰影を生成しています。色は領土の状態、明暗は地形の起伏です。山のボタンで起伏・山名・川・池・湖をまとめて切り替えられます。\nhttps://maps.gsi.go.jp/development/ichiran.html#dem',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
@@ -948,7 +948,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '川・湖：国土地理院ベクトルタイル提供実験を加工して作成（提供元の更新情報：2026年7月1日時点）。地表の河川・水路、湖・貯水池を青色で表示し、拡大すると川名を表示します。起伏と共通の山のボタンで切り替えられます。地下水路・枯れ川は含みません。\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment',
+                    '川・湖：国土地理院ベクトルタイル提供実験を加工して作成（提供元の更新情報：2026年7月1日時点）。地表の河川・水路、湖・貯水池を青色で表示し、拡大すると川名を表示します。起伏と共通の山のボタンで切り替えられます。山名も同じデータの注記から取得し、淡い黄色で表示します。地下水路・枯れ川は含みません。\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
