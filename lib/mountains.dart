@@ -10,11 +10,10 @@ class MountainLabel {
   final Offset point;
 }
 
-/// Annotation positions and independently sourced summit coordinates.
+/// Mountain annotation positions; only names are displayed.
 class MountainLayer {
-  MountainLayer(this.labels, {this.summits = const []});
+  MountainLayer(this.labels);
   final List<MountainLabel> labels;
-  final List<MountainLabel> summits;
   static const overviewNames = [
     '八経ヶ岳',
     '大台ヶ原山',
@@ -66,48 +65,10 @@ class MountainLayer {
       final order = priority(a).compareTo(priority(b));
       return order == 0 ? a.name.compareTo(b.name) : order;
     });
-    return MountainLayer(
-      labels,
-      summits: [
-        for (final s in (json['summits'] as List? ?? const []))
-          MountainLabel(
-            s['name'] as String,
-            project(
-              math.Point(
-                (s['point'][0] as num).toDouble(),
-                (s['point'][1] as num).toDouble(),
-              ),
-            ),
-          ),
-      ],
-    );
+    return MountainLayer(labels);
   }
 
   void paintLabels(Canvas canvas, Path clip, double zoom, List<Rect> occupied) {
-    // Never infer a summit from a cartographic label position.
-    canvas.save();
-    canvas.clipPath(clip);
-    for (final summit in summits) {
-      if (!clip.contains(summit.point)) continue;
-      final p = summit.point;
-      final marker =
-          Path()
-            ..moveTo(p.dx, p.dy - 5 / zoom)
-            ..lineTo(p.dx + 4.5 / zoom, p.dy + 3.5 / zoom)
-            ..lineTo(p.dx - 4.5 / zoom, p.dy + 3.5 / zoom)
-            ..close();
-      canvas.drawPath(marker, Paint()..color = const Color(0xFFFFF1C2));
-      canvas.drawPath(
-        marker,
-        Paint()
-          ..color = const Color(0xFF101C2B)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5 / zoom
-          ..strokeJoin = StrokeJoin.round,
-      );
-      occupied.add(marker.getBounds().inflate(2 / zoom));
-    }
-    canvas.restore();
     for (final label in labels) {
       if (zoom < 0.65 && !overviewNames.contains(label.name)) continue;
       if (!clip.contains(label.point)) continue;
@@ -123,7 +84,7 @@ class MountainLayer {
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      // Move only the text when a summit or another label occupies its anchor.
+      // Move only the text when another label occupies its anchor.
       for (final offset in [
         Offset.zero,
         Offset(0, -(text.height / 2 + 10 / zoom)),
