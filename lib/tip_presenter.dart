@@ -32,6 +32,7 @@ class TipPresenter extends StatelessWidget {
         a.showCharacter &&
         a.bubbleShape == TipBubbleShape.speech;
     final bubble = Expanded(
+      flex: 2,
       child: Padding(
         padding: EdgeInsets.only(
           left: hasTail && !a.characterOnRight ? 10 : 0,
@@ -99,22 +100,45 @@ class TipPresenter extends StatelessWidget {
         ),
       ),
     );
-    final character = SizedBox(
-      key: const Key('tip-character'),
-      width: a.size.height * 0.65,
-      height: a.size.height,
-      child: ExcludeSemantics(
-        child:
-            a.character == TipCharacter.guide
-                ? Transform.flip(
-                  flipX: a.characterOnRight,
-                  child: Image.asset(
-                    'assets/characters/nara_guide.png',
-                    fit: BoxFit.contain,
-                    cacheWidth: 200,
-                  ),
-                )
-                : CustomPaint(painter: _DeerPainter()),
+    final character = Flexible(
+      child: SizedBox(
+        key: const Key('tip-character'),
+        width: a.size.height,
+        height: a.size.height,
+        child: ExcludeSemantics(
+          child:
+              a.character == TipCharacter.guide
+                  ? Transform.flip(
+                    flipX: a.characterOnRight,
+                    child: ClipRect(
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        alignment: Alignment.bottomCenter,
+                        child: SizedBox(
+                          width: 1024,
+                          height: 880,
+                          child: ClipRect(
+                            child: OverflowBox(
+                              alignment: Alignment.topCenter,
+                              minWidth: 1024,
+                              maxWidth: 1024,
+                              minHeight: 1536,
+                              maxHeight: 1536,
+                              child: Image.asset(
+                                'assets/characters/nara_guide.png',
+                                width: 1024,
+                                height: 1536,
+                                fit: BoxFit.fill,
+                                cacheWidth: 320,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                  : CustomPaint(painter: _DeerPainter()),
+        ),
       ),
     );
     return SizedBox(
