@@ -8,6 +8,14 @@ for (const build of _flutter.buildConfig.builds) {
 // Embed in the document rather than making body a fixed, non-scrolling surface.
 // The large viewport provides real page pixels behind floating browser controls.
 const appHost = document.getElementById('app-host');
+// Keep native selection menus off game controls; editing retains its normal menu.
+for (const type of ['selectstart', 'contextmenu']) {
+  appHost.addEventListener(type, (event) => {
+    if (!event.target.closest?.('input, textarea, [contenteditable="true"]')) {
+      event.preventDefault();
+    }
+  });
+}
 const safeAreaProbe = document.getElementById('safe-area-probe');
 let topInset = 0;
 let bottomInset = 0;

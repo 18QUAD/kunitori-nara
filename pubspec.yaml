@@ -58,6 +58,8 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
+    - assets/icons/tap.png
+    - assets/icons/MaterialIcons_LICENSE.txt
     - assets/characters/nara_guide.png
     - assets/characters/nara_guide_face_parts.png
     - assets/data/nara.json
