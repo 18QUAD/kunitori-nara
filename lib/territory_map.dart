@@ -406,6 +406,33 @@ class _TerritoryMapState extends State<TerritoryMap> {
               ),
             ),
           Positioned(
+            left: 8,
+            top: 8,
+            child: IgnorePointer(
+              child: Semantics(
+                label: '北',
+                child: const SizedBox(
+                  key: Key('map-compass'),
+                  width: 48,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.navigation_outlined,
+                        size: 22,
+                        color: Colors.white,
+                      ),
+                      Text(
+                        'N',
+                        style: TextStyle(fontSize: 12, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
             right: 8,
             top: 8,
             bottom: 8,
@@ -428,16 +455,6 @@ class _TerritoryMapState extends State<TerritoryMap> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.navigation_outlined,
-                          size: 22,
-                          color: Colors.white,
-                        ),
-                        const Text(
-                          'N',
-                          style: TextStyle(fontSize: 12, color: Colors.white),
-                        ),
-                        const SizedBox(height: 8),
                         ...widget.controls.expand(
                           (control) => [control, const SizedBox(height: 6)],
                         ),

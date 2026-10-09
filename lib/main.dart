@@ -760,11 +760,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     onCitySelected: _selectCity,
                     controls: [
                       IconButton.filledTonal(
-                        tooltip: '市町村・町を探す',
-                        onPressed: _search,
-                        icon: const Icon(Icons.search),
-                      ),
-                      IconButton.filledTonal(
                         tooltip: '県全域を表示',
                         onPressed: () => _selectCity(null),
                         icon: const Icon(Icons.zoom_out_map),

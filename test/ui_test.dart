@@ -9,17 +9,17 @@ import 'package:kunitori/territory_map.dart';
 
 void expectMapControlsInside(WidgetTester tester) {
   final map = tester.getRect(find.byType(TerritoryMap));
-  for (final label in [
-    '市町村・町を探す',
-    '県全域を表示',
-    '起伏・市街地・山名・川・池・湖を非表示',
-    '拡大',
-    '縮小',
-  ]) {
+  for (final label in ['県全域を表示', '起伏・市街地・山名・川・池・湖を非表示', '拡大', '縮小']) {
     final control = tester.getRect(find.byTooltip(label));
     expect(map.contains(control.topLeft), isTrue, reason: label);
     expect(map.contains(control.bottomRight), isTrue, reason: label);
   }
+  final compass = tester.getRect(find.byKey(const Key('map-compass')));
+  expect(compass.topLeft, map.topLeft + const Offset(8, 8));
+  final firstControl = tester.getRect(find.byTooltip('県全域を表示'));
+  expect(firstControl.top, greaterThanOrEqualTo(map.top + 8));
+  expect(firstControl.top, lessThanOrEqualTo(map.top + 12));
+  expect(find.byTooltip('市町村・町を探す'), findsNothing);
   final home = tester.getRect(find.byKey(const Key('map-home')));
   expect(map.contains(home.topLeft), isTrue);
   expect(map.contains(home.bottomRight), isTrue);
@@ -82,7 +82,7 @@ void main() {
       isNull,
     );
     expect(tester.takeException(), isNull);
-    await tester.tap(find.byTooltip('市町村・町を探す'));
+    await tester.tap(find.text('地名から本拠地を探す'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(ListTile, '油留木町'), findsNothing);
     await tester.tap(find.widgetWithText(ListTile, '奈良市'));
