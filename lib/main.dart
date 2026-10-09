@@ -661,11 +661,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ),
             ),
           ),
-          FilledButton.icon(
-            onPressed: _search,
-            icon: const Icon(Icons.search),
-            label: Text(g.home == null ? '地名から本拠地を探す' : '攻略先を探す'),
-          ),
+          if (g.home == null)
+            FilledButton.icon(
+              onPressed: _search,
+              icon: const Icon(Icons.search),
+              label: const Text('地名から本拠地を探す'),
+            ),
         ],
       );
     }
@@ -706,22 +707,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ),
             ),
           ),
-          FilledButton.icon(
-            onPressed:
-                quizAvailable
-                    ? () => _confirmQuiz(town.id)
-                    : cityReady
-                    ? () => _focusOffice(town.cityId)
-                    : _search,
-            icon: Icon(quizAvailable ? Icons.quiz_outlined : Icons.search),
-            label: Text(
-              quizAvailable
-                  ? '制圧クイズに挑戦'
-                  : cityReady
-                  ? '役所所在地へ'
-                  : '攻略先を探す',
+          if (quizAvailable || cityReady)
+            FilledButton.icon(
+              onPressed:
+                  quizAvailable
+                      ? () => _confirmQuiz(town.id)
+                      : () => _focusOffice(town.cityId),
+              icon: Icon(quizAvailable ? Icons.quiz_outlined : Icons.search),
+              label: Text(quizAvailable ? '制圧クイズに挑戦' : '役所所在地へ'),
             ),
-          ),
         ],
       );
     }
