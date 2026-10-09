@@ -3,7 +3,7 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-const RESOURCES = {"main.dart.js": "793db574960d2e5d6e87321543a408a2",
+const RESOURCES = {"main.dart.js": "7e64fb00c1da3cec746df50eeaa6c897",
 "canvaskit/canvaskit.js.symbols": "68eb703b9a609baef8ee0e413b442f33",
 "canvaskit/skwasm_st.wasm": "56c3973560dfcbf28ce47cebe40f3206",
 "canvaskit/canvaskit.wasm": "efeeba7dcc952dae57870d4df3111fad",
@@ -42,9 +42,9 @@ const RESOURCES = {"main.dart.js": "793db574960d2e5d6e87321543a408a2",
 "assets/assets/characters/nara_guide_face_parts.png": "123fde33f947ec6e0a18c1f61626794d",
 "assets/assets/characters/nara_guide.png": "dabb74985fac7a752bef34667ba16882",
 "assets/shaders/ink_sparkle.frag": "ecc85a2e95f5e9f53123dcaf8cb9b6ce",
-"index.html": "a03ef2216d5e754506fd4127da9dec1a",
-"/": "a03ef2216d5e754506fd4127da9dec1a",
-"flutter_bootstrap.js": "f7a167f2ba109956e8b4f1c24d5afce5",
+"index.html": "4c4cc159b40038c15286d1239f9d8848",
+"/": "4c4cc159b40038c15286d1239f9d8848",
+"flutter_bootstrap.js": "246e123a847bd9891a247f55f4ac6126",
 "version.json": "8c276741097b0c1809b7cf9bd0c2d84d"};
 // The application shell files that are downloaded before a service worker can
 // start.
