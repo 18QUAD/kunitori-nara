@@ -15,6 +15,7 @@ class QuizStage extends StatelessWidget {
     this.seconds,
     this.correct,
     this.streak = 0,
+    this.nextSpeechAt,
   });
 
   final String title;
@@ -24,6 +25,7 @@ class QuizStage extends StatelessWidget {
   final int? seconds;
   final bool? correct;
   final int streak;
+  final DateTime? nextSpeechAt;
 
   @override
   Widget build(BuildContext context) => ClipRRect(
@@ -108,6 +110,8 @@ class QuizStage extends StatelessWidget {
                         ? question.question
                         : '${correct! ? '正解！' : '不正解'}\n正解は「${question.answer}」',
                 appearance: appearance,
+                nextSpeechAt: nextSpeechAt,
+                speechKey: '${question.factId}:$correct',
               ),
             ),
           ),

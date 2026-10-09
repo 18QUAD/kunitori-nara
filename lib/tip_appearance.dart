@@ -51,6 +51,8 @@ class TipAppearance {
     this.showTips = true,
     this.showCharacter = true,
     this.showBubble = true,
+    this.blinkEnabled = true,
+    this.lipSyncEnabled = true,
     this.character = TipCharacter.guide,
     this.bubbleStyle = TipBubbleStyle.red,
     this.bubbleShape = TipBubbleShape.speech,
@@ -60,6 +62,7 @@ class TipAppearance {
     this.controlInsetSize,
   });
   final bool showTips, showCharacter, showBubble, characterOnRight;
+  final bool blinkEnabled, lipSyncEnabled;
   final TipCharacter character;
   final TipBubbleStyle bubbleStyle;
   final TipBubbleShape bubbleShape;
@@ -72,6 +75,8 @@ class TipAppearance {
     bool? showTips,
     bool? showCharacter,
     bool? showBubble,
+    bool? blinkEnabled,
+    bool? lipSyncEnabled,
     bool? characterOnRight,
     TipCharacter? character,
     TipBubbleStyle? bubbleStyle,
@@ -82,6 +87,8 @@ class TipAppearance {
     showTips: showTips ?? this.showTips,
     showCharacter: showCharacter ?? this.showCharacter,
     showBubble: showBubble ?? this.showBubble,
+    blinkEnabled: blinkEnabled ?? this.blinkEnabled,
+    lipSyncEnabled: lipSyncEnabled ?? this.lipSyncEnabled,
     characterOnRight: characterOnRight ?? this.characterOnRight,
     character: character ?? this.character,
     bubbleStyle: bubbleStyle ?? this.bubbleStyle,
@@ -95,6 +102,8 @@ class TipAppearance {
     'showTips': showTips,
     'showCharacter': showCharacter,
     'showBubble': showBubble,
+    'blinkEnabled': blinkEnabled,
+    'lipSyncEnabled': lipSyncEnabled,
     'characterOnRight': characterOnRight,
     'character': character.name,
     'bubbleStyle': bubbleStyle.name,
@@ -113,6 +122,8 @@ class TipAppearance {
       showTips: flag('showTips', true),
       showCharacter: flag('showCharacter', true),
       showBubble: flag('showBubble', true),
+      blinkEnabled: flag('blinkEnabled', true),
+      lipSyncEnabled: flag('lipSyncEnabled', true),
       characterOnRight: flag('characterOnRight', false),
       character: value(TipCharacter.values, 'character', TipCharacter.guide),
       bubbleStyle: value(

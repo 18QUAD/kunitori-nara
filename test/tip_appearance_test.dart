@@ -21,6 +21,8 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final store = TipAppearanceStore(prefs);
       final appearance = const TipAppearance().copyWith(
+        blinkEnabled: false,
+        lipSyncEnabled: false,
         showCharacter: false,
         showBubble: false,
         character: TipCharacter.deer,
@@ -203,6 +205,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.text('瞬き'));
+      await tester.pumpAndSettle();
+      expect(appearance.blinkEnabled, isFalse);
+      await tester.tap(find.text('口パク'));
+      await tester.pumpAndSettle();
+      expect(appearance.lipSyncEnabled, isFalse);
       await tester.tap(find.text('キャラを表示'));
       await tester.pumpAndSettle();
       expect(appearance.showCharacter, isFalse);

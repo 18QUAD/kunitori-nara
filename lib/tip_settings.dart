@@ -109,6 +109,20 @@ class _TipSettingsState extends State<TipSettings> {
                 value: appearance.showBubble,
                 onChanged: (v) => update(appearance.copyWith(showBubble: v)),
               ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('瞬き'),
+                value: appearance.blinkEnabled,
+                onChanged: (v) => update(appearance.copyWith(blinkEnabled: v)),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('口パク'),
+                subtitle: const Text('次のセリフに変わる1秒前まで繰り返します'),
+                value: appearance.lipSyncEnabled,
+                onChanged:
+                    (v) => update(appearance.copyWith(lipSyncEnabled: v)),
+              ),
               const SizedBox(height: 16),
               choice(
                 'キャラのデザイン',

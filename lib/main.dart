@@ -159,6 +159,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String? cityFilter;
   int factIndex = 0, mapFocus = 0, mapCenter = 0;
   Timer? timer, tipsTimer;
+  DateTime? _nextTipAt, _feedbackEndsAt;
   bool corrupt = false;
   bool _quizPromptOpen = false;
   bool _answerFeedbackOpen = false;
@@ -312,6 +313,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   void _startTipsTimer() {
     tipsTimer?.cancel();
+    _nextTipAt = DateTime.now().add(const Duration(seconds: 5));
     tipsTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       final lifecycle = WidgetsBinding.instance.lifecycleState;
       if (!mounted ||
@@ -322,6 +324,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         return;
       }
       setState(() {
+        _nextTipAt = DateTime.now().add(const Duration(seconds: 5));
         factIndex++;
         _rememberVisibleFact();
       });
@@ -634,7 +637,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 Offstage(
                                   offstage:
                                       g.quiz != null || _feedbackQuiz != null,
-                                  child: _map(),
+                                  child: TickerMode(
+                                    enabled:
+                                        g.quiz == null && _feedbackQuiz == null,
+                                    child: _map(),
+                                  ),
                                 ),
                                 if (g.quiz != null || _feedbackQuiz != null)
                                   _quiz(),
@@ -677,6 +684,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         visibleFact?.text ??
         (cityFilter == null ? '市区町村を選び、次に町から本拠地を選びましょう。' : '町を選んで本拠地を決めましょう。'),
     appearance: tipAppearance,
+    speechKey: '${visibleFact?.id}:$factIndex',
+    nextSpeechAt: _nextTipAt,
   );
 
   void _tipSettings() => showModalBottomSheet<void>(
@@ -924,6 +933,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
     setState(() {
       _feedbackQuiz = q;
+      _feedbackEndsAt = DateTime.now().add(answerFeedbackDuration);
       _feedbackCorrect = correct == true;
     });
     _save();
@@ -956,6 +966,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       question: q,
       appearance: tipAppearance,
       seconds: seconds,
+      nextSpeechAt: _feedbackQuiz == null ? q.deadline : _feedbackEndsAt,
       correct: _feedbackQuiz == null ? null : _feedbackCorrect,
       streak: _feedbackCorrect ? q.correctCount + 1 : 0,
       onAnswer: (answer) => _answerQuiz(q, answer),

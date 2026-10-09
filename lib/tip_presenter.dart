@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'tip_appearance.dart';
+import 'tip_character.dart';
 
 class TipPresenter extends StatelessWidget {
   const TipPresenter({
@@ -8,10 +9,14 @@ class TipPresenter extends StatelessWidget {
     required this.text,
     required this.appearance,
     this.expandForText = false,
+    this.speechKey,
+    this.nextSpeechAt,
   });
   final String text;
   final TipAppearance appearance;
   final bool expandForText;
+  final Object? speechKey;
+  final DateTime? nextSpeechAt;
 
   @override
   Widget build(BuildContext context) {
@@ -154,38 +159,11 @@ class TipPresenter extends StatelessWidget {
           width: characterWidth,
           height: height,
           child: ExcludeSemantics(
-            child:
-                a.character == TipCharacter.guide
-                    ? Transform.flip(
-                      flipX: a.characterOnRight,
-                      child: ClipRect(
-                        child: FittedBox(
-                          fit: BoxFit.contain,
-                          alignment: Alignment.bottomCenter,
-                          child: SizedBox(
-                            width: 840,
-                            height: 880,
-                            child: ClipRect(
-                              child: OverflowBox(
-                                alignment: Alignment.topCenter,
-                                minWidth: 1024,
-                                maxWidth: 1024,
-                                minHeight: 1536,
-                                maxHeight: 1536,
-                                child: Image.asset(
-                                  'assets/characters/nara_guide.png',
-                                  width: 1024,
-                                  height: 1536,
-                                  fit: BoxFit.fill,
-                                  cacheWidth: 320,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                    : CustomPaint(painter: _DeerPainter()),
+            child: TipCharacterView(
+              appearance: a,
+              speechKey: speechKey ?? text,
+              nextSpeechAt: nextSpeechAt,
+            ),
           ),
         );
         return Align(
@@ -255,64 +233,4 @@ class _BubblePainter extends CustomPainter {
       radius != old.radius ||
       tail != old.tail ||
       right != old.right;
-}
-
-class _DeerPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.translate(0, (size.height - size.width * 1.2) / 2);
-    canvas.scale(size.width / 100);
-    final brown =
-        Paint()
-          ..color = const Color(0xFF67412F)
-          ..strokeWidth = 5
-          ..strokeCap = StrokeCap.round;
-    for (final side in [-1, 1]) {
-      final x = 50 + side * 20.0;
-      canvas.drawLine(Offset(x, 38), Offset(x + side * 6, 5), brown);
-      canvas.drawLine(
-        Offset(x + side * 4, 20),
-        Offset(x + side * 16, 10),
-        brown,
-      );
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: Offset(50 + side * 34.0, 45),
-          width: 25,
-          height: 18,
-        ),
-        Paint()..color = const Color(0xFFDDA66C),
-      );
-    }
-    canvas.drawOval(
-      const Rect.fromLTWH(13, 30, 74, 75),
-      Paint()..color = const Color(0xFFE8B67A),
-    );
-    canvas.drawOval(
-      const Rect.fromLTWH(24, 70, 52, 32),
-      Paint()..color = const Color(0xFFFFEBD0),
-    );
-    for (final x in [34.0, 66.0]) {
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(x, 62), width: 10, height: 14),
-        brown,
-      );
-      canvas.drawCircle(Offset(x - 2, 59), 2, Paint()..color = Colors.white);
-    }
-    canvas.drawOval(const Rect.fromLTWH(44, 78, 12, 8), brown);
-    canvas.drawArc(
-      const Rect.fromLTWH(38, 79, 24, 14),
-      0,
-      3.14,
-      false,
-      brown
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_DeerPainter old) => false;
 }
