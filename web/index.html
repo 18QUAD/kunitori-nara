@@ -17,6 +17,8 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101C2B">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="奈良県の町をめぐる連打型陣取りゲーム。">
 
@@ -31,8 +33,21 @@
 
   <title>くにとり · 奈良</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html, body { margin: 0; background: #101C2B; }
+    html { min-height: 100%; }
+    body { min-height: 100vh; min-height: 100lvh; }
+    #app-host { position: relative; width: 100%; height: 100vh; height: 100lvh; background: #101C2B; }
+    #safe-area-probe {
+      position: fixed; visibility: hidden; pointer-events: none;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+  </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js?v=portrait-aligned-tips-v1" async></script>
+  <div id="app-host"></div>
+  <div id="safe-area-probe" aria-hidden="true"></div>
+  <script src="flutter_bootstrap.js?v=browser-underlay-v1" async></script>
 </body>
 </html>

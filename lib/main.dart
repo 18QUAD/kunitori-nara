@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
+import 'browser_insets.dart';
 import 'conquest_success.dart';
 import 'practice_quiz.dart';
 import 'answer_feedback.dart';
@@ -68,51 +69,76 @@ class KunitoriApp extends StatelessWidget {
         ),
       ),
     ),
-    builder: (context, child) {
-      final size = MediaQuery.sizeOf(context);
-      final landscape =
-          size.width > size.height &&
-          MediaQuery.viewInsetsOf(context).bottom == 0;
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          ExcludeSemantics(
-            excluding: landscape,
-            child: IgnorePointer(ignoring: landscape, child: child!),
-          ),
-          if (landscape)
-            const Positioned.fill(
-              child: Material(
-                color: ink,
-                child: SafeArea(
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Column(
-                        key: Key('portrait-guide'),
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.screen_rotation, size: 48, color: mint),
-                          SizedBox(height: 16),
-                          Text(
-                            '端末を縦向きにしてご利用ください',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+    builder:
+        (context, child) => ValueListenableBuilder<EdgeInsets>(
+          valueListenable: browserInsets,
+          builder: (context, insets, _) {
+            final size = MediaQuery.sizeOf(context);
+            final landscape =
+                size.width > size.height &&
+                MediaQuery.viewInsetsOf(context).bottom == 0;
+            final media = MediaQuery.of(context);
+            final visibleSize = Size(
+              size.width,
+              math.max(0, size.height - insets.vertical),
+            );
+            return ColoredBox(
+              color: ink,
+              child: Padding(
+                padding: insets,
+                child: MediaQuery(
+                  data: media.copyWith(size: visibleSize),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ExcludeSemantics(
+                        excluding: landscape,
+                        child: IgnorePointer(
+                          ignoring: landscape,
+                          child: child!,
+                        ),
+                      ),
+                      if (landscape)
+                        const Positioned.fill(
+                          child: Material(
+                            color: ink,
+                            child: SafeArea(
+                              child: Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(24),
+                                  child: Column(
+                                    key: Key('portrait-guide'),
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.screen_rotation,
+                                        size: 48,
+                                        color: mint,
+                                      ),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        '端末を縦向きにしてご利用ください',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                    ],
                   ),
                 ),
               ),
-            ),
-        ],
-      );
-    },
+            );
+          },
+        ),
     home: const GameScreen(),
   );
 }

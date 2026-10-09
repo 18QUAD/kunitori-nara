@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kunitori/tip_appearance.dart';
 import 'package:kunitori/main.dart';
+import 'package:kunitori/browser_insets.dart';
 import 'package:kunitori/game.dart' show number;
 import 'package:kunitori/territory_map.dart';
 
@@ -60,6 +61,8 @@ void main() {
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
+    browserInsets.value = EdgeInsets.zero;
+    addTearDown(() => browserInsets.value = EdgeInsets.zero);
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -257,6 +260,20 @@ void main() {
           .getMaxScaleOnAxis(),
       zoomedScale,
     );
+    final beforeInsetGame =
+        tester.widget<TerritoryMap>(find.byType(TerritoryMap)).game;
+    browserInsets.value = const EdgeInsets.only(top: 20, bottom: 100);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(find.byKey(const Key('action-region'))).bottom,
+      closeTo(744, .01),
+    );
+    expect(
+      tester.widget<TerritoryMap>(find.byType(TerritoryMap)).game,
+      same(beforeInsetGame),
+    );
+    browserInsets.value = EdgeInsets.zero;
+    await tester.pumpAndSettle();
     tester.view.physicalSize = const Size(844, 390);
     await tester.pumpAndSettle();
     expectMapControlsInside(tester);
