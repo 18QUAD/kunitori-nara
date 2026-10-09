@@ -84,8 +84,8 @@ class TipPresenter extends StatelessWidget {
               painter:
                   a.showBubble
                       ? _BubblePainter(
-                        background,
-                        border,
+                        background.withValues(alpha: 0.8),
+                        border.withValues(alpha: border.a * 0.8),
                         a.bubbleShape == TipBubbleShape.square ? 8 : 22,
                         hasTail,
                         a.characterOnRight,
