@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'tip_appearance.dart';
 
@@ -31,127 +32,147 @@ class TipPresenter extends StatelessWidget {
         a.showBubble &&
         a.showCharacter &&
         a.bubbleShape == TipBubbleShape.speech;
-    final bubble = Expanded(
-      flex: 3,
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: hasTail && !a.characterOnRight ? 10 : 0,
-          right: hasTail && a.characterOnRight ? 10 : 0,
-        ),
-        child: CustomPaint(
-          painter:
-              a.showBubble
-                  ? _BubblePainter(
-                    background,
-                    border,
-                    a.bubbleShape == TipBubbleShape.square ? 8 : 22,
-                    hasTail,
-                    a.characterOnRight,
-                  )
-                  : null,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final aspectRatio =
+            a.character == TipCharacter.guide ? 840 / 880 : 100 / 120;
+        final availableHeight = math.min(a.size.height, constraints.maxHeight);
+        final characterWidth = math.min(
+          constraints.maxWidth / 4,
+          availableHeight * aspectRatio,
+        );
+        final height =
+            a.showCharacter ? characterWidth / aspectRatio : availableHeight;
+        final bubble = Expanded(
+          flex: 3,
           child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: a.showBubble ? 10 : 0,
-              vertical: 8,
+            padding: EdgeInsets.only(
+              left: hasTail && !a.characterOnRight ? 10 : 0,
+              right: hasTail && a.characterOnRight ? 10 : 0,
             ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                var fontSize = a.size.fontSize;
-                TextStyle style() => TextStyle(
-                  fontSize: fontSize,
-                  height: 1.4,
-                  fontWeight:
-                      a.showBubble ? FontWeight.w600 : FontWeight.normal,
-                  color: a.showBubble ? foreground : Colors.white,
-                  shadows:
-                      a.showBubble
-                          ? null
-                          : const [Shadow(color: Colors.black, blurRadius: 4)],
-                );
-                while (fontSize > 10) {
-                  final painter = TextPainter(
-                    text: TextSpan(
-                      text: text,
-                      style: DefaultTextStyle.of(context).style.merge(style()),
-                    ),
-                    textDirection: Directionality.of(context),
-                    maxLines: 4,
-                    textScaler: MediaQuery.textScalerOf(context),
-                  )..layout(maxWidth: constraints.maxWidth);
-                  final fits =
-                      !painter.didExceedMaxLines &&
-                      painter.height <= constraints.maxHeight;
-                  painter.dispose();
-                  if (fits) break;
-                  fontSize -= 0.5;
-                }
-                return Center(
-                  child: Text(
-                    text,
-                    key: const Key('tip-text'),
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: style(),
-                  ),
-                );
-              },
+            child: CustomPaint(
+              key: const Key('tip-bubble'),
+              painter:
+                  a.showBubble
+                      ? _BubblePainter(
+                        background,
+                        border,
+                        a.bubbleShape == TipBubbleShape.square ? 8 : 22,
+                        hasTail,
+                        a.characterOnRight,
+                      )
+                      : null,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: a.showBubble ? 10 : 0,
+                  vertical: 4,
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    var fontSize = a.size.fontSize;
+                    TextStyle style() => TextStyle(
+                      fontSize: fontSize,
+                      height: 1.25,
+                      fontWeight:
+                          a.showBubble ? FontWeight.w600 : FontWeight.normal,
+                      color: a.showBubble ? foreground : Colors.white,
+                      shadows:
+                          a.showBubble
+                              ? null
+                              : const [
+                                Shadow(color: Colors.black, blurRadius: 4),
+                              ],
+                    );
+                    while (fontSize > 10) {
+                      final painter = TextPainter(
+                        text: TextSpan(
+                          text: text,
+                          style: DefaultTextStyle.of(
+                            context,
+                          ).style.merge(style()),
+                        ),
+                        textDirection: Directionality.of(context),
+                        maxLines: 4,
+                        textScaler: MediaQuery.textScalerOf(context),
+                      )..layout(maxWidth: constraints.maxWidth);
+                      final fits =
+                          !painter.didExceedMaxLines &&
+                          painter.height <= constraints.maxHeight;
+                      painter.dispose();
+                      if (fits) break;
+                      fontSize -= 0.5;
+                    }
+                    return Center(
+                      child: Text(
+                        text,
+                        key: const Key('tip-text'),
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: style(),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-    );
-    final character = Flexible(
-      child: SizedBox(
-        key: const Key('tip-character'),
-        width: a.size.height,
-        height: a.size.height,
-        child: ExcludeSemantics(
-          child:
-              a.character == TipCharacter.guide
-                  ? Transform.flip(
-                    flipX: a.characterOnRight,
-                    child: ClipRect(
-                      child: FittedBox(
-                        fit: BoxFit.contain,
-                        alignment: Alignment.bottomCenter,
-                        child: SizedBox(
-                          width: 840,
-                          height: 880,
-                          child: ClipRect(
-                            child: OverflowBox(
-                              alignment: Alignment.topCenter,
-                              minWidth: 1024,
-                              maxWidth: 1024,
-                              minHeight: 1536,
-                              maxHeight: 1536,
-                              child: Image.asset(
-                                'assets/characters/nara_guide.png',
-                                width: 1024,
-                                height: 1536,
-                                fit: BoxFit.fill,
-                                cacheWidth: 320,
+        );
+        final character = SizedBox(
+          key: const Key('tip-character'),
+          width: characterWidth,
+          height: height,
+          child: ExcludeSemantics(
+            child:
+                a.character == TipCharacter.guide
+                    ? Transform.flip(
+                      flipX: a.characterOnRight,
+                      child: ClipRect(
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          alignment: Alignment.bottomCenter,
+                          child: SizedBox(
+                            width: 840,
+                            height: 880,
+                            child: ClipRect(
+                              child: OverflowBox(
+                                alignment: Alignment.topCenter,
+                                minWidth: 1024,
+                                maxWidth: 1024,
+                                minHeight: 1536,
+                                maxHeight: 1536,
+                                child: Image.asset(
+                                  'assets/characters/nara_guide.png',
+                                  width: 1024,
+                                  height: 1536,
+                                  fit: BoxFit.fill,
+                                  cacheWidth: 320,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  )
-                  : CustomPaint(painter: _DeerPainter()),
-        ),
-      ),
-    );
-    return SizedBox(
-      key: const Key('tips-region'),
-      height: a.size.height,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (a.showCharacter && !a.characterOnRight) character,
-          bubble,
-          if (a.showCharacter && a.characterOnRight) character,
-        ],
-      ),
+                    )
+                    : CustomPaint(painter: _DeerPainter()),
+          ),
+        );
+        return Align(
+          alignment: Alignment.bottomCenter,
+          heightFactor: 1,
+          child: SizedBox(
+            key: const Key('tips-region'),
+            height: height,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (a.showCharacter && !a.characterOnRight) character,
+                bubble,
+                if (a.showCharacter && a.characterOnRight) character,
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

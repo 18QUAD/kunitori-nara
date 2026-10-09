@@ -791,12 +791,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     right: 60,
                     bottom: 8,
                     child: AbsorbPointer(
-                      child: SizedBox(
-                        height: math.min(
-                          tipAppearance.size.height,
-                          math.min(
-                            math.max(0, constraints.maxHeight - 16),
-                            math.max(48, constraints.maxHeight * 0.35),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: math.min(
+                            tipAppearance.size.height,
+                            math.min(
+                              math.max(0, constraints.maxHeight - 16),
+                              math.max(48, constraints.maxHeight * 0.35),
+                            ),
                           ),
                         ),
                         child: _tipPresenter(),

@@ -124,7 +124,37 @@ void main() {
               );
               expect(
                 tester.getSize(find.byKey(const Key('tips-region'))).height,
-                size.height,
+                closeTo(right ? 72 : 60 * 880 / 840, 0.01),
+              );
+              expect(
+                tester.getSize(find.byKey(const Key('tip-bubble'))).height,
+                tester.getSize(find.byKey(const Key('tip-character'))).height,
+              );
+              final tipText = tester.widget<Text>(
+                find.byKey(const Key('tip-text')),
+              );
+              final measurer = TextPainter(
+                text: TextSpan(
+                  text: '奈良\n奈良\n奈良',
+                  style: tipText.style!.copyWith(fontFamily: 'NotoSansJP'),
+                ),
+                textDirection: TextDirection.ltr,
+              )..layout(maxWidth: 140);
+              final lineHeight = measurer.height / 3;
+              measurer.dispose();
+              expect(
+                paragraph.size.height,
+                lessThanOrEqualTo(
+                  tester.getSize(find.byKey(const Key('tip-bubble'))).height -
+                      8,
+                ),
+              );
+              expect(
+                lineHeight * 3,
+                lessThanOrEqualTo(
+                  tester.getSize(find.byKey(const Key('tip-bubble'))).height -
+                      8,
+                ),
               );
               expect(tester.takeException(), isNull);
             }
