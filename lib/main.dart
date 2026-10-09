@@ -523,8 +523,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final topHeight = math.min(
-                        constraints.maxHeight * 0.6,
-                        math.max(0.0, constraints.maxHeight - 180),
+                        constraints.maxHeight * 0.6 + 12,
+                        math.max(0.0, constraints.maxHeight - 168),
                       );
                       return Column(
                         key: const Key('play-layout'),
@@ -729,12 +729,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LinearProgressIndicator(
-          value: (g.progress[town.id] ?? 0) / g.requiredTaps(town),
-          minHeight: 4,
-          color: gold,
-        ),
-        const SizedBox(height: 8),
         Expanded(
           child: FilledButton.icon(
             key: const Key('attack'),

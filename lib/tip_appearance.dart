@@ -37,9 +37,9 @@ enum TipPlacement {
 }
 
 enum TipSize {
-  small('小さめ', 88, 12),
-  standard('標準', 104, 13),
-  large('大きめ', 120, 14);
+  small('小さめ', 100, 12),
+  standard('標準', 116, 13),
+  large('大きめ', 132, 14);
 
   const TipSize(this.label, this.height, this.fontSize);
   final String label;

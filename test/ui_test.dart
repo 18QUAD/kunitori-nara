@@ -68,7 +68,7 @@ void main() {
     expect(find.text('面積'), findsNothing);
     final fixed = tester.getRect(find.byKey(const Key('fixed-region')));
     final layout = tester.getSize(find.byKey(const Key('play-layout')));
-    expect(fixed.height, closeTo(layout.height * 0.6, 1));
+    expect(fixed.height, closeTo(layout.height * 0.6 + 12, 1));
     expect(
       tester.getSize(find.byType(TerritoryMap)).height,
       closeTo(fixed.height, 1),
