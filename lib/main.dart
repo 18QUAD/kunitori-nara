@@ -756,6 +756,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     focusVersion: mapFocus,
                     centerVersion: mapCenter,
                     fitScale: 1,
+                    controlsBottomInset:
+                        tipAppearance.showTips
+                            ? _tipMaxHeight(constraints) + 16
+                            : 8,
                     onSelected: _select,
                     onCitySelected: _selectCity,
                     controls: [
@@ -781,18 +785,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 if (tipAppearance.showTips)
                   Positioned(
                     left: 0,
-                    right: constraints.maxHeight >= 360 ? 0 : 60,
+                    right: 0,
                     bottom: 8,
                     child: AbsorbPointer(
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          maxHeight: math.min(
-                            tipAppearance.size.height,
-                            math.min(
-                              math.max(0, constraints.maxHeight - 16),
-                              math.max(48, constraints.maxHeight * 0.35),
-                            ),
-                          ),
+                          maxHeight: _tipMaxHeight(constraints),
                         ),
                         child: _tipPresenter(),
                       ),
@@ -803,6 +801,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ),
     ),
   );
+  double _tipMaxHeight(BoxConstraints constraints) => math.min(
+    tipAppearance.size.height,
+    math.min(
+      math.max(0, constraints.maxHeight - 16),
+      math.max(48, constraints.maxHeight * .35),
+    ),
+  );
+
   Widget _difficulty() => DropdownButtonFormField<Difficulty>(
     value: game!.difficulty,
     decoration: const InputDecoration(labelText: '難易度'),

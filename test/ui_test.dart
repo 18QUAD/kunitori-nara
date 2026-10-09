@@ -320,8 +320,20 @@ void main() {
         tester.getRect(find.byKey(const Key('action-region'))),
         actionRect,
       );
-      tester.view.physicalSize = const Size(844, 390);
-      await tester.pumpAndSettle();
+      for (final viewport in [const Size(360, 600), const Size(844, 390)]) {
+        tester.view.physicalSize = viewport;
+        await tester.pumpAndSettle();
+        final compactMap = tester.getRect(
+          find.byKey(const Key('fixed-region')),
+        );
+        final compactTip = tester.getRect(find.byKey(const Key('tips-region')));
+        expect(compactTip.right, closeTo(compactMap.right, .01));
+        final lastControl = tester.getRect(
+          find.byTooltip('起伏・市街地・山名・川・池・湖を非表示'),
+        );
+        expect(lastControl.bottom, lessThan(compactTip.top));
+      }
+
       expect(tester.takeException(), isNull);
       tester.view.physicalSize = const Size(390, 844);
       await tester.pumpAndSettle();
