@@ -38,6 +38,17 @@
     html { min-height: 100%; }
     body { min-height: 100vh; min-height: 100lvh; }
     #app-host { position: relative; width: 100%; height: 100vh; height: 100lvh; background: #101C2B; }
+    /* Repeated taps must not select Flutter's accessibility text on iOS. */
+    #app-host, #app-host * {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    #app-host input, #app-host textarea, #app-host [contenteditable="true"] {
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
+    }
     #safe-area-probe {
       position: fixed; visibility: hidden; pointer-events: none;
       padding-top: env(safe-area-inset-top, 0px);
@@ -48,6 +59,6 @@
 <body>
   <div id="app-host"></div>
   <div id="safe-area-probe" aria-hidden="true"></div>
-  <script src="flutter_bootstrap.js?v=practice-intro-v1" async></script>
+  <script src="flutter_bootstrap.js?v=tap-image-v1" async></script>
 </body>
 </html>
