@@ -139,13 +139,6 @@ class _TipSettingsState extends State<TipSettings> {
                 (v) => update(appearance.copyWith(bubbleShape: v)),
               ),
               choice(
-                '表示する場所',
-                appearance.placement,
-                TipPlacement.values,
-                (v) => v.label,
-                (v) => update(appearance.copyWith(placement: v)),
-              ),
-              choice(
                 '表示サイズ',
                 appearance.size,
                 TipSize.values,

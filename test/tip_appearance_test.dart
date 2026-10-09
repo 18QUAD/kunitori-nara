@@ -26,7 +26,6 @@ void main() {
         character: TipCharacter.deer,
         bubbleStyle: TipBubbleStyle.mint,
         bubbleShape: TipBubbleShape.square,
-        placement: TipPlacement.controls,
         characterOnRight: true,
         size: TipSize.large,
       );
@@ -44,6 +43,35 @@ void main() {
           'showTips': 123,
         }).toJson(),
         const TipAppearance().toJson(),
+      );
+    },
+  );
+
+  test(
+    'legacy controls tips reclaim space without changing the action height',
+    () {
+      final appearance = TipAppearance.fromJson({
+        'placement': 'controls',
+        'size': 'large',
+        'showTips': true,
+      });
+      expect(appearance.placement, TipPlacement.mapBottom);
+      expect(appearance.controlInsetSize, TipSize.large);
+      final changed = appearance.copyWith(size: TipSize.small, showTips: false);
+      expect(
+        TipAppearance.fromJson(changed.toJson()).controlInsetSize,
+        TipSize.large,
+      );
+      expect(
+        TipAppearance.fromJson({
+          'placement': 'controls',
+          'showTips': false,
+        }).controlInsetSize,
+        isNull,
+      );
+      expect(
+        TipAppearance.fromJson({'placement': 'mapTop'}).placement,
+        TipPlacement.mapBottom,
       );
     },
   );

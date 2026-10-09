@@ -22,12 +22,14 @@ class TerritoryMap extends StatefulWidget {
     required this.onCitySelected,
     this.controls = const [],
     this.centerVersion = 0,
+    this.fitScale = 0.9,
   });
   final List<Widget> controls;
   final Atlas atlas;
   final Game game;
   final String? selected, cityId;
   final int focusVersion, centerVersion;
+  final double fitScale;
   final ValueChanged<String> onSelected, onCitySelected;
   @override
   State<TerritoryMap> createState() => _TerritoryMapState();
@@ -243,7 +245,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
       box = target.inflate(math.max(target.width, target.height) * 2 + 3);
     }
     final scale =
-        math.min(size.width / box.width, size.height / box.height) * 0.9;
+        math.min(size.width / box.width, size.height / box.height) *
+        widget.fitScale;
     controller.value =
         Matrix4.identity()
           ..translate(

@@ -57,6 +57,7 @@ class TipAppearance {
     this.placement = TipPlacement.mapBottom,
     this.characterOnRight = false,
     this.size = TipSize.standard,
+    this.controlInsetSize,
   });
   final bool showTips, showCharacter, showBubble, characterOnRight;
   final TipCharacter character;
@@ -64,6 +65,8 @@ class TipAppearance {
   final TipBubbleShape bubbleShape;
   final TipPlacement placement;
   final TipSize size;
+  // Preserve the former action height when moving a saved controls tip onto the map.
+  final TipSize? controlInsetSize;
 
   TipAppearance copyWith({
     bool? showTips,
@@ -85,6 +88,7 @@ class TipAppearance {
     bubbleShape: bubbleShape ?? this.bubbleShape,
     placement: placement ?? this.placement,
     size: size ?? this.size,
+    controlInsetSize: controlInsetSize,
   );
 
   Map<String, dynamic> toJson() => {
@@ -97,6 +101,7 @@ class TipAppearance {
     'bubbleShape': bubbleShape.name,
     'placement': placement.name,
     'size': size.name,
+    if (controlInsetSize != null) 'controlInsetSize': controlInsetSize!.name,
   };
 
   factory TipAppearance.fromJson(Map<String, dynamic> data) {
@@ -120,12 +125,15 @@ class TipAppearance {
         'bubbleShape',
         TipBubbleShape.speech,
       ),
-      placement: value(
-        TipPlacement.values,
-        'placement',
-        TipPlacement.mapBottom,
-      ),
+      placement: TipPlacement.mapBottom,
       size: value(TipSize.values, 'size', TipSize.standard),
+      controlInsetSize:
+          TipSize.values
+              .where((v) => v.name == data['controlInsetSize'])
+              .firstOrNull ??
+          (data['placement'] == 'controls' && flag('showTips', true)
+              ? value(TipSize.values, 'size', TipSize.standard)
+              : null),
     );
   }
 }

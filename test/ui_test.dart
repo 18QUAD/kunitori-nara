@@ -280,31 +280,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('奈良県'), findsOneWidget);
     expect(find.text('旅のはじまり'), findsOneWidget);
-    for (final placement in [
-      TipPlacement.controls,
-      TipPlacement.mapTop,
-      TipPlacement.mapBottom,
-    ]) {
+    final actionRect = tester.getRect(find.byKey(const Key('action-region')));
+    for (final size in TipSize.values) {
       await tester.tap(find.byTooltip('設定'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('キャラ・吹き出し'));
       await tester.pumpAndSettle();
-      final field = find.byType(DropdownButtonFormField<TipPlacement>);
+      final field = find.byType(DropdownButtonFormField<TipSize>);
       await tester.ensureVisible(field);
       await tester.pumpAndSettle();
       await tester.tap(field);
       await tester.pumpAndSettle();
-      await tester.tap(find.text(placement.label).last);
+      await tester.tap(find.text(size.label).last);
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('tips設定を閉じる'));
       await tester.pumpAndSettle();
       final mapRect = tester.getRect(find.byKey(const Key('fixed-region')));
       final tipRect = tester.getRect(find.byKey(const Key('tips-region')));
-      if (placement == TipPlacement.controls) {
-        expect(tipRect.top, greaterThanOrEqualTo(mapRect.bottom));
-      } else {
-        expect(mapRect.contains(tipRect.center), isTrue);
-      }
+      expect(mapRect.contains(tipRect.center), isTrue);
+      expect(tipRect.bottom, lessThanOrEqualTo(mapRect.bottom));
+      expect(
+        tester.getRect(find.byKey(const Key('action-region'))),
+        actionRect,
+      );
       tester.view.physicalSize = const Size(844, 390);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
@@ -320,6 +318,7 @@ void main() {
     await tester.tap(find.byTooltip('tips設定を閉じる'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('tips-region')), findsNothing);
+    expect(tester.getRect(find.byKey(const Key('action-region'))), actionRect);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(const KunitoriApp());
     await tester.runAsync(
@@ -327,6 +326,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('tips-region')), findsNothing);
+    expect(tester.getRect(find.byKey(const Key('action-region'))), actionRect);
     expect(jsonDecode(prefs.getString('kunitori.nara.v1')!)['owned'], isEmpty);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());

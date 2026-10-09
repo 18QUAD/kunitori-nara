@@ -522,10 +522,26 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final topHeight = math.min(
+                      final baseMapHeight = math.min(
                         constraints.maxHeight * 0.6 + 12,
                         math.max(0.0, constraints.maxHeight - 168),
                       );
+                      final formerTipSize = tipAppearance.controlInsetSize;
+                      final reclaimedHeight =
+                          formerTipSize == null
+                              ? 0.0
+                              : math.min(
+                                    formerTipSize.height,
+                                    math.max(
+                                          0,
+                                          constraints.maxHeight -
+                                              baseMapHeight -
+                                              16,
+                                        ) *
+                                        0.4,
+                                  ) +
+                                  8;
+                      final topHeight = baseMapHeight + reclaimedHeight;
                       return Column(
                         key: const Key('play-layout'),
                         children: [
@@ -562,26 +578,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Widget _controls() {
     return Padding(
+      key: const Key('action-region'),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: LayoutBuilder(
-        builder:
-            (context, constraints) => Column(
-              children: [
-                if (tipAppearance.showTips &&
-                    tipAppearance.placement == TipPlacement.controls) ...[
-                  SizedBox(
-                    height: math.min(
-                      tipAppearance.size.height,
-                      constraints.maxHeight * 0.4,
-                    ),
-                    child: _tipPresenter(),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                Expanded(child: _actionPanel()),
-              ],
-            ),
-      ),
+      child: _actionPanel(),
     );
   }
 
@@ -761,6 +760,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     cityId: cityFilter,
                     focusVersion: mapFocus,
                     centerVersion: mapCenter,
+                    fitScale: 1,
                     onSelected: _select,
                     onCitySelected: _selectCity,
                     controls: [
@@ -786,19 +786,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ],
                   ),
                 ),
-                if (tipAppearance.showTips &&
-                    tipAppearance.placement != TipPlacement.controls)
+                if (tipAppearance.showTips)
                   Positioned(
                     left: 0,
                     right: 60,
-                    bottom:
-                        tipAppearance.placement == TipPlacement.mapBottom
-                            ? 8
-                            : null,
-                    top:
-                        tipAppearance.placement == TipPlacement.mapTop
-                            ? 8
-                            : null,
+                    bottom: 8,
                     child: AbsorbPointer(
                       child: SizedBox(
                         height: math.min(
