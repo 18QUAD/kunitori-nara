@@ -164,7 +164,7 @@ class Atlas {
           '${city.value}の攻略対象は$n町。すべての領土を獲得したら、役所・役場のある町をタップして制圧クイズに挑戦できます。',
           '${city.value}の攻略対象は何町？',
           '$n町',
-          ['${n + 1}町', '${max(0, n - 1)}町', '${n + 10}町'],
+          ['${max(1, n ~/ 2)}町', '${n * 2}町', '${n * 3}町'],
           censusSource,
         ),
         LocalFact(
@@ -175,9 +175,9 @@ class Atlas {
           '${city.value}の収録地域の人口合計は？',
           '${number(population)}人',
           [
-            '${number(population + 100)}人',
-            '${number(max(0, population - 100))}人',
-            '${number(population + 1000)}人',
+            '${number(population / 2)}人',
+            '${number(population * 2)}人',
+            '${number(population * 3)}人',
           ],
           censusSource,
         ),
@@ -188,10 +188,18 @@ class Atlas {
           '${city.value}で収録人口が最も多い町は${largest.first.name}（${number(largest.first.population)}人）です。',
           '${city.value}で収録人口が最も多い町は？',
           largest.first.name,
-          largest
-              .skip(1)
+          [...largest.skip(1)].reversed
               .map((t) => t.name)
-              .where((n) => n != largest.first.name)
+              .where(
+                (n) =>
+                    n != largest.first.name &&
+                    !n.startsWith(
+                      largest.first.name.substring(
+                        0,
+                        min(2, largest.first.name.length),
+                      ),
+                    ),
+              )
               .toSet()
               .take(3)
               .toList(),
@@ -245,7 +253,7 @@ class Atlas {
           '斑鳩町の法隆寺には、飛鳥の仏教文化を伝える世界最古の木造建造物が残ります。',
           '攻略中に紹介した、斑鳩町にある寺院は？',
           '法隆寺',
-          ['東大寺', '薬師寺', '唐招提寺'],
+          ['清水寺', '金閣寺', '浅草寺'],
           'https://kunishitei.bunka.go.jp/heritage/detail/911/1',
         ),
       );
@@ -258,7 +266,7 @@ class Atlas {
         '奈良県の中和地域には、靴下やニットなどの繊維産業が集積しています。',
         '紹介した奈良県・中和地域の繊維製品は？',
         '靴下',
-        ['タオル', '絹の帯', '帆布'],
+        ['陶磁器', '漆器', 'ガラス食器'],
         'https://www.pref.nara.lg.jp/n002/1360.html',
       ),
     );
@@ -270,7 +278,7 @@ class Atlas {
         '奈良県では、吉野杉を背景に木材・木製品産業が発達してきました。',
         '紹介した奈良県の木材・木製品産業を支える木は？',
         '吉野杉',
-        ['秋田杉', '北山杉', '屋久杉'],
+        ['松', '桜', '竹'],
         'https://www.pref.nara.lg.jp/n002/1360.html',
       ),
     );
@@ -476,15 +484,30 @@ class Game {
     final decoys =
         fact.decoys.where((a) => a != fact.answer).toSet().toList()
           ..shuffle(random);
-    while (decoys.length < 3) {
-      decoys.add('該当する地域なし ${decoys.length + 1}');
+    // Very small municipalities may not have two distinct alternative town names.
+    for (final fallback in ['奈良公園', '関西国際空港', '富士山']) {
+      if (decoys.length >= 2) break;
+      if (fallback != fact.answer && !decoys.contains(fallback)) {
+        decoys.add(fallback);
+      }
     }
-    if (difficulty == Difficulty.casual) decoys[2] = '鹿がすべて決めている';
+    final jokes = switch (fact.id.split(':').last) {
+      'count' => ['鹿の気分で毎朝変わる', '鹿せんべいの枚数と同じ', '鹿が数え終わるまで未定'],
+      'population' => ['鹿も数えるので測定不能', '鹿せんべい1枚につき1人', '全員忍者なので数えられない'],
+      'largest' => ['鹿せんべい銀河団', '空飛ぶ鹿の秘密基地', '地下のせんべい王国'],
+      'heritage' => ['鹿せんべい神殿', '空飛ぶ大仏の別荘', '鹿の宇宙ステーション'],
+      'industry' => ['鹿専用の宇宙服', '鹿専用のロケット', '透明になる鹿せんべい'],
+      _ => ['せんべいが実る木', '空飛ぶ鹿のなる木', '大仏の盆栽'],
+    };
     return QuizQuestion(
       factId: fact.id,
       question: fact.question,
       answer: fact.answer,
-      choices: [fact.answer, ...decoys.take(3)]..shuffle(random),
+      choices: [
+        fact.answer,
+        ...decoys.take(2),
+        jokes[random.nextInt(jokes.length)],
+      ]..shuffle(random),
     );
   }
 
@@ -703,12 +726,13 @@ class Game {
           q.choices.toSet().length == 4 &&
           q.choices.contains(q.answer)) {
         final f = fs.single;
+        final updated = g._makeQuestion(f);
         g.quiz = Quiz(
           cityId: q.cityId,
           factId: f.id,
           question: f.question,
           answer: f.answer,
-          choices: [f.answer, ...f.decoys.take(3)],
+          choices: updated.choices,
           deadline: q.deadline,
         );
       }

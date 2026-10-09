@@ -43,6 +43,63 @@ void main() {
     },
   );
 
+  test('every difficulty gives two distinct decoys and exactly one joke', () {
+    final seenFacts = <String>{};
+    final jokesSeen = <String>{};
+    for (final difficulty in Difficulty.values) {
+      final game = Game(atlas, random: Random(42))..difficulty = difficulty;
+      for (final office in atlas.officeTownIds.values) {
+        for (var attempt = 0; attempt < 10; attempt++) {
+          for (final q in game.practiceQuestionsAt(office)) {
+            final fact = atlas.facts[atlas.towns[office]!.cityId]!.singleWhere(
+              (f) => f.id == q.factId,
+            );
+            final normal = {...fact.decoys, '奈良公園', '関西国際空港', '富士山'};
+            final wrong = q.choices.where((a) => a != q.answer).toList();
+            expect(q.choices.toSet(), hasLength(4), reason: q.factId);
+            expect(q.choices.where((a) => a == q.answer), hasLength(1));
+            expect(
+              wrong.where(normal.contains),
+              hasLength(2),
+              reason: q.factId,
+            );
+            final joke = wrong.where((a) => !normal.contains(a)).single;
+            expect(joke, isNotEmpty);
+            jokesSeen.add(joke);
+            seenFacts.add(q.factId);
+          }
+        }
+      }
+    }
+    expect(
+      seenFacts,
+      atlas.facts.values
+          .expand((fs) => fs)
+          .where((f) => f.quizEligible)
+          .map((f) => f.id)
+          .toSet(),
+    );
+    expect(jokesSeen.length, greaterThan(6));
+  });
+
+  test('numeric alternatives differ by at least a quarter of the answer', () {
+    int parse(String value) =>
+        int.parse(value.replaceAll(RegExp(r'[^0-9]'), ''));
+    for (final fact in atlas.facts.values.expand((fs) => fs)) {
+      if (!fact.id.endsWith(':count') && !fact.id.endsWith(':population')) {
+        continue;
+      }
+      final answer = parse(fact.answer);
+      for (final decoy in fact.decoys) {
+        expect(
+          (parse(decoy) - answer).abs(),
+          greaterThanOrEqualTo(answer / 4),
+          reason: fact.id,
+        );
+      }
+    }
+  });
+
   test('generated office constants match the bundled source records', () {
     final data = jsonDecode(
       File('assets/data/nara_offices.json').readAsStringSync(),
