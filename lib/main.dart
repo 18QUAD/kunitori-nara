@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
 import 'conquest_success.dart';
+import 'practice_quiz.dart';
 import 'save_store.dart';
 import 'territory_map.dart';
 
@@ -249,7 +250,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   bool _select(String id) {
     final g = game!;
-    if (g.isReachable(id) && !g.selectAttackTarget(id)) {
+    final isOffice = atlas!.officeTownIds.values.contains(id);
+    if (g.isReachable(id) && !g.selectAttackTarget(id) && !isOffice) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('攻略先は1か所です。攻略中の町を獲得してから選んでください。')),
       );
@@ -571,6 +573,35 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Widget _actionPanel() {
+    final townId = selected;
+    if (townId == null || !atlas!.officeTownIds.values.contains(townId)) {
+      return _territoryActionPanel();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: _territoryActionPanel()),
+        const SizedBox(height: 4),
+        TextButton.icon(
+          onPressed: () {
+            final questions = game!.practiceQuestionsAt(townId);
+            showDialog<void>(
+              context: context,
+              builder:
+                  (_) => PracticeQuiz(
+                    cityName: atlas!.cities[atlas!.towns[townId]!.cityId]!,
+                    questions: questions,
+                  ),
+            );
+          },
+          icon: const Icon(Icons.school_outlined),
+          label: const Text('クイズを予習'),
+        ),
+      ],
+    );
+  }
+
+  Widget _territoryActionPanel() {
     final g = game!;
     final town = selected == null ? null : atlas!.towns[selected];
     if (town == null) {

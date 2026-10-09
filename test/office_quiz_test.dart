@@ -23,6 +23,26 @@ void main() {
     return game;
   }
 
+  test(
+    'all offices allow practice before conquest without changing game data',
+    () {
+      final game = Game(atlas);
+      final before = jsonEncode(game.toJson());
+      for (final office in atlas.officeTownIds.values) {
+        final questions = game.practiceQuestionsAt(office);
+        expect(questions, hasLength(5));
+        expect(questions.map((q) => q.factId).toSet(), hasLength(5));
+        expect(questions.every((q) => q.choices.contains(q.answer)), isTrue);
+        expect(jsonEncode(game.toJson()), before);
+        expect(game.canStartQuizAt(office), isFalse);
+      }
+      final ordinaryTown = atlas.towns.keys.firstWhere(
+        (id) => !atlas.officeTownIds.values.contains(id),
+      );
+      expect(game.practiceQuestionsAt(ordinaryTown), isEmpty);
+    },
+  );
+
   test('generated office constants match the bundled source records', () {
     final data = jsonDecode(
       File('assets/data/nara_offices.json').readAsStringSync(),

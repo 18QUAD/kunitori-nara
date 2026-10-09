@@ -488,15 +488,25 @@ class Game {
     );
   }
 
-  // Only the office territory can open a new challenge; taking the last town never starts it.
-  void startQuizAt(String townId, DateTime now) {
-    if (!canStartQuizAt(townId)) return;
-    final city = atlas.towns[townId]!.cityId;
+  List<QuizQuestion> practiceQuestionsAt(String townId) {
+    final town = atlas.towns[townId];
+    if (town == null || atlas.officeTownIds[town.cityId] != townId) return [];
+    return _quizQuestions(town.cityId);
+  }
+
+  List<QuizQuestion> _quizQuestions(String city) {
     final pool =
         atlas.facts[city]!.where((f) => f.quizEligible).toList()
           ..shuffle(random);
     if (pool.length < 5) throw StateError('制圧クイズには異なる5問が必要です');
-    final questions = pool.take(5).map(_makeQuestion).toList();
+    return pool.take(5).map(_makeQuestion).toList();
+  }
+
+  // Only the office territory can open a new challenge; taking the last town never starts it.
+  void startQuizAt(String townId, DateTime now) {
+    if (!canStartQuizAt(townId)) return;
+    final city = atlas.towns[townId]!.cityId;
+    final questions = _quizQuestions(city);
     final first = questions.first;
     quiz = Quiz(
       cityId: city,

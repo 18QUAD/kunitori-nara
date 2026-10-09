@@ -10,6 +10,89 @@ import 'package:kunitori/territory_map.dart';
 
 void main() {
   testWidgets(
+    'unowned office offers practice, answers reveal solutions without conquest',
+    (tester) async {
+      rootBundle.clear();
+      final atlas = Atlas.fromJson(
+        jsonDecode(File('assets/data/nara.json').readAsStringSync()),
+      );
+      final office = atlas.officeTownIds['29205']!;
+      final saved = Game(atlas)..setHome(office);
+      saved.owned.clear();
+      SharedPreferences.setMockInitialValues({
+        'flutter.kunitori.nara.v1': jsonEncode(saved.toJson()),
+      });
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(const KunitoriApp());
+      for (var i = 0; i < 20; i++) {
+        await tester.runAsync(
+          () async => Future<void>.delayed(const Duration(milliseconds: 200)),
+        );
+        await tester.pump();
+        if (find.byType(TerritoryMap).evaluate().isNotEmpty) break;
+      }
+      await tester.pumpAndSettle();
+      final map = tester.widget<TerritoryMap>(find.byType(TerritoryMap));
+      final game = map.game;
+      expect(game.owned, saved.owned);
+      expect(game.quiz, isNull);
+      Future<void> tapOffice() async {
+        final viewer = tester.widget<InteractiveViewer>(
+          find.byType(InteractiveViewer),
+        );
+        final dynamic painter =
+            (((viewer.child as GestureDetector).child as SizedBox).child
+                    as CustomPaint)
+                .painter;
+        final Offset point = painter.officePoints['29205'];
+        final screen = MatrixUtils.transformPoint(
+          viewer.transformationController!.value,
+          point,
+        );
+        await tester.tapAt(
+          tester.getTopLeft(find.byType(InteractiveViewer)) + screen,
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await tester.tap(find.byTooltip('県全域を表示'));
+      await tester.pumpAndSettle();
+      await tapOffice();
+      expect(find.text('クイズを開始'), findsNothing);
+      expect(find.text('クイズを予習'), findsOneWidget);
+      final before = jsonEncode(game.toJson());
+      await tester.tap(find.text('クイズを予習'));
+      await tester.pumpAndSettle();
+      expect(find.text('橿原市 · クイズ予習'), findsOneWidget);
+      await tester.pump(const Duration(minutes: 2));
+      for (var i = 0; i < 5; i++) {
+        final option = find.byType(OutlinedButton).first;
+        await tester.ensureVisible(option);
+        await tester.tap(option);
+        await tester.pumpAndSettle();
+        expect(find.textContaining('正解は「'), findsOneWidget);
+        final next = find.text(i == 4 ? '結果を見る' : '次の問題');
+        await tester.ensureVisible(next);
+        await tester.tap(next);
+        await tester.pumpAndSettle();
+      }
+      expect(find.textContaining('予習完了！'), findsOneWidget);
+      expect(game.quiz, isNull);
+      // The tips timer may record seen tips; practice must not change gameplay.
+      final after = game.toJson()..['seen'] = jsonDecode(before)['seen'];
+      expect(jsonEncode(after), before);
+      await tester.tap(find.text('地図へ戻る'));
+      await tester.pumpAndSettle();
+      expect(find.text('クイズを予習'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
     'office map tap confirms, cancel preserves land, five answers clear',
     (tester) async {
       rootBundle.clear();
