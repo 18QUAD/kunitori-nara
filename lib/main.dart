@@ -526,21 +526,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         constraints.maxHeight * 0.6 + 12,
                         math.max(0.0, constraints.maxHeight - 168),
                       );
-                      final formerTipSize = tipAppearance.controlInsetSize;
+                      // Reuse the former tips row for the map for every profile,
+                      // including the default profile without saved appearance data.
+                      final formerTipSize =
+                          tipAppearance.controlInsetSize ?? TipSize.standard;
                       final reclaimedHeight =
-                          formerTipSize == null
-                              ? 0.0
-                              : math.min(
-                                    formerTipSize.height,
-                                    math.max(
-                                          0,
-                                          constraints.maxHeight -
-                                              baseMapHeight -
-                                              16,
-                                        ) *
-                                        0.4,
-                                  ) +
-                                  8;
+                          math.min(
+                            formerTipSize.height,
+                            math.max(
+                                  0,
+                                  constraints.maxHeight - baseMapHeight - 16,
+                                ) *
+                                0.4,
+                          ) +
+                          8;
                       final topHeight = baseMapHeight + reclaimedHeight;
                       return Column(
                         key: const Key('play-layout'),
