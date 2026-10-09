@@ -25,6 +25,7 @@ class TerritoryMap extends StatefulWidget {
     this.centerVersion = 0,
     this.fitScale = 0.9,
     this.controlsBottomInset = 8,
+    this.showControls = true,
   });
   final List<Widget> controls, secondaryControls;
   final Atlas atlas;
@@ -32,6 +33,7 @@ class TerritoryMap extends StatefulWidget {
   final String? selected, cityId;
   final int focusVersion, centerVersion;
   final double fitScale, controlsBottomInset;
+  final bool showControls;
   final ValueChanged<String> onSelected, onCitySelected;
   @override
   State<TerritoryMap> createState() => _TerritoryMapState();
@@ -434,83 +436,84 @@ class _TerritoryMapState extends State<TerritoryMap> {
               ),
             ),
           ),
-          Positioned(
-            right: 12,
-            top: 4,
-            bottom: widget.controlsBottomInset,
-            child: SizedBox(
-              width: 40,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.topRight,
-                child: SizedBox(
-                  width: 40,
-                  child: IconButtonTheme(
-                    data: IconButtonThemeData(
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.7),
-                        foregroundColor: const Color(0xFF102A32),
-                        disabledBackgroundColor: Colors.white54,
-                        disabledForegroundColor: Colors.black38,
+          if (widget.showControls)
+            Positioned(
+              right: 12,
+              top: 4,
+              bottom: widget.controlsBottomInset,
+              child: SizedBox(
+                width: 40,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topRight,
+                  child: SizedBox(
+                    width: 40,
+                    child: IconButtonTheme(
+                      data: IconButtonThemeData(
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: 0.7),
+                          foregroundColor: const Color(0xFF102A32),
+                          disabledBackgroundColor: Colors.white54,
+                          disabledForegroundColor: Colors.black38,
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ...widget.controls.expand(
-                          (control) => [control, const SizedBox(height: 2)],
-                        ),
-                        IconButton.filledTonal(
-                          tooltip: '拡大',
-                          onPressed: () => _zoom(1.7),
-                          icon: const Icon(Icons.add),
-                        ),
-                        const SizedBox(height: 2),
-                        IconButton.filledTonal(
-                          tooltip: '縮小',
-                          onPressed: () => _zoom(1 / 1.7),
-                          icon: const Icon(Icons.remove),
-                        ),
-                        const SizedBox(height: 2),
-                        ...widget.secondaryControls.expand(
-                          (control) => [control, const SizedBox(height: 2)],
-                        ),
-                        IconButton.filledTonal(
-                          tooltip:
-                              showGeography
-                                  ? '起伏・市街地・山名・川・池・湖を非表示'
-                                  : '起伏・市街地・山名・川・池・湖を表示',
-                          isSelected: showGeography,
-                          onPressed: () {
-                            setState(() => showGeography = !showGeography);
-                            // Retry failed layers when the shared overlay is enabled.
-                            if (showGeography && reliefFailed) {
-                              setState(() => reliefFailed = false);
-                              _loadRelief();
-                            }
-                            if (showGeography && mountainsFailed) {
-                              setState(() => mountainsFailed = false);
-                              _loadMountains();
-                            }
-                            if (showGeography && urbanFailed) {
-                              setState(() => urbanFailed = false);
-                              _loadUrban();
-                            }
-                            if (showGeography && waterFailed) {
-                              setState(() => waterFailed = false);
-                              _loadWater();
-                            }
-                          },
-                          icon: const Icon(Icons.terrain_outlined),
-                          selectedIcon: const Icon(Icons.terrain),
-                        ),
-                      ],
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ...widget.controls.expand(
+                            (control) => [control, const SizedBox(height: 2)],
+                          ),
+                          IconButton.filledTonal(
+                            tooltip: '拡大',
+                            onPressed: () => _zoom(1.7),
+                            icon: const Icon(Icons.add),
+                          ),
+                          const SizedBox(height: 2),
+                          IconButton.filledTonal(
+                            tooltip: '縮小',
+                            onPressed: () => _zoom(1 / 1.7),
+                            icon: const Icon(Icons.remove),
+                          ),
+                          const SizedBox(height: 2),
+                          ...widget.secondaryControls.expand(
+                            (control) => [control, const SizedBox(height: 2)],
+                          ),
+                          IconButton.filledTonal(
+                            tooltip:
+                                showGeography
+                                    ? '起伏・市街地・山名・川・池・湖を非表示'
+                                    : '起伏・市街地・山名・川・池・湖を表示',
+                            isSelected: showGeography,
+                            onPressed: () {
+                              setState(() => showGeography = !showGeography);
+                              // Retry failed layers when the shared overlay is enabled.
+                              if (showGeography && reliefFailed) {
+                                setState(() => reliefFailed = false);
+                                _loadRelief();
+                              }
+                              if (showGeography && mountainsFailed) {
+                                setState(() => mountainsFailed = false);
+                                _loadMountains();
+                              }
+                              if (showGeography && urbanFailed) {
+                                setState(() => urbanFailed = false);
+                                _loadUrban();
+                              }
+                              if (showGeography && waterFailed) {
+                                setState(() => waterFailed = false);
+                                _loadWater();
+                              }
+                            },
+                            icon: const Icon(Icons.terrain_outlined),
+                            selectedIcon: const Icon(Icons.terrain),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
       );
     },

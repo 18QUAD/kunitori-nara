@@ -66,10 +66,18 @@ void main() {
       await tapOffice();
       expect(find.text('クイズを開始'), findsNothing);
       expect(find.text('クイズを予習'), findsOneWidget);
+      final mapController =
+          tester
+              .widget<InteractiveViewer>(find.byType(InteractiveViewer))
+              .transformationController!;
+      final mapTransform = mapController.value.clone();
       final before = jsonEncode(game.toJson());
       await tester.tap(find.text('クイズを予習'));
       await tester.pumpAndSettle();
-      expect(find.text('橿原市 · クイズ予習'), findsOneWidget);
+      expect(find.textContaining('橿原市 · クイズ予習'), findsOneWidget);
+      expect(find.byType(Dialog), findsNothing);
+      expect(find.byType(Scaffold), findsOneWidget);
+      expect(find.byType(TerritoryMap), findsOneWidget);
       await tester.pump(const Duration(minutes: 2));
       for (var i = 0; i < 5; i++) {
         final question =
@@ -102,6 +110,13 @@ void main() {
         await tester.pumpAndSettle();
       }
       expect(find.textContaining('予習完了！'), findsOneWidget);
+      expect(
+        tester
+            .widget<InteractiveViewer>(find.byType(InteractiveViewer))
+            .transformationController,
+        same(mapController),
+      );
+      expect(mapController.value, mapTransform);
       expect(game.quiz, isNull);
       // The tips timer may record seen tips; practice must not change gameplay.
       final after = game.toJson()..['seen'] = jsonDecode(before)['seen'];
@@ -184,6 +199,12 @@ void main() {
       for (var i = 0; i < 5; i++) {
         expect(find.text('橿原市 · 制圧クイズ ${i + 1} / 5問'), findsOneWidget);
         expect(find.byType(OutlinedButton), findsNWidgets(4));
+        expect(find.byType(TerritoryMap), findsOneWidget);
+        expect(find.byType(Scaffold), findsOneWidget);
+        expect(
+          tester.widget<TerritoryMap>(find.byType(TerritoryMap)).showControls,
+          isFalse,
+        );
         expect(find.text('クイズを予習'), findsNothing);
         expect(find.text('上の選択肢をタップして回答'), findsOneWidget);
         expect(find.text('制圧成功'), findsNothing);
@@ -216,6 +237,7 @@ void main() {
         duplicateAnswer();
         await tester.pump();
         expect(find.byType(AnswerFeedback), findsOneWidget);
+        expect(find.byType(TerritoryMap), findsOneWidget);
         expect(find.textContaining('正解！'), findsOneWidget);
         expect(
           find.text(['good！', 'nice！', 'great！', 'brilliant！', 'perfect！'][i]),

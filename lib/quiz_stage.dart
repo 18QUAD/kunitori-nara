@@ -30,19 +30,24 @@ class QuizStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ClipRRect(
     borderRadius: BorderRadius.circular(22),
-    child: ColoredBox(
-      color: const Color(0xFF122B32),
-      child: Column(
-        children: [
-          Expanded(
-            child: Padding(
-              key: const Key('quiz-upper-region'),
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              child:
-                  correct != null
-                      ? Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
+    child: Column(
+      children: [
+        Expanded(
+          child: Padding(
+            key: const Key('quiz-upper-region'),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            child:
+                correct != null
+                    ? Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF101C2B,
+                            ).withValues(alpha: 0.8),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                           child: AnswerFeedback(
                             key: ValueKey(
                               '${question.factId}-$streak-$correct',
@@ -51,73 +56,88 @@ class QuizStage extends StatelessWidget {
                             streak: streak,
                           ),
                         ),
-                      )
-                      : SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              title,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                      ),
+                    )
+                    : SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF101C2B,
+                              ).withValues(alpha: 0.8),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  title,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (seconds != null)
+                                  Text(
+                                    '残り $seconds 秒',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color:
+                                          seconds! <= 5
+                                              ? Colors.redAccent
+                                              : const Color(0xFF7AE1BB),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          for (final answer in question.choices)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: OutlinedButton(
+                                onPressed: () => onAnswer(answer),
+                                style: OutlinedButton.styleFrom(
+                                  alignment: Alignment.centerLeft,
+                                  minimumSize: const Size.fromHeight(42),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  backgroundColor: const Color(
+                                    0xFF192A3A,
+                                  ).withValues(alpha: 0.8),
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: Text(answer),
                               ),
                             ),
-                            if (seconds != null)
-                              Text(
-                                '残り $seconds 秒',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color:
-                                      seconds! <= 5
-                                          ? Colors.redAccent
-                                          : const Color(0xFF7AE1BB),
-                                ),
-                              ),
-                            const SizedBox(height: 8),
-                            for (final answer in question.choices)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: OutlinedButton(
-                                  onPressed: () => onAnswer(answer),
-                                  style: OutlinedButton.styleFrom(
-                                    alignment: Alignment.centerLeft,
-                                    minimumSize: const Size.fromHeight(42),
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
-                                    ),
-                                    backgroundColor: const Color(0xFF192A3A),
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  child: Text(answer),
-                                ),
-                              ),
-                          ],
-                        ),
+                        ],
                       ),
+                    ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 12, bottom: 8),
+          child: Semantics(
+            liveRegion: correct != null,
+            child: QuizPrompt(
+              question:
+                  correct == null
+                      ? question.question
+                      : '${correct! ? '正解！' : '不正解'}\n正解は「${question.answer}」',
+              appearance: appearance,
+              nextSpeechAt: nextSpeechAt,
+              lipSyncDuration: const Duration(seconds: 3),
+              speechKey: '${question.factId}:$correct',
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12, bottom: 8),
-            child: Semantics(
-              liveRegion: correct != null,
-              child: QuizPrompt(
-                question:
-                    correct == null
-                        ? question.question
-                        : '${correct! ? '正解！' : '不正解'}\n正解は「${question.answer}」',
-                appearance: appearance,
-                nextSpeechAt: nextSpeechAt,
-                lipSyncDuration: const Duration(seconds: 3),
-                speechKey: '${question.factId}:$correct',
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     ),
   );
 }

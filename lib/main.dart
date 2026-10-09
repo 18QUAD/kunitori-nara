@@ -165,6 +165,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _answerFeedbackOpen = false;
   Quiz? _feedbackQuiz;
   bool _feedbackCorrect = false;
+  PracticeQuizController? _practice;
+  String? _practiceCityName;
+  bool get _quizActive =>
+      game?.quiz != null || _feedbackQuiz != null || _practice != null;
   @override
   void initState() {
     super.initState();
@@ -176,6 +180,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void dispose() {
     timer?.cancel();
     tipsTimer?.cancel();
+    _practice?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     if (store != null) store!.onChanged = null;
     super.dispose();
@@ -318,7 +323,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final lifecycle = WidgetsBinding.instance.lifecycleState;
       if (!mounted ||
           !tipAppearance.showTips ||
-          game!.quiz != null ||
+          _quizActive ||
           visibleFact == null ||
           (lifecycle != null && lifecycle != AppLifecycleState.resumed)) {
         return;
@@ -634,17 +639,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                Offstage(
-                                  offstage:
-                                      g.quiz != null || _feedbackQuiz != null,
-                                  child: TickerMode(
-                                    enabled:
-                                        g.quiz == null && _feedbackQuiz == null,
-                                    child: _map(),
+                                IgnorePointer(
+                                  ignoring: _quizActive,
+                                  child: ExcludeSemantics(
+                                    excluding: _quizActive,
+                                    child: _map(
+                                      showTips: !_quizActive,
+                                      showControls: !_quizActive,
+                                    ),
                                   ),
                                 ),
                                 if (g.quiz != null || _feedbackQuiz != null)
                                   _quiz(),
+                                if (_practice != null)
+                                  PracticeQuiz(
+                                    cityName: _practiceCityName!,
+                                    questions: _practice!.questions,
+                                    appearance: tipAppearance,
+                                    controller: _practice,
+                                    inline: true,
+                                    onClose: _closePractice,
+                                  ),
                               ],
                             ),
                           ),
@@ -667,7 +682,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       key: const Key('action-region'),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child:
-          game!.quiz != null || _answerFeedbackOpen
+          _practice != null
+              ? PracticeQuizControls(
+                controller: _practice!,
+                onClose: _closePractice,
+              )
+              : game!.quiz != null || _answerFeedbackOpen
               ? Center(
                 child: Text(
                   _answerFeedbackOpen ? '正解は吹き出しで確認できます' : '上の選択肢をタップして回答',
@@ -724,23 +744,28 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         Expanded(child: _territoryActionPanel()),
         const SizedBox(height: 4),
         TextButton.icon(
-          onPressed: () {
-            final questions = game!.practiceQuestionsAt(townId);
-            showDialog<void>(
-              context: context,
-              builder:
-                  (_) => PracticeQuiz(
-                    cityName: atlas!.cities[atlas!.towns[townId]!.cityId]!,
-                    questions: questions,
-                    appearance: tipAppearance,
-                  ),
-            );
-          },
+          onPressed: () => _startPractice(townId),
           icon: const Icon(Icons.school_outlined),
           label: const Text('クイズを予習'),
         ),
       ],
     );
+  }
+
+  void _startPractice(String townId) {
+    if (_quizActive) return;
+    final questions = game!.practiceQuestionsAt(townId);
+    if (questions.isEmpty) return;
+    setState(() {
+      _practice = PracticeQuizController(questions);
+      _practiceCityName = atlas!.cities[atlas!.towns[townId]!.cityId];
+    });
+  }
+
+  void _closePractice() {
+    final practice = _practice;
+    setState(() => _practice = null);
+    practice?.dispose();
   }
 
   Widget _territoryActionPanel() {
@@ -836,7 +861,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _map() => ClipRRect(
+  Widget _map({bool showTips = true, bool showControls = true}) => ClipRRect(
     borderRadius: BorderRadius.circular(22),
     child: ColoredBox(
       color: const Color(0xFF122B32),
@@ -853,8 +878,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     focusVersion: mapFocus,
                     centerVersion: mapCenter,
                     fitScale: 1,
+                    showControls: showControls,
                     controlsBottomInset:
-                        tipAppearance.showTips
+                        showTips && tipAppearance.showTips
                             ? _tipMaxHeight(constraints) + 16
                             : 8,
                     onSelected: _select,
@@ -879,7 +905,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ],
                   ),
                 ),
-                if (tipAppearance.showTips)
+                if (showTips && tipAppearance.showTips)
                   Positioned(
                     left: 0,
                     right: 12,
