@@ -789,8 +789,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 if (tipAppearance.showTips &&
                     tipAppearance.placement != TipPlacement.controls)
                   Positioned(
-                    left: 8,
-                    right: 68,
+                    left: 0,
+                    right: 60,
                     bottom:
                         tipAppearance.placement == TipPlacement.mapBottom
                             ? 8

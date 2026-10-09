@@ -32,7 +32,7 @@ class TipPresenter extends StatelessWidget {
         a.showCharacter &&
         a.bubbleShape == TipBubbleShape.speech;
     final bubble = Expanded(
-      flex: 2,
+      flex: 3,
       child: Padding(
         padding: EdgeInsets.only(
           left: hasTail && !a.characterOnRight ? 10 : 0,
@@ -115,7 +115,7 @@ class TipPresenter extends StatelessWidget {
                         fit: BoxFit.contain,
                         alignment: Alignment.bottomCenter,
                         child: SizedBox(
-                          width: 1024,
+                          width: 840,
                           height: 880,
                           child: ClipRect(
                             child: OverflowBox(
