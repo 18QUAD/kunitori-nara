@@ -91,7 +91,7 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const Key('tip-text'))).maxLines, 4);
     expectMapControlsInside(tester);
     final tipsRect = tester.getRect(find.byKey(const Key('tips-region')));
-    expect(tipsRect.right, closeTo(fixed.right - 8, .01));
+    expect(tipsRect.right, closeTo(fixed.right, .01));
     expect(
       tester.widget<IconButton>(find.byKey(const Key('map-home'))).onPressed,
       isNull,

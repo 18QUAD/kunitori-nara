@@ -781,7 +781,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 if (tipAppearance.showTips)
                   Positioned(
                     left: 0,
-                    right: constraints.maxHeight >= 360 ? 8 : 60,
+                    right: constraints.maxHeight >= 360 ? 0 : 60,
                     bottom: 8,
                     child: AbsorbPointer(
                       child: ConstrainedBox(
