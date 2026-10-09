@@ -12,7 +12,7 @@ import 'practice_quiz.dart';
 import 'answer_feedback.dart';
 import 'tip_appearance.dart';
 import 'tip_presenter.dart';
-import 'quiz_prompt.dart';
+import 'quiz_stage.dart';
 import 'tip_settings.dart';
 import 'save_store.dart';
 import 'territory_map.dart';
@@ -162,6 +162,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool corrupt = false;
   bool _quizPromptOpen = false;
   bool _answerFeedbackOpen = false;
+  Quiz? _feedbackQuiz;
+  bool _feedbackCorrect = false;
   @override
   void initState() {
     super.initState();
@@ -211,12 +213,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (expiredOnLoad) _showQuizOutcome();
       if (g.home != null) _save();
       timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
-        if (!mounted || game!.quiz == null) return;
-        final expired = game!.expire(DateTime.now());
-        setState(() {});
-        if (expired) {
-          _save();
-          _showQuizOutcome();
+        if (!mounted || game!.quiz == null || _answerFeedbackOpen) return;
+        final q = game!.quiz!;
+        if (!DateTime.now().isBefore(q.deadline)) {
+          unawaited(_answerQuiz(q, null));
+        } else {
+          setState(() {});
         }
       });
     } catch (_) {
@@ -235,10 +237,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (game == null) return;
-    if (state == AppLifecycleState.resumed) {
-      final expired = game!.expire(DateTime.now());
-      setState(() {});
-      if (expired) _showQuizOutcome();
+    if (state == AppLifecycleState.resumed && !_answerFeedbackOpen) {
+      final q = game!.quiz;
+      if (q != null && !DateTime.now().isBefore(q.deadline)) {
+        unawaited(_answerQuiz(q, null));
+      } else {
+        setState(() {});
+      }
     }
     _save();
   }
@@ -623,7 +628,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                           SizedBox(
                             key: const Key('fixed-region'),
                             height: topHeight,
-                            child: _map(),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Offstage(
+                                  offstage:
+                                      g.quiz != null || _feedbackQuiz != null,
+                                  child: _map(),
+                                ),
+                                if (g.quiz != null || _feedbackQuiz != null)
+                                  _quiz(),
+                              ],
+                            ),
                           ),
                           Expanded(child: _controls()),
                         ],
@@ -633,18 +649,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 ),
               ],
             ),
-            if (g.quiz != null)
-              Positioned.fill(
-                child: ColoredBox(
-                  color: Colors.black87,
-                  child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: _quiz(),
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -655,7 +659,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return Padding(
       key: const Key('action-region'),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: _actionPanel(),
+      child:
+          game!.quiz != null || _answerFeedbackOpen
+              ? Center(
+                child: Text(
+                  _answerFeedbackOpen ? '正解は吹き出しで確認できます' : '上の選択肢をタップして回答',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              )
+              : _actionPanel(),
     );
   }
 
@@ -900,7 +913,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (d != null) setState(() => game!.difficulty = d);
     },
   );
-  Future<void> _answerQuiz(Quiz q, String answer) async {
+  Future<void> _answerQuiz(Quiz q, String? answer) async {
     final g = game!;
     if (_answerFeedbackOpen || !identical(g.quiz, q)) return;
     _answerFeedbackOpen = true;
@@ -909,25 +922,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       DateTime.now(),
       nextQuestionDelay: answerFeedbackDuration,
     );
-    setState(() {});
+    setState(() {
+      _feedbackQuiz = q;
+      _feedbackCorrect = correct == true;
+    });
     _save();
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (_) => PopScope(
-            canPop: false,
-            child: Dialog(
-              child: AnswerFeedback(
-                correct: correct == true,
-                answer: q.answer,
-                autoDismiss: true,
-              ),
-            ),
-          ),
-    );
-    _answerFeedbackOpen = false;
-    if (!mounted || game != g || g.quiz != null) return;
+    await Future<void>.delayed(answerFeedbackDuration);
+    if (!mounted) return;
+    setState(() {
+      _answerFeedbackOpen = false;
+      _feedbackQuiz = null;
+    });
+    if (game != g || g.quiz != null) return;
     if (correct == true) {
       await showDialog<void>(
         context: context,
@@ -940,75 +946,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Widget _quiz() {
-    final q = game!.quiz!;
+    final q = _feedbackQuiz ?? game!.quiz!;
     final seconds = math.max(
       0,
       (q.deadline.difference(DateTime.now()).inMilliseconds / 1000).ceil(),
     );
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 500),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(
-                Icons.workspace_premium_outlined,
-                size: 44,
-                color: gold,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '${atlas!.cities[q.cityId]} · 制圧クイズ ${q.correctCount + 1} / 5問',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: gold,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Semantics(
-                liveRegion: true,
-                child: Text(
-                  '残り $seconds 秒',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: seconds <= 5 ? Colors.redAccent : mint,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              QuizPrompt(question: q.question, appearance: tipAppearance),
-              const SizedBox(height: 20),
-              ...q.choices.map(
-                (answer) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: OutlinedButton(
-                    onPressed: () => _answerQuiz(q, answer),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.all(16),
-                      alignment: Alignment.centerLeft,
-                    ),
-                    child: Text(answer, style: const TextStyle(fontSize: 16)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '5問全問正解でクリア。不正解・時間切れで役所所在地の支配を失います（本拠地も対象）。アプリを閉じても時間は進みます。',
-                style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 13,
-                  height: 1.6,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return QuizStage(
+      title: '${atlas!.cities[q.cityId]} · 制圧クイズ ${q.correctCount + 1} / 5問',
+      question: q,
+      appearance: tipAppearance,
+      seconds: seconds,
+      correct: _feedbackQuiz == null ? null : _feedbackCorrect,
+      streak: _feedbackCorrect ? q.correctCount + 1 : 0,
+      onAnswer: (answer) => _answerQuiz(q, answer),
     );
   }
 

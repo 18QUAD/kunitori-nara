@@ -184,6 +184,8 @@ void main() {
       for (var i = 0; i < 5; i++) {
         expect(find.text('橿原市 · 制圧クイズ ${i + 1} / 5問'), findsOneWidget);
         expect(find.byType(OutlinedButton), findsNWidgets(4));
+        expect(find.text('クイズを予習'), findsNothing);
+        expect(find.text('上の選択肢をタップして回答'), findsOneWidget);
         expect(find.text('制圧成功'), findsNothing);
         final prompt = find.byType(QuizPrompt);
         expect(prompt, findsOneWidget);
@@ -214,7 +216,11 @@ void main() {
         duplicateAnswer();
         await tester.pump();
         expect(find.byType(AnswerFeedback), findsOneWidget);
-        expect(find.text('正解！'), findsOneWidget);
+        expect(find.textContaining('正解！'), findsOneWidget);
+        expect(
+          find.text(['good！', 'nice！', 'great！', 'brilliant！', 'perfect！'][i]),
+          findsOneWidget,
+        );
         expect(game.quiz?.correctCount ?? 5, i + 1);
         await tester.pumpAndSettle();
         expect(find.byType(AnswerFeedback), findsNothing);

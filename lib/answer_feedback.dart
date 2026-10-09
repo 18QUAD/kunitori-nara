@@ -5,15 +5,21 @@ const answerFeedbackDuration = Duration(milliseconds: 850);
 
 /// Shared answer feedback for practice and conquest, with bounded motion.
 class AnswerFeedback extends StatelessWidget {
-  const AnswerFeedback({
-    super.key,
-    required this.correct,
-    required this.answer,
-    this.autoDismiss = false,
-  });
+  const AnswerFeedback({super.key, required this.correct, this.streak = 1});
 
-  final bool correct, autoDismiss;
-  final String answer;
+  final bool correct;
+  final int streak;
+
+  String get label =>
+      correct
+          ? [
+            'good！',
+            'nice！',
+            'great！',
+            'brilliant！',
+            'perfect！',
+          ][(streak.clamp(1, 5)) - 1]
+          : 'bad';
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +28,6 @@ class AnswerFeedback extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: answerFeedbackDuration,
-      onEnd: autoDismiss ? () => Navigator.of(context).pop() : null,
       builder: (context, progress, child) {
         final scale =
             reducedMotion || !correct
@@ -60,15 +65,13 @@ class AnswerFeedback extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                correct ? '正解！' : '不正解',
+                label,
                 style: TextStyle(
                   color: color,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 8),
-              Text('正解は「$answer」', textAlign: TextAlign.center),
             ],
           ),
         ),
