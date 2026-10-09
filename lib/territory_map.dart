@@ -435,16 +435,16 @@ class _TerritoryMapState extends State<TerritoryMap> {
             ),
           ),
           Positioned(
-            right: 8,
+            right: 12,
             top: 4,
             bottom: widget.controlsBottomInset,
             child: SizedBox(
-              width: 48,
+              width: 40,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topRight,
                 child: SizedBox(
-                  width: 48,
+                  width: 40,
                   child: IconButtonTheme(
                     data: IconButtonThemeData(
                       style: IconButton.styleFrom(

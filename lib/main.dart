@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
@@ -19,8 +20,11 @@ const ink = Color(0xFF101C2B),
     panel = Color(0xFF192A3A),
     mint = Color(0xFF7AE1BB),
     gold = Color(0xFFEEC47C);
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (!kIsWeb) {
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  }
   runApp(const KunitoriApp());
 }
 
@@ -64,6 +68,51 @@ class KunitoriApp extends StatelessWidget {
         ),
       ),
     ),
+    builder: (context, child) {
+      final size = MediaQuery.sizeOf(context);
+      final landscape =
+          size.width > size.height &&
+          MediaQuery.viewInsetsOf(context).bottom == 0;
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          ExcludeSemantics(
+            excluding: landscape,
+            child: IgnorePointer(ignoring: landscape, child: child!),
+          ),
+          if (landscape)
+            const Positioned.fill(
+              child: Material(
+                color: ink,
+                child: SafeArea(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Column(
+                        key: Key('portrait-guide'),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.screen_rotation, size: 48, color: mint),
+                          SizedBox(height: 16),
+                          Text(
+                            '端末を縦向きにしてご利用ください',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    },
     home: const GameScreen(),
   );
 }
@@ -785,7 +834,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 if (tipAppearance.showTips)
                   Positioned(
                     left: 0,
-                    right: 0,
+                    right: 12,
                     bottom: 8,
                     child: AbsorbPointer(
                       child: ConstrainedBox(

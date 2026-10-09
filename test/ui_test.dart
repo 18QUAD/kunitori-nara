@@ -34,6 +34,7 @@ void expectMapControlsInside(WidgetTester tester) {
   expect(firstControl.top, lessThanOrEqualTo(map.top + 8));
   expect(find.byTooltip('市町村・町を探す'), findsNothing);
   final home = tester.getRect(find.byKey(const Key('map-home')));
+  expect(home.right, closeTo(map.right - 12, .01));
   expect(map.contains(home.topLeft), isTrue);
   expect(map.contains(home.bottomRight), isTrue);
 }
@@ -91,7 +92,7 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const Key('tip-text'))).maxLines, 4);
     expectMapControlsInside(tester);
     final tipsRect = tester.getRect(find.byKey(const Key('tips-region')));
-    expect(tipsRect.right, closeTo(fixed.right, .01));
+    expect(tipsRect.right, closeTo(fixed.right - 12, .01));
     expect(
       tester.widget<IconButton>(find.byKey(const Key('map-home'))).onPressed,
       isNull,
@@ -259,6 +260,7 @@ void main() {
     tester.view.physicalSize = const Size(844, 390);
     await tester.pumpAndSettle();
     expectMapControlsInside(tester);
+    expect(find.byKey(const Key('portrait-guide')), findsOneWidget);
     expect(tester.takeException(), isNull);
     tester.view.physicalSize = const Size(390, 844);
     await tester.pumpAndSettle();
@@ -327,7 +329,7 @@ void main() {
           find.byKey(const Key('fixed-region')),
         );
         final compactTip = tester.getRect(find.byKey(const Key('tips-region')));
-        expect(compactTip.right, closeTo(compactMap.right, .01));
+        expect(compactTip.right, closeTo(compactMap.right - 12, .01));
         final lastControl = tester.getRect(
           find.byTooltip('起伏・市街地・山名・川・池・湖を非表示'),
         );
@@ -337,6 +339,7 @@ void main() {
       expect(tester.takeException(), isNull);
       tester.view.physicalSize = const Size(390, 844);
       await tester.pumpAndSettle();
+      expect(find.byKey(const Key('portrait-guide')), findsNothing);
     }
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
