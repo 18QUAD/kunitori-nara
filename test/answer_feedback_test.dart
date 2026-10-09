@@ -115,6 +115,57 @@ void main() {
     },
   );
 
+  testWidgets('practice introduction fits all four choices on a small phone', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 528);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 340,
+            child: PracticeQuiz(
+              cityName: '宇陀市',
+              questions: [question],
+              inline: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.text(PracticeQuizController.introduction), findsOneWidget);
+    expect(find.text(question.question), findsNothing);
+    await tester.pump(const Duration(seconds: 3));
+    final title = tester.widget<Text>(find.text('宇陀市 · クイズ予習 1/1問'));
+    expect(title.maxLines, 1);
+    final bubble = tester.getRect(find.byKey(const Key('tips-region')));
+    final upper = tester.getRect(find.byKey(const Key('quiz-upper-region')));
+    for (var i = 0; i < 4; i++) {
+      final rect = tester.getRect(find.byType(OutlinedButton).at(i));
+      expect(rect.bottom, lessThanOrEqualTo(upper.bottom));
+      expect(rect.bottom, lessThan(bubble.top));
+    }
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('closing during practice introduction cancels its transition', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: PracticeQuiz(cityName: '奈良市', questions: [question]),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 3));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'practice resets streak after a wrong answer and blocks duplicate answers',
     (tester) async {
@@ -126,6 +177,12 @@ void main() {
           ),
         ),
       );
+      expect(find.text(PracticeQuizController.introduction), findsOneWidget);
+      expect(find.byType(OutlinedButton), findsNothing);
+      await tester.pump(const Duration(milliseconds: 2999));
+      expect(find.byType(OutlinedButton), findsNothing);
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(find.text(PracticeQuizController.introduction), findsNothing);
       for (var i = 0; i < 4; i++) {
         final answer = i == 2 ? '大阪市' : '奈良市';
         final callback =

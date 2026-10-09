@@ -74,6 +74,9 @@ void main() {
       final before = jsonEncode(game.toJson());
       await tester.tap(find.text('クイズを予習'));
       await tester.pumpAndSettle();
+      expect(find.text(PracticeQuizController.introduction), findsOneWidget);
+      expect(find.byType(OutlinedButton), findsNothing);
+      await tester.pump(const Duration(seconds: 3));
       expect(find.textContaining('橿原市 · クイズ予習'), findsOneWidget);
       expect(find.byType(Dialog), findsNothing);
       expect(find.byType(Scaffold), findsOneWidget);

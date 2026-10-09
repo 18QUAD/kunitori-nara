@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'game.dart';
 import 'quiz_stage.dart';
@@ -5,7 +6,17 @@ import 'quiz_prompt.dart';
 import 'tip_appearance.dart';
 
 class PracticeQuizController extends ChangeNotifier {
-  PracticeQuizController(this.questions);
+  PracticeQuizController(this.questions) {
+    if (questions.isNotEmpty) {
+      _introTimer = Timer(const Duration(seconds: 3), () {
+        introducing = false;
+        notifyListeners();
+      });
+    }
+  }
+  static const introduction = '時間制限なし。領土・戦績には影響しません。';
+  Timer? _introTimer;
+  bool introducing = true;
   final List<QuizQuestion> questions;
   int index = 0, correctCount = 0, streak = 0;
   String? choice;
@@ -14,7 +25,7 @@ class PracticeQuizController extends ChangeNotifier {
   bool? get correct => choice == null ? null : choice == question.answer;
 
   void answer(String value) {
-    if (finished || choice != null) return;
+    if (introducing || finished || choice != null) return;
     choice = value;
     if (value == question.answer) {
       correctCount++;
@@ -23,6 +34,12 @@ class PracticeQuizController extends ChangeNotifier {
       streak = 0;
     }
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _introTimer?.cancel();
+    super.dispose();
   }
 
   void advance() {
@@ -93,9 +110,24 @@ class _PracticeQuizState extends State<PracticeQuiz> {
                     ),
                   ],
                 )
+                : controller.introducing
+                ? Column(
+                  children: [
+                    const Expanded(child: SizedBox()),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12, bottom: 8),
+                      child: QuizPrompt(
+                        question: PracticeQuizController.introduction,
+                        appearance: widget.appearance,
+                        lipSyncDuration: const Duration(seconds: 3),
+                        speechKey: 'practice-introduction',
+                      ),
+                    ),
+                  ],
+                )
                 : QuizStage(
                   title:
-                      '${widget.cityName} · クイズ予習\n${controller.index + 1} / ${controller.questions.length}問',
+                      '${widget.cityName} · クイズ予習 ${controller.index + 1}/${controller.questions.length}問',
                   question: controller.question,
                   appearance: widget.appearance,
                   correct: controller.correct,
@@ -136,12 +168,6 @@ class PracticeQuizControls extends StatelessWidget {
         (context, _) => Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              '時間制限なし。領土・戦績には影響しません。',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12),
-            ),
-            const SizedBox(height: 4),
             OverflowBar(
               alignment: MainAxisAlignment.center,
               children: [
