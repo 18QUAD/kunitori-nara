@@ -929,15 +929,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final correct = g.answer(
       answer,
       DateTime.now(),
-      nextQuestionDelay: answerFeedbackDuration,
+      nextQuestionDelay: answerFeedbackDisplayDuration,
     );
     setState(() {
       _feedbackQuiz = q;
-      _feedbackEndsAt = DateTime.now().add(answerFeedbackDuration);
+      _feedbackEndsAt = DateTime.now().add(answerFeedbackDisplayDuration);
       _feedbackCorrect = correct == true;
     });
     _save();
-    await Future<void>.delayed(answerFeedbackDuration);
+    await Future<void>.delayed(answerFeedbackDisplayDuration);
     if (!mounted) return;
     setState(() {
       _answerFeedbackOpen = false;

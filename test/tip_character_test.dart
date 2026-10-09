@@ -49,12 +49,13 @@ void main() {
           choices: ['答え'],
         );
         final next = DateTime.now().add(const Duration(seconds: 25));
-        Widget quiz(QuizQuestion q, int seconds) => MaterialApp(
+        Widget quiz(QuizQuestion q, int seconds, {bool? result}) => MaterialApp(
           home: Scaffold(
             body: QuizStage(
               title: '予習・制圧共通',
               question: q,
               seconds: seconds,
+              correct: result,
               nextSpeechAt: next,
               appearance: TipAppearance(
                 character: character,
@@ -98,6 +99,18 @@ void main() {
         expect(closed(), restarted);
         await tester.pump(const Duration(milliseconds: 2700));
         expect(closed(), isTrue);
+        for (final result in [true, false]) {
+          await tester.pumpWidget(quiz(first, 0, result: result));
+          final initialResult = closed();
+          await tester.pump(const Duration(milliseconds: 180));
+          expect(closed(), !initialResult);
+          await tester.pump(const Duration(milliseconds: 180));
+          expect(closed(), initialResult);
+          await tester.pump(const Duration(milliseconds: 2700));
+          expect(closed(), isTrue);
+          await tester.pump(const Duration(milliseconds: 360));
+          expect(closed(), isTrue);
+        }
         await tester.pumpWidget(const SizedBox());
         expect(tester.takeException(), isNull);
       },

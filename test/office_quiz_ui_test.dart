@@ -222,6 +222,11 @@ void main() {
           findsOneWidget,
         );
         expect(game.quiz?.correctCount ?? 5, i + 1);
+        await tester.pump(const Duration(milliseconds: 2500));
+        expect(find.byType(AnswerFeedback), findsOneWidget);
+        await tester.pump(
+          answerFeedbackDisplayDuration - const Duration(milliseconds: 2500),
+        );
         await tester.pumpAndSettle();
         expect(find.byType(AnswerFeedback), findsNothing);
       }

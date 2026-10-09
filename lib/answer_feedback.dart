@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 const answerFeedbackDuration = Duration(milliseconds: 850);
+const answerFeedbackDisplayDuration = Duration(seconds: 3);
 
 /// Shared answer feedback for practice and conquest, with bounded motion.
 class AnswerFeedback extends StatelessWidget {

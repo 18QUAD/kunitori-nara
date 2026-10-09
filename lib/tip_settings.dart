@@ -118,7 +118,7 @@ class _TipSettingsState extends State<TipSettings> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('口パク'),
-                subtitle: const Text('tipsは切替の1秒前まで、クイズの設問は3秒間動きます'),
+                subtitle: const Text('tipsは切替の1秒前まで、クイズのセリフは3秒間動きます'),
                 value: appearance.lipSyncEnabled,
                 onChanged:
                     (v) => update(appearance.copyWith(lipSyncEnabled: v)),
