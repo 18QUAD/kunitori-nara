@@ -85792,7 +85792,7 @@ if(f.a&&f.w!==B.l5){s=f.w
 r=s===B.i7?8:h
 s=s===B.zN?8:h
 q=b.d
-i.push(A.tp(r,A.aw9(!0,new A.be(h,Math.min(f.x.d,Math.min(Math.max(0,q-16),Math.max(48,q*0.35))),g.QV(),h)),h,h,8,68,s,h))}return A.hF(B.c1,i,B.K,B.bj,h)},
+i.push(A.tp(r,A.aw9(!0,new A.be(h,Math.min(f.x.d,Math.min(Math.max(0,q-16),Math.max(48,q*0.35))),g.QV(),h)),h,h,0,60,s,h))}return A.hF(B.c1,i,B.K,B.bj,h)},
 $S:203}
 A.ajB.prototype={
 $0(){return this.a.PQ(null)},
@@ -86736,10 +86736,10 @@ return A.P(null,r)}})
 return A.Q($async$$1,r)},
 $S:161}
 A.BC.prototype={
-M(a){var s,r,q,p,o,n,m,l,k,j=null,i=1024,h={},g=this.d
-if(!g.a)return B.aG
-h.a=null
-switch(g.f.a){case 0:s=B.a6A
+M(a){var s,r,q,p,o,n,m,l,k,j=null,i={},h=this.d
+if(!h.a)return B.aG
+i.a=null
+switch(h.f.a){case 0:s=B.a6A
 break
 case 1:s=B.a6B
 break
@@ -86747,25 +86747,25 @@ case 2:s=B.a6z
 break
 default:s=j}r=s.a
 q=s.b
-h.a=s.c
-s=g.c
-p=s&&g.b&&g.r===B.i5
-o=p&&!g.d?10:0
-n=p&&g.d?10:0
-if(s){m=g.r===B.zM?8:22
-m=new A.Ok(r,q,m,p,g.d,j)}else m=j
+i.a=s.c
+s=h.c
+p=s&&h.b&&h.r===B.i5
+o=p&&!h.d?10:0
+n=p&&h.d?10:0
+if(s){m=h.r===B.zM?8:22
+m=new A.Ok(r,q,m,p,h.d,j)}else m=j
 s=s?10:0
-l=A.ef(new A.bc(new A.ai(o,0,n,0),A.eX(new A.bc(new A.ai(s,8,s,8),new A.fX(new A.aeB(h,this,g),j),j),j,j,m,B.A),j),2)
-m=g.x.d
-if(g.e===B.i6){s=A.lN(A.a13(B.fk,new A.be(i,880,A.lN(A.ayO(B.iC,new A.yn(A.aKj(320,j,new A.wA("assets/characters/nara_guide.png",j,j)),i,1536,B.B4,j),1536,i,1536,i),B.K,j),j),B.B5),B.K,j)
-o=g.d?-1:1
+l=A.ef(new A.bc(new A.ai(o,0,n,0),A.eX(new A.bc(new A.ai(s,8,s,8),new A.fX(new A.aeB(i,this,h),j),j),j,j,m,B.A),j),3)
+m=h.x.d
+if(h.e===B.i6){s=A.lN(A.a13(B.fk,new A.be(840,880,A.lN(A.ayO(B.iC,new A.yn(A.aKj(320,j,new A.wA("assets/characters/nara_guide.png",j,j)),1024,1536,B.B4,j),1536,1024,1536,1024),B.K,j),j),B.B5),B.K,j)
+o=h.d?-1:1
 s=new A.jN(A.oZ(o,1,1),B.a2,!0,j,s,j)}else s=A.eX(j,j,j,new A.Pj(j),B.A)
 k=new A.ja(1,B.dy,new A.be(m,m,new A.kh(!0,s,j),B.agr),j)
 s=A.c([],t.p)
-o=g.b
-if(o&&!g.d)s.push(k)
+o=h.b
+if(o&&!h.d)s.push(k)
 s.push(l)
-if(o&&g.d)s.push(k)
+if(o&&h.d)s.push(k)
 return new A.be(j,m,A.fs(s,B.b9,B.E,B.a3),B.ags)}}
 A.aeB.prototype={
 $2(a,b){var s,r,q,p,o,n,m,l,k,j=null,i={},h=this.c,g=i.a=h.x.e,f=new A.aeC(i,this.a,h)
