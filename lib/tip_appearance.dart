@@ -10,7 +10,7 @@ enum TipCharacter {
 }
 
 enum TipBubbleStyle {
-  red('白地・赤い縁'),
+  red('白地・枠なし'),
   gold('クリーム・金の縁'),
   mint('濃紺・ミントの縁');
 

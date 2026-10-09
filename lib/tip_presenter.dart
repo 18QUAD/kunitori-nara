@@ -13,7 +13,7 @@ class TipPresenter extends StatelessWidget {
     final (background, border, foreground) = switch (a.bubbleStyle) {
       TipBubbleStyle.red => (
         const Color(0xFFFFFAF5),
-        const Color(0xFFE6434C),
+        Colors.transparent,
         const Color(0xFF242D36),
       ),
       TipBubbleStyle.gold => (
