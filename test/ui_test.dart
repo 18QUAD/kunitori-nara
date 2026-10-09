@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kunitori/tip_appearance.dart';
 import 'package:kunitori/main.dart';
 import 'package:kunitori/game.dart' show number;
 import 'package:kunitori/territory_map.dart';
@@ -72,7 +73,7 @@ void main() {
       tester.getSize(find.byType(TerritoryMap)).height,
       closeTo(fixed.height, 1),
     );
-    expect(tester.widget<Text>(find.byKey(const Key('tip-text'))).maxLines, 2);
+    expect(tester.widget<Text>(find.byKey(const Key('tip-text'))).maxLines, 4);
     expectMapControlsInside(tester);
     expect(
       tester.widget<IconButton>(find.byKey(const Key('map-home'))).onPressed,
@@ -95,7 +96,7 @@ void main() {
     await tester.tap(find.text('ここを本拠地にする'));
     await tester.pumpAndSettle();
     expect(find.text('この地域はあなたの領土です'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('tip-text')));
+    await tester.tap(find.byKey(const Key('tips-region')), warnIfMissed: false);
     await tester.pump();
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.byKey(const Key('tip-details-button')), findsNothing);
@@ -279,6 +280,54 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('奈良県'), findsOneWidget);
     expect(find.text('旅のはじまり'), findsOneWidget);
+    for (final placement in [
+      TipPlacement.controls,
+      TipPlacement.mapTop,
+      TipPlacement.mapBottom,
+    ]) {
+      await tester.tap(find.byTooltip('設定'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('キャラ・吹き出し'));
+      await tester.pumpAndSettle();
+      final field = find.byType(DropdownButtonFormField<TipPlacement>);
+      await tester.ensureVisible(field);
+      await tester.pumpAndSettle();
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(placement.label).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('tips設定を閉じる'));
+      await tester.pumpAndSettle();
+      final mapRect = tester.getRect(find.byKey(const Key('fixed-region')));
+      final tipRect = tester.getRect(find.byKey(const Key('tips-region')));
+      if (placement == TipPlacement.controls) {
+        expect(tipRect.top, greaterThanOrEqualTo(mapRect.bottom));
+      } else {
+        expect(mapRect.contains(tipRect.center), isTrue);
+      }
+      tester.view.physicalSize = const Size(844, 390);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.byTooltip('設定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('キャラ・吹き出し'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('tipsを表示'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('tips設定を閉じる'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('tips-region')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(const KunitoriApp());
+    await tester.runAsync(
+      () async => Future<void>.delayed(const Duration(seconds: 2)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('tips-region')), findsNothing);
+    expect(jsonDecode(prefs.getString('kunitori.nara.v1')!)['owned'], isEmpty);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });

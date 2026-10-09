@@ -8,6 +8,9 @@ import 'game.dart';
 import 'conquest_success.dart';
 import 'practice_quiz.dart';
 import 'answer_feedback.dart';
+import 'tip_appearance.dart';
+import 'tip_presenter.dart';
+import 'tip_settings.dart';
 import 'save_store.dart';
 import 'territory_map.dart';
 
@@ -74,6 +77,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Atlas? atlas;
   Game? game;
   SaveStore? store;
+  TipAppearanceStore? tipAppearanceStore;
+  TipAppearance tipAppearance = const TipAppearance();
   String? error, selected;
   String? cityFilter;
   int factIndex = 0, mapFocus = 0, mapCenter = 0;
@@ -104,6 +109,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             as Map<String, dynamic>,
       );
       final saver = SaveStore(await SharedPreferences.getInstance());
+      final appearanceStore = TipAppearanceStore(saver.preferences);
       Game g;
       try {
         g = saver.load(data);
@@ -115,6 +121,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       atlas = data;
       game = g;
       store = saver;
+      tipAppearanceStore = appearanceStore;
+      tipAppearance = appearanceStore.load();
       saver.onChanged = () {
         if (mounted) setState(() {});
       };
@@ -216,6 +224,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _rememberVisibleFact() {
+    if (!tipAppearance.showTips) return;
     final f = visibleFact;
     if (f != null) game!.seen.add(f.id);
   }
@@ -225,6 +234,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     tipsTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       final lifecycle = WidgetsBinding.instance.lifecycleState;
       if (!mounted ||
+          !tipAppearance.showTips ||
           game!.quiz != null ||
           visibleFact == null ||
           (lifecycle != null && lifecycle != AppLifecycleState.resumed)) {
@@ -467,9 +477,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             onSelected: (value) {
               if (value == 'records') _showRecords();
               if (value == 'help') _about();
+              if (value == 'tips') _tipSettings();
             },
             itemBuilder:
                 (_) => const [
+                  PopupMenuItem(
+                    value: 'tips',
+                    child: ListTile(
+                      leading: Icon(Icons.chat_bubble_outline),
+                      title: Text('キャラ・吹き出し'),
+                    ),
+                  ),
                   PopupMenuItem(
                     value: 'records',
                     child: ListTile(
@@ -543,36 +561,61 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Widget _controls() {
-    final fact = visibleFact;
-    final tip =
-        fact?.text ??
-        (cityFilter == null ? '市区町村を選び、次に町から本拠地を選びましょう。' : '町を選んで本拠地を決めましょう。');
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: Column(
-        children: [
-          SizedBox(
-            key: const Key('tips-region'),
-            height: 44,
-            width: double.infinity,
-            child: Text(
-              tip,
-              key: const Key('tip-text'),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.5,
-                color: Colors.white,
-              ),
+      child: LayoutBuilder(
+        builder:
+            (context, constraints) => Column(
+              children: [
+                if (tipAppearance.showTips &&
+                    tipAppearance.placement == TipPlacement.controls) ...[
+                  SizedBox(
+                    height: math.min(
+                      tipAppearance.size.height,
+                      constraints.maxHeight * 0.4,
+                    ),
+                    child: _tipPresenter(),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                Expanded(child: _actionPanel()),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(child: _actionPanel()),
-        ],
       ),
     );
   }
+
+  Widget _tipPresenter() => TipPresenter(
+    text:
+        visibleFact?.text ??
+        (cityFilter == null ? '市区町村を選び、次に町から本拠地を選びましょう。' : '町を選んで本拠地を決めましょう。'),
+    appearance: tipAppearance,
+  );
+
+  void _tipSettings() => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: panel,
+    builder:
+        (_) => TipSettings(
+          initial: tipAppearance,
+          onChanged: (value) {
+            setState(() => tipAppearance = value);
+            unawaited(
+              tipAppearanceStore!.save(value).catchError((Object _) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('表示設定を保存できませんでした。もう一度設定してください。'),
+                    ),
+                  );
+                }
+              }),
+            );
+          },
+        ),
+  );
 
   Widget _actionPanel() {
     final townId = selected;
@@ -712,36 +755,71 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     borderRadius: BorderRadius.circular(22),
     child: ColoredBox(
       color: const Color(0xFF122B32),
-      child: TerritoryMap(
-        atlas: atlas!,
-        game: game!,
-        selected: selected,
-        cityId: cityFilter,
-        focusVersion: mapFocus,
-        centerVersion: mapCenter,
-        onSelected: _select,
-        onCitySelected: _selectCity,
-        controls: [
-          IconButton.filledTonal(
-            tooltip: '市町村・町を探す',
-            onPressed: _search,
-            icon: const Icon(Icons.search),
-          ),
-          IconButton.filledTonal(
-            tooltip: '県全域を表示',
-            onPressed: () => _selectCity(null),
-            icon: const Icon(Icons.zoom_out_map),
-          ),
-          IconButton.filledTonal(
-            key: const Key('map-home'),
-            tooltip: game!.attackTarget == null ? '本拠地へ' : '攻略中の町へ',
-            onPressed:
-                (game!.attackTarget ?? game!.home) == null
-                    ? null
-                    : _focusCampaign,
-            icon: const Icon(Icons.home_outlined),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder:
+            (context, constraints) => Stack(
+              children: [
+                Positioned.fill(
+                  child: TerritoryMap(
+                    atlas: atlas!,
+                    game: game!,
+                    selected: selected,
+                    cityId: cityFilter,
+                    focusVersion: mapFocus,
+                    centerVersion: mapCenter,
+                    onSelected: _select,
+                    onCitySelected: _selectCity,
+                    controls: [
+                      IconButton.filledTonal(
+                        tooltip: '市町村・町を探す',
+                        onPressed: _search,
+                        icon: const Icon(Icons.search),
+                      ),
+                      IconButton.filledTonal(
+                        tooltip: '県全域を表示',
+                        onPressed: () => _selectCity(null),
+                        icon: const Icon(Icons.zoom_out_map),
+                      ),
+                      IconButton.filledTonal(
+                        key: const Key('map-home'),
+                        tooltip: game!.attackTarget == null ? '本拠地へ' : '攻略中の町へ',
+                        onPressed:
+                            (game!.attackTarget ?? game!.home) == null
+                                ? null
+                                : _focusCampaign,
+                        icon: const Icon(Icons.home_outlined),
+                      ),
+                    ],
+                  ),
+                ),
+                if (tipAppearance.showTips &&
+                    tipAppearance.placement != TipPlacement.controls)
+                  Positioned(
+                    left: 8,
+                    right: 68,
+                    bottom:
+                        tipAppearance.placement == TipPlacement.mapBottom
+                            ? 8
+                            : null,
+                    top:
+                        tipAppearance.placement == TipPlacement.mapTop
+                            ? 8
+                            : null,
+                    child: AbsorbPointer(
+                      child: SizedBox(
+                        height: math.min(
+                          tipAppearance.size.height,
+                          math.min(
+                            math.max(0, constraints.maxHeight - 16),
+                            math.max(48, constraints.maxHeight * 0.35),
+                          ),
+                        ),
+                        child: _tipPresenter(),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
       ),
     ),
   );
@@ -1066,7 +1144,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 10),
                   const SelectableText(
-                    '地域tips：全39市町村に各30件。自治体公式資料の90件に、日本語版Wikipediaの各記事の執筆者による内容を要約・編集した1,080件を追加しています。tipsは2行に収まる短文で表示します。出典は以下の一覧で確認できます。\nWikipedia由来のtips：CC BY-SA 4.0\nhttps://creativecommons.org/licenses/by-sa/4.0/',
+                    '地域tips：全39市町村に各30件。自治体公式資料の90件に、日本語版Wikipediaの各記事の執筆者による内容を要約・編集した1,080件を追加しています。tipsは吹き出しに収まる短文で表示します。キャラ・吹き出しのデザイン、配置、表示は設定から変更できます。出典は以下の一覧で確認できます。\nWikipedia由来のtips：CC BY-SA 4.0\nhttps://creativecommons.org/licenses/by-sa/4.0/',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
