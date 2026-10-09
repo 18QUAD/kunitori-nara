@@ -14,11 +14,24 @@ void expectMapControlsInside(WidgetTester tester) {
     expect(map.contains(control.topLeft), isTrue, reason: label);
     expect(map.contains(control.bottomRight), isTrue, reason: label);
   }
+  final ordered = [
+    find.byKey(const Key('map-home')),
+    find.byTooltip('拡大'),
+    find.byTooltip('縮小'),
+    find.byTooltip('県全域を表示'),
+    find.byTooltip('起伏・市街地・山名・川・池・湖を非表示'),
+  ];
+  for (var i = 1; i < ordered.length; i++) {
+    expect(
+      tester.getRect(ordered[i]).top,
+      greaterThan(tester.getRect(ordered[i - 1]).bottom),
+    );
+  }
   final compass = tester.getRect(find.byKey(const Key('map-compass')));
   expect(compass.topLeft, map.topLeft + const Offset(8, 8));
-  final firstControl = tester.getRect(find.byTooltip('県全域を表示'));
-  expect(firstControl.top, greaterThanOrEqualTo(map.top + 8));
-  expect(firstControl.top, lessThanOrEqualTo(map.top + 12));
+  final firstControl = tester.getRect(find.byKey(const Key('map-home')));
+  expect(firstControl.top, greaterThanOrEqualTo(map.top + 4));
+  expect(firstControl.top, lessThanOrEqualTo(map.top + 8));
   expect(find.byTooltip('市町村・町を探す'), findsNothing);
   final home = tester.getRect(find.byKey(const Key('map-home')));
   expect(map.contains(home.topLeft), isTrue);
@@ -77,6 +90,8 @@ void main() {
     );
     expect(tester.widget<Text>(find.byKey(const Key('tip-text'))).maxLines, 4);
     expectMapControlsInside(tester);
+    final tipsRect = tester.getRect(find.byKey(const Key('tips-region')));
+    expect(tipsRect.right, closeTo(fixed.right - 8, .01));
     expect(
       tester.widget<IconButton>(find.byKey(const Key('map-home'))).onPressed,
       isNull,

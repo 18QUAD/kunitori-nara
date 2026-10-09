@@ -21,10 +21,11 @@ class TerritoryMap extends StatefulWidget {
     required this.onSelected,
     required this.onCitySelected,
     this.controls = const [],
+    this.secondaryControls = const [],
     this.centerVersion = 0,
     this.fitScale = 0.9,
   });
-  final List<Widget> controls;
+  final List<Widget> controls, secondaryControls;
   final Atlas atlas;
   final Game game;
   final String? selected, cityId;
@@ -434,7 +435,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
           ),
           Positioned(
             right: 8,
-            top: 8,
+            top: 4,
             bottom: 8,
             child: SizedBox(
               width: 48,
@@ -456,7 +457,22 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ...widget.controls.expand(
-                          (control) => [control, const SizedBox(height: 6)],
+                          (control) => [control, const SizedBox(height: 2)],
+                        ),
+                        IconButton.filledTonal(
+                          tooltip: '拡大',
+                          onPressed: () => _zoom(1.7),
+                          icon: const Icon(Icons.add),
+                        ),
+                        const SizedBox(height: 2),
+                        IconButton.filledTonal(
+                          tooltip: '縮小',
+                          onPressed: () => _zoom(1 / 1.7),
+                          icon: const Icon(Icons.remove),
+                        ),
+                        const SizedBox(height: 2),
+                        ...widget.secondaryControls.expand(
+                          (control) => [control, const SizedBox(height: 2)],
                         ),
                         IconButton.filledTonal(
                           tooltip:
@@ -486,18 +502,6 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           },
                           icon: const Icon(Icons.terrain_outlined),
                           selectedIcon: const Icon(Icons.terrain),
-                        ),
-                        const SizedBox(height: 6),
-                        IconButton.filledTonal(
-                          tooltip: '拡大',
-                          onPressed: () => _zoom(1.7),
-                          icon: const Icon(Icons.add),
-                        ),
-                        const SizedBox(height: 6),
-                        IconButton.filledTonal(
-                          tooltip: '縮小',
-                          onPressed: () => _zoom(1 / 1.7),
-                          icon: const Icon(Icons.remove),
                         ),
                       ],
                     ),

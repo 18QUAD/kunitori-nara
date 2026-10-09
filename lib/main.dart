@@ -760,11 +760,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     onCitySelected: _selectCity,
                     controls: [
                       IconButton.filledTonal(
-                        tooltip: '県全域を表示',
-                        onPressed: () => _selectCity(null),
-                        icon: const Icon(Icons.zoom_out_map),
-                      ),
-                      IconButton.filledTonal(
                         key: const Key('map-home'),
                         tooltip: game!.attackTarget == null ? '本拠地へ' : '攻略中の町へ',
                         onPressed:
@@ -774,12 +769,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         icon: const Icon(Icons.home_outlined),
                       ),
                     ],
+                    secondaryControls: [
+                      IconButton.filledTonal(
+                        tooltip: '県全域を表示',
+                        onPressed: () => _selectCity(null),
+                        icon: const Icon(Icons.zoom_out_map),
+                      ),
+                    ],
                   ),
                 ),
                 if (tipAppearance.showTips)
                   Positioned(
                     left: 0,
-                    right: 60,
+                    right: constraints.maxHeight >= 360 ? 8 : 60,
                     bottom: 8,
                     child: AbsorbPointer(
                       child: ConstrainedBox(
