@@ -85779,7 +85779,7 @@ k=t.p
 k=A.c([A.KG(0,new A.Bi(A.c([A.Jk(B.GU,j,B.agw,(m?s.d:n)==null?j:i.ga5Z(),j,l)],k),A.c([A.Jk(B.GM,j,j,new A.ajF(i),j,"\u770c\u5168\u57df\u3092\u8868\u793a")],k),h,s,r,q,p,o,1,i.gaej(),i.gaek(),j))],k)
 h=i.w
 if(h.a){s=b.d
-r=s>=360?8:60
+r=s>=360?0:60
 s=Math.min(h.x.d,Math.min(Math.max(0,s-16),Math.max(48,s*0.35)))
 h=i.gIC()
 h=h==null?j:h.d
