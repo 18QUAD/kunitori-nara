@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'game.dart';
+import 'answer_feedback.dart';
 
 class PracticeQuiz extends StatefulWidget {
   const PracticeQuiz({
@@ -54,11 +55,10 @@ class _PracticeQuizState extends State<PracticeQuiz> {
                   ),
                 ),
               if (choice != null)
-                Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    '${choice == q.answer ? '正解！' : '不正解'} 正解は「${q.answer}」',
-                  ),
+                AnswerFeedback(
+                  key: ValueKey(index),
+                  correct: choice == q.answer,
+                  answer: q.answer,
                 ),
             ],
           ],

@@ -543,7 +543,11 @@ class Game {
     message = '${atlas.cities[city]}の制圧クイズ。4択5問すべてに正解するとクリア！';
   }
 
-  bool? answer(String? choice, DateTime now) {
+  bool? answer(
+    String? choice,
+    DateTime now, {
+    Duration nextQuestionDelay = Duration.zero,
+  }) {
     final q = quiz;
     if (q == null) return null;
     final correct = now.isBefore(q.deadline) && choice == q.answer;
@@ -557,7 +561,9 @@ class Game {
         choices: next.choices,
         correctCount: q.correctCount + 1,
         remaining: q.remaining.skip(1).toList(),
-        deadline: now.add(Duration(seconds: difficulty.seconds)),
+        deadline: now.add(
+          Duration(seconds: difficulty.seconds) + nextQuestionDelay,
+        ),
       );
       return true;
     }

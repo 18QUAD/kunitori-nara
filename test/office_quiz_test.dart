@@ -100,6 +100,39 @@ void main() {
     }
   });
 
+  test(
+    'feedback delay does not consume the next question time or extend the current deadline',
+    () {
+      final game = ready('29205')
+        ..startQuizAt(atlas.officeTownIds['29205']!, now);
+      final answeredAt = now.add(const Duration(seconds: 1));
+      expect(
+        game.answer(
+          game.quiz!.answer,
+          answeredAt,
+          nextQuestionDelay: const Duration(milliseconds: 850),
+        ),
+        isTrue,
+      );
+      expect(
+        game.quiz!.deadline,
+        answeredAt.add(
+          Duration(seconds: game.difficulty.seconds, milliseconds: 850),
+        ),
+      );
+      final deadline = game.quiz!.deadline;
+      expect(
+        game.answer(
+          game.quiz!.answer,
+          deadline,
+          nextQuestionDelay: const Duration(milliseconds: 850),
+        ),
+        isFalse,
+      );
+      expect(game.losses, 1);
+    },
+  );
+
   test('generated office constants match the bundled source records', () {
     final data = jsonDecode(
       File('assets/data/nara_offices.json').readAsStringSync(),

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
 import 'conquest_success.dart';
 import 'practice_quiz.dart';
+import 'answer_feedback.dart';
 import 'save_store.dart';
 import 'territory_map.dart';
 
@@ -79,6 +80,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Timer? timer, tipsTimer;
   bool corrupt = false;
   bool _quizPromptOpen = false;
+  bool _answerFeedbackOpen = false;
   @override
   void initState() {
     super.initState();
@@ -759,6 +761,45 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (d != null) setState(() => game!.difficulty = d);
     },
   );
+  Future<void> _answerQuiz(Quiz q, String answer) async {
+    final g = game!;
+    if (_answerFeedbackOpen || !identical(g.quiz, q)) return;
+    _answerFeedbackOpen = true;
+    final correct = g.answer(
+      answer,
+      DateTime.now(),
+      nextQuestionDelay: answerFeedbackDuration,
+    );
+    setState(() {});
+    _save();
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (_) => PopScope(
+            canPop: false,
+            child: Dialog(
+              child: AnswerFeedback(
+                correct: correct == true,
+                answer: q.answer,
+                autoDismiss: true,
+              ),
+            ),
+          ),
+    );
+    _answerFeedbackOpen = false;
+    if (!mounted || game != g || g.quiz != null) return;
+    if (correct == true) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => ConquestSuccess(cityName: atlas!.cities[q.cityId]!),
+      );
+    } else {
+      _showQuizOutcome();
+    }
+  }
+
   Widget _quiz() {
     final q = game!.quiz!;
     final seconds = math.max(
@@ -814,28 +855,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 (answer) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: OutlinedButton(
-                    onPressed: () {
-                      if (!identical(game!.quiz, q)) return;
-                      final correct = game!.answer(answer, DateTime.now());
-                      setState(() {});
-                      _save();
-                      if (game!.quiz == null) {
-                        if (correct == true) {
-                          unawaited(
-                            showDialog<void>(
-                              context: context,
-                              barrierDismissible: false,
-                              builder:
-                                  (_) => ConquestSuccess(
-                                    cityName: atlas!.cities[q.cityId]!,
-                                  ),
-                            ),
-                          );
-                        } else {
-                          _showQuizOutcome();
-                        }
-                      }
-                    },
+                    onPressed: () => _answerQuiz(q, answer),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.all(16),
                       alignment: Alignment.centerLeft,

@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kunitori/main.dart';
+import 'package:kunitori/answer_feedback.dart';
+import 'package:kunitori/practice_quiz.dart';
 import 'package:kunitori/game.dart';
 import 'package:kunitori/territory_map.dart';
 
@@ -69,11 +71,22 @@ void main() {
       expect(find.text('橿原市 · クイズ予習'), findsOneWidget);
       await tester.pump(const Duration(minutes: 2));
       for (var i = 0; i < 5; i++) {
-        final option = find.byType(OutlinedButton).first;
+        final question =
+            tester.widget<PracticeQuiz>(find.byType(PracticeQuiz)).questions[i];
+        final answer =
+            i == 0
+                ? question.choices.firstWhere((a) => a != question.answer)
+                : question.answer;
+        final option = find.widgetWithText(OutlinedButton, answer);
         await tester.ensureVisible(option);
         await tester.tap(option);
         await tester.pumpAndSettle();
         expect(find.textContaining('正解は「'), findsOneWidget);
+        expect(find.byType(AnswerFeedback), findsOneWidget);
+        expect(
+          tester.widget<AnswerFeedback>(find.byType(AnswerFeedback)).correct,
+          i != 0,
+        );
         final next = find.text(i == 4 ? '結果を見る' : '次の問題');
         await tester.ensureVisible(next);
         await tester.tap(next);
@@ -165,8 +178,20 @@ void main() {
         expect(find.text('制圧成功'), findsNothing);
         final answer = game.quiz!.answer;
         await tester.ensureVisible(find.widgetWithText(OutlinedButton, answer));
+        final duplicateAnswer =
+            tester
+                .widget<OutlinedButton>(
+                  find.widgetWithText(OutlinedButton, answer),
+                )
+                .onPressed!;
         await tester.tap(find.widgetWithText(OutlinedButton, answer));
+        duplicateAnswer();
+        await tester.pump();
+        expect(find.byType(AnswerFeedback), findsOneWidget);
+        expect(find.text('正解！'), findsOneWidget);
+        expect(game.quiz?.correctCount ?? 5, i + 1);
         await tester.pumpAndSettle();
+        expect(find.byType(AnswerFeedback), findsNothing);
       }
       expect(game.quiz, isNull);
       expect(game.mastered, contains('29205'));
