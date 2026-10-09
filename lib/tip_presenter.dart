@@ -3,9 +3,15 @@ import 'package:flutter/material.dart';
 import 'tip_appearance.dart';
 
 class TipPresenter extends StatelessWidget {
-  const TipPresenter({super.key, required this.text, required this.appearance});
+  const TipPresenter({
+    super.key,
+    required this.text,
+    required this.appearance,
+    this.expandForText = false,
+  });
   final String text;
   final TipAppearance appearance;
+  final bool expandForText;
 
   @override
   Widget build(BuildContext context) {
@@ -41,8 +47,31 @@ class TipPresenter extends StatelessWidget {
           constraints.maxWidth / 4,
           availableHeight * aspectRatio,
         );
-        final height =
+        var height =
             a.showCharacter ? characterWidth / aspectRatio : availableHeight;
+        if (expandForText) {
+          final measure = TextPainter(
+            text: TextSpan(
+              text: text,
+              style: DefaultTextStyle.of(context).style.merge(
+                const TextStyle(
+                  fontSize: 16,
+                  height: 1.4,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            textDirection: Directionality.of(context),
+            textScaler: MediaQuery.textScalerOf(context),
+          )..layout(
+            maxWidth: math.max(
+              1,
+              constraints.maxWidth - characterWidth - (hasTail ? 10 : 0) - 20,
+            ),
+          );
+          height = math.max(height, measure.height + 24);
+          measure.dispose();
+        }
         final bubble = Expanded(
           flex: 3,
           child: Padding(
@@ -65,14 +94,14 @@ class TipPresenter extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: a.showBubble ? 10 : 0,
-                  vertical: 4,
+                  vertical: expandForText ? 12 : 4,
                 ),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    var fontSize = a.size.fontSize;
+                    var fontSize = expandForText ? 16.0 : a.size.fontSize;
                     TextStyle style() => TextStyle(
                       fontSize: fontSize,
-                      height: 1.25,
+                      height: expandForText ? 1.4 : 1.25,
                       fontWeight:
                           a.showBubble ? FontWeight.w600 : FontWeight.normal,
                       color: a.showBubble ? foreground : Colors.white,
@@ -83,7 +112,7 @@ class TipPresenter extends StatelessWidget {
                                 Shadow(color: Colors.black, blurRadius: 4),
                               ],
                     );
-                    while (fontSize > 10) {
+                    while (!expandForText && fontSize > 10) {
                       final painter = TextPainter(
                         text: TextSpan(
                           text: text,
@@ -106,8 +135,11 @@ class TipPresenter extends StatelessWidget {
                       child: Text(
                         text,
                         key: const Key('tip-text'),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: expandForText ? null : 4,
+                        overflow:
+                            expandForText
+                                ? TextOverflow.visible
+                                : TextOverflow.ellipsis,
                         style: style(),
                       ),
                     );

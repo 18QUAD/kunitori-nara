@@ -10,6 +10,7 @@ import 'practice_quiz.dart';
 import 'answer_feedback.dart';
 import 'tip_appearance.dart';
 import 'tip_presenter.dart';
+import 'quiz_prompt.dart';
 import 'tip_settings.dart';
 import 'save_store.dart';
 import 'territory_map.dart';
@@ -634,6 +635,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   (_) => PracticeQuiz(
                     cityName: atlas!.cities[atlas!.towns[townId]!.cityId]!,
                     questions: questions,
+                    appearance: tipAppearance,
                   ),
             );
           },
@@ -875,7 +877,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       constraints: const BoxConstraints(maxWidth: 500),
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(26),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -907,14 +909,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 ),
               ),
               const SizedBox(height: 20),
-              Text(
-                q.question,
-                style: const TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.bold,
-                  height: 1.5,
-                ),
-              ),
+              QuizPrompt(question: q.question, appearance: tipAppearance),
               const SizedBox(height: 20),
               ...q.choices.map(
                 (answer) => Padding(

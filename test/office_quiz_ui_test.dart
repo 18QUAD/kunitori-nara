@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kunitori/main.dart';
 import 'package:kunitori/answer_feedback.dart';
 import 'package:kunitori/practice_quiz.dart';
+import 'package:kunitori/quiz_prompt.dart';
 import 'package:kunitori/game.dart';
 import 'package:kunitori/territory_map.dart';
 
@@ -77,6 +78,14 @@ void main() {
             i == 0
                 ? question.choices.firstWhere((a) => a != question.answer)
                 : question.answer;
+        expect(find.byType(QuizPrompt), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(QuizPrompt),
+            matching: find.text(question.question),
+          ),
+          findsOneWidget,
+        );
         final option = find.widgetWithText(OutlinedButton, answer);
         await tester.ensureVisible(option);
         await tester.tap(option);
@@ -176,6 +185,23 @@ void main() {
         expect(find.text('橿原市 · 制圧クイズ ${i + 1} / 5問'), findsOneWidget);
         expect(find.byType(OutlinedButton), findsNWidgets(4));
         expect(find.text('制圧成功'), findsNothing);
+        final prompt = find.byType(QuizPrompt);
+        expect(prompt, findsOneWidget);
+        expect(
+          find.descendant(
+            of: prompt,
+            matching: find.byKey(const Key('tip-character')),
+          ),
+          findsOneWidget,
+        );
+        final text = tester.widget<Text>(
+          find.descendant(
+            of: prompt,
+            matching: find.byKey(const Key('tip-text')),
+          ),
+        );
+        expect(text.data, game.quiz!.question);
+        expect(text.maxLines, isNull);
         final answer = game.quiz!.answer;
         await tester.ensureVisible(find.widgetWithText(OutlinedButton, answer));
         final duplicateAnswer =
