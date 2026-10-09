@@ -9,10 +9,12 @@ class TipCharacterView extends StatefulWidget {
     required this.appearance,
     required this.speechKey,
     this.nextSpeechAt,
+    this.lipSyncDuration,
   });
   final TipAppearance appearance;
   final Object speechKey;
   final DateTime? nextSpeechAt;
+  final Duration? lipSyncDuration;
 
   @override
   State<TipCharacterView> createState() => _TipCharacterViewState();
@@ -24,10 +26,12 @@ class _TipCharacterViewState extends State<TipCharacterView>
   Timer? _blinkTimer, _blinkEnd, _mouthTimer, _mouthEnd;
   bool _eyesClosed = false, _mouthClosed = false;
   bool _active = false;
+  late DateTime _speechStartedAt;
 
   @override
   void initState() {
     super.initState();
+    _speechStartedAt = DateTime.now();
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -40,13 +44,17 @@ class _TipCharacterViewState extends State<TipCharacterView>
   @override
   void didUpdateWidget(TipCharacterView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.speechKey != widget.speechKey) {
+      _speechStartedAt = DateTime.now();
+    }
     if (oldWidget.appearance.character != widget.appearance.character ||
         oldWidget.appearance.blinkEnabled != widget.appearance.blinkEnabled ||
         oldWidget.appearance.lipSyncEnabled !=
             widget.appearance.lipSyncEnabled) {
       _restart();
     } else if (oldWidget.speechKey != widget.speechKey ||
-        oldWidget.nextSpeechAt != widget.nextSpeechAt) {
+        oldWidget.nextSpeechAt != widget.nextSpeechAt ||
+        oldWidget.lipSyncDuration != widget.lipSyncDuration) {
       _restart(resetBlink: false);
     }
   }
@@ -78,9 +86,12 @@ class _TipCharacterViewState extends State<TipCharacterView>
     }
     if (resetBlink && widget.appearance.blinkEnabled) _scheduleBlink();
     if (!widget.appearance.lipSyncEnabled) return;
+    final duration = widget.lipSyncDuration;
     final changeAt = widget.nextSpeechAt;
     final untilStop =
-        changeAt == null
+        duration != null
+            ? _speechStartedAt.add(duration).difference(DateTime.now())
+            : changeAt == null
             ? null
             : changeAt.difference(DateTime.now()) - const Duration(seconds: 1);
     if (untilStop != null && untilStop <= Duration.zero) {

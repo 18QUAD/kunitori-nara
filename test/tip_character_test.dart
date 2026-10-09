@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/tip_appearance.dart';
 import 'package:kunitori/tip_character.dart';
+import 'package:kunitori/quiz_stage.dart';
+import 'package:kunitori/game.dart';
 
 void main() {
   Widget scene(
@@ -31,6 +33,76 @@ void main() {
   );
 
   for (final character in TipCharacter.values) {
+    testWidgets(
+      '${character.name} quiz speaks for three seconds per question despite countdown rebuilds',
+      (tester) async {
+        const first = QuizQuestion(
+          factId: 'one',
+          question: '問題1',
+          answer: '答え',
+          choices: ['答え'],
+        );
+        const second = QuizQuestion(
+          factId: 'two',
+          question: '問題2',
+          answer: '答え',
+          choices: ['答え'],
+        );
+        final next = DateTime.now().add(const Duration(seconds: 25));
+        Widget quiz(QuizQuestion q, int seconds) => MaterialApp(
+          home: Scaffold(
+            body: QuizStage(
+              title: '予習・制圧共通',
+              question: q,
+              seconds: seconds,
+              nextSpeechAt: next,
+              appearance: TipAppearance(
+                character: character,
+                blinkEnabled: false,
+              ),
+              onAnswer: (_) {},
+            ),
+          ),
+        );
+        bool closed() =>
+            character == TipCharacter.guide
+                ? find
+                    .byKey(const Key('guide-closed-mouth'))
+                    .evaluate()
+                    .isNotEmpty
+                : (tester
+                            .widget<CustomPaint>(
+                              find.byKey(const Key('deer-face-parts')),
+                            )
+                            .painter
+                        as DeerCharacterPainter)
+                    .mouthClosed;
+        await tester.pumpWidget(quiz(first, 25));
+        final initial = closed();
+        await tester.pump(const Duration(milliseconds: 180));
+        expect(closed(), !initial);
+        await tester.pump(const Duration(milliseconds: 180));
+        expect(closed(), initial);
+        await tester.pump(const Duration(milliseconds: 2400));
+        await tester.pumpWidget(quiz(first, 22));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(closed(), isTrue);
+        await tester.pumpWidget(quiz(first, 20));
+        await tester.pump(const Duration(milliseconds: 360));
+        expect(closed(), isTrue);
+        await tester.pumpWidget(quiz(second, 25));
+        final restarted = closed();
+        await tester.pump(const Duration(milliseconds: 180));
+        expect(closed(), !restarted);
+        await tester.pump(const Duration(milliseconds: 180));
+        expect(closed(), restarted);
+        await tester.pump(const Duration(milliseconds: 2700));
+        expect(closed(), isTrue);
+        await tester.pumpWidget(const SizedBox());
+        expect(tester.takeException(), isNull);
+      },
+    );
+
     testWidgets(
       '${character.name} lip sync repeats and stops one second before next speech',
       (tester) async {

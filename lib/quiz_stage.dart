@@ -111,6 +111,8 @@ class QuizStage extends StatelessWidget {
                         : '${correct! ? '正解！' : '不正解'}\n正解は「${question.answer}」',
                 appearance: appearance,
                 nextSpeechAt: nextSpeechAt,
+                lipSyncDuration:
+                    correct == null ? const Duration(seconds: 3) : null,
                 speechKey: '${question.factId}:$correct',
               ),
             ),

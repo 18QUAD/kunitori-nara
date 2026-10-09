@@ -11,12 +11,14 @@ class TipPresenter extends StatelessWidget {
     this.expandForText = false,
     this.speechKey,
     this.nextSpeechAt,
+    this.lipSyncDuration,
   });
   final String text;
   final TipAppearance appearance;
   final bool expandForText;
   final Object? speechKey;
   final DateTime? nextSpeechAt;
+  final Duration? lipSyncDuration;
 
   @override
   Widget build(BuildContext context) {
@@ -163,6 +165,7 @@ class TipPresenter extends StatelessWidget {
               appearance: a,
               speechKey: speechKey ?? text,
               nextSpeechAt: nextSpeechAt,
+              lipSyncDuration: lipSyncDuration,
             ),
           ),
         );
