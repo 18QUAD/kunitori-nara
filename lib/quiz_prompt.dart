@@ -10,12 +10,14 @@ class QuizPrompt extends StatelessWidget {
     this.speechKey,
     this.nextSpeechAt,
     this.lipSyncDuration,
+    this.expression = TipExpression.neutral,
   });
   final String question;
   final TipAppearance appearance;
   final Object? speechKey;
   final DateTime? nextSpeechAt;
   final Duration? lipSyncDuration;
+  final TipExpression expression;
 
   @override
   Widget build(BuildContext context) => TipPresenter(
@@ -25,6 +27,7 @@ class QuizPrompt extends StatelessWidget {
     speechKey: speechKey,
     nextSpeechAt: nextSpeechAt,
     lipSyncDuration: lipSyncDuration,
+    expression: expression,
     appearance: appearance.copyWith(
       showTips: true,
       showCharacter: true,

@@ -10,11 +10,13 @@ class TipCharacterView extends StatefulWidget {
     required this.speechKey,
     this.nextSpeechAt,
     this.lipSyncDuration,
+    this.expression = TipExpression.neutral,
   });
   final TipAppearance appearance;
   final Object speechKey;
   final DateTime? nextSpeechAt;
   final Duration? lipSyncDuration;
+  final TipExpression expression;
 
   @override
   State<TipCharacterView> createState() => _TipCharacterViewState();
@@ -25,7 +27,7 @@ class _TipCharacterViewState extends State<TipCharacterView>
   final _random = math.Random();
   Timer? _blinkTimer, _blinkEnd, _mouthTimer, _mouthEnd;
   bool _eyesClosed = false, _mouthClosed = false;
-  bool _active = false;
+  bool _active = false, _expressionsCached = false;
   late DateTime _speechStartedAt;
 
   @override
@@ -38,12 +40,14 @@ class _TipCharacterViewState extends State<TipCharacterView>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _precacheExpressions();
     _restart();
   }
 
   @override
   void didUpdateWidget(TipCharacterView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _precacheExpressions();
     if (oldWidget.speechKey != widget.speechKey) {
       _speechStartedAt = DateTime.now();
     }
@@ -54,8 +58,34 @@ class _TipCharacterViewState extends State<TipCharacterView>
       _restart();
     } else if (oldWidget.speechKey != widget.speechKey ||
         oldWidget.nextSpeechAt != widget.nextSpeechAt ||
-        oldWidget.lipSyncDuration != widget.lipSyncDuration) {
+        oldWidget.lipSyncDuration != widget.lipSyncDuration ||
+        oldWidget.expression != widget.expression) {
       _restart(resetBlink: false);
+    }
+  }
+
+  void _precacheExpressions() {
+    if (_expressionsCached ||
+        widget.appearance.character != TipCharacter.guide) {
+      return;
+    }
+    _expressionsCached = true;
+    for (final suffix in [
+      '_joy',
+      '_joy_face_parts',
+      '_sad',
+      '_sad_face_parts',
+    ]) {
+      unawaited(
+        precacheImage(
+          ResizeImage.resizeIfNeeded(
+            320,
+            null,
+            AssetImage('assets/characters/nara_guide$suffix.png'),
+          ),
+          context,
+        ),
+      );
     }
   }
 
@@ -136,6 +166,15 @@ class _TipCharacterViewState extends State<TipCharacterView>
     super.dispose();
   }
 
+  String _guideAsset({required bool parts}) {
+    final suffix = switch (widget.expression) {
+      TipExpression.neutral => '',
+      TipExpression.joyful => '_joy',
+      TipExpression.disappointed => '_sad',
+    };
+    return 'assets/characters/nara_guide$suffix${parts ? '_face_parts' : ''}.png';
+  }
+
   @override
   Widget build(BuildContext context) =>
       widget.appearance.character == TipCharacter.guide
@@ -162,7 +201,7 @@ class _TipCharacterViewState extends State<TipCharacterView>
                           fit: StackFit.expand,
                           children: [
                             Image.asset(
-                              'assets/characters/nara_guide.png',
+                              _guideAsset(parts: false),
                               cacheWidth: 320,
                               fit: BoxFit.fill,
                             ),
@@ -171,7 +210,7 @@ class _TipCharacterViewState extends State<TipCharacterView>
                                 key: const Key('guide-closed-eyes'),
                                 clipper: const _GuideFaceClipper(eyes: true),
                                 child: Image.asset(
-                                  'assets/characters/nara_guide_face_parts.png',
+                                  _guideAsset(parts: true),
                                   cacheWidth: 320,
                                   fit: BoxFit.fill,
                                 ),
@@ -181,7 +220,7 @@ class _TipCharacterViewState extends State<TipCharacterView>
                                 key: const Key('guide-closed-mouth'),
                                 clipper: const _GuideFaceClipper(eyes: false),
                                 child: Image.asset(
-                                  'assets/characters/nara_guide_face_parts.png',
+                                  _guideAsset(parts: true),
                                   cacheWidth: 320,
                                   fit: BoxFit.fill,
                                 ),
@@ -200,6 +239,7 @@ class _TipCharacterViewState extends State<TipCharacterView>
             painter: DeerCharacterPainter(
               eyesClosed: _eyesClosed,
               mouthClosed: _mouthClosed,
+              expression: widget.expression,
             ),
           );
 }
@@ -222,8 +262,10 @@ class DeerCharacterPainter extends CustomPainter {
   const DeerCharacterPainter({
     this.eyesClosed = false,
     this.mouthClosed = false,
+    this.expression = TipExpression.neutral,
   });
   final bool eyesClosed, mouthClosed;
+  final TipExpression expression;
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
@@ -259,12 +301,56 @@ class DeerCharacterPainter extends CustomPainter {
       const Rect.fromLTWH(24, 70, 52, 32),
       Paint()..color = const Color(0xFFFFEBD0),
     );
+    final joyful = expression == TipExpression.joyful;
+    final sad = expression == TipExpression.disappointed;
+    if (joyful) {
+      for (final x in [23.0, 77.0]) {
+        canvas.drawOval(
+          Rect.fromCenter(center: Offset(x, 76), width: 12, height: 7),
+          Paint()..color = const Color(0xFFF39B94),
+        );
+      }
+    }
     for (final x in [34.0, 66.0]) {
+      if (sad) {
+        final left = x < 50;
+        canvas.drawLine(
+          Offset(x - 6, left ? 52 : 49),
+          Offset(x + 6, left ? 49 : 52),
+          Paint()
+            ..color = const Color(0xFF67412F)
+            ..strokeWidth = 2
+            ..strokeCap = StrokeCap.round,
+        );
+      }
       if (eyesClosed) {
-        canvas.drawLine(Offset(x - 5, 62), Offset(x + 5, 62), brown);
+        if (joyful || sad) {
+          canvas.drawArc(
+            Rect.fromLTWH(x - 6, 59, 12, 8),
+            joyful ? math.pi : 0,
+            math.pi,
+            false,
+            Paint()
+              ..color = const Color(0xFF67412F)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 3
+              ..strokeCap = StrokeCap.round,
+          );
+        } else {
+          canvas.drawLine(Offset(x - 5, 62), Offset(x + 5, 62), brown);
+        }
       } else {
         canvas.drawOval(
-          Rect.fromCenter(center: Offset(x, 62), width: 10, height: 14),
+          Rect.fromCenter(
+            center: Offset(x, 62),
+            width: 10,
+            height:
+                sad
+                    ? 9
+                    : joyful
+                    ? 16
+                    : 14,
+          ),
           brown,
         );
         canvas.drawCircle(Offset(x - 2, 59), 2, Paint()..color = Colors.white);
@@ -273,8 +359,10 @@ class DeerCharacterPainter extends CustomPainter {
     canvas.drawOval(const Rect.fromLTWH(44, 78, 12, 8), brown);
     if (mouthClosed) {
       canvas.drawArc(
-        const Rect.fromLTWH(38, 79, 24, 14),
-        0,
+        sad
+            ? const Rect.fromLTWH(38, 88, 24, 14)
+            : const Rect.fromLTWH(38, 79, 24, 14),
+        sad ? math.pi : 0,
         math.pi,
         false,
         brown
@@ -282,16 +370,27 @@ class DeerCharacterPainter extends CustomPainter {
           ..strokeWidth = 2,
       );
     } else {
-      canvas.drawOval(const Rect.fromLTWH(40, 87, 20, 13), brown);
       canvas.drawOval(
-        const Rect.fromLTWH(44, 94, 12, 4),
-        Paint()..color = const Color(0xFFF39B94),
+        sad
+            ? const Rect.fromLTWH(44, 89, 12, 7)
+            : joyful
+            ? const Rect.fromLTWH(39, 86, 22, 16)
+            : const Rect.fromLTWH(40, 87, 20, 13),
+        brown,
       );
+      if (!sad) {
+        canvas.drawOval(
+          const Rect.fromLTWH(44, 94, 12, 4),
+          Paint()..color = const Color(0xFFF39B94),
+        );
+      }
     }
     canvas.restore();
   }
 
   @override
   bool shouldRepaint(DeerCharacterPainter old) =>
-      old.eyesClosed != eyesClosed || old.mouthClosed != mouthClosed;
+      old.eyesClosed != eyesClosed ||
+      old.mouthClosed != mouthClosed ||
+      old.expression != expression;
 }

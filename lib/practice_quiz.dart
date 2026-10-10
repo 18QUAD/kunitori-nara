@@ -96,6 +96,11 @@ class _PracticeQuizState extends State<PracticeQuiz> {
                         question:
                             'おつかれさま！${controller.questions.length}問中${controller.correctCount}問正解だったよ。また一緒に予習しようね！',
                         appearance: widget.appearance,
+                        expression:
+                            controller.correctCount ==
+                                    controller.questions.length
+                                ? TipExpression.joyful
+                                : TipExpression.neutral,
                         lipSyncDuration: const Duration(seconds: 3),
                       ),
                     ),

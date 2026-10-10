@@ -34,6 +34,106 @@ void main() {
 
   for (final character in TipCharacter.values) {
     testWidgets(
+      '${character.name} changes expression for quiz results and resets on next question',
+      (tester) async {
+        const question = QuizQuestion(
+          factId: 'expression',
+          question: '問題',
+          answer: '答え',
+          choices: ['答え', '別の答え'],
+        );
+        for (final result in [null, true, false, null]) {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: QuizStage(
+                  title: 'クイズ',
+                  question: question,
+                  correct: result,
+                  streak: 1,
+                  appearance: TipAppearance(
+                    character: character,
+                    blinkEnabled: false,
+                  ),
+                  onAnswer: (_) {},
+                ),
+              ),
+            ),
+          );
+          final expected =
+              result == null
+                  ? TipExpression.neutral
+                  : result
+                  ? TipExpression.joyful
+                  : TipExpression.disappointed;
+          expect(
+            tester
+                .widget<TipCharacterView>(find.byType(TipCharacterView))
+                .expression,
+            expected,
+          );
+          if (character == TipCharacter.guide) {
+            final names =
+                tester
+                    .widgetList<Image>(
+                      find.descendant(
+                        of: find.byType(TipCharacterView),
+                        matching: find.byType(Image),
+                      ),
+                    )
+                    .map((image) {
+                      final provider =
+                          image.image is ResizeImage
+                              ? (image.image as ResizeImage).imageProvider
+                              : image.image;
+                      return (provider as AssetImage).assetName;
+                    })
+                    .toList();
+            expect(
+              names,
+              contains(
+                'assets/characters/nara_guide${result == null
+                    ? ''
+                    : result
+                    ? '_joy'
+                    : '_sad'}.png',
+              ),
+            );
+          } else {
+            expect(
+              (tester
+                          .widget<CustomPaint>(
+                            find.byKey(const Key('deer-face-parts')),
+                          )
+                          .painter
+                      as DeerCharacterPainter)
+                  .expression,
+              expected,
+            );
+          }
+          await tester.pump(const Duration(milliseconds: 180));
+          expect(
+            tester
+                .widget<TipCharacterView>(find.byType(TipCharacterView))
+                .expression,
+            expected,
+          );
+          await tester.pump(const Duration(seconds: 3));
+          expect(
+            tester
+                .widget<TipCharacterView>(find.byType(TipCharacterView))
+                .expression,
+            expected,
+          );
+          expect(tester.takeException(), isNull);
+        }
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
+  for (final character in TipCharacter.values) {
+    testWidgets(
       '${character.name} quiz speaks for three seconds per question despite countdown rebuilds',
       (tester) async {
         const first = QuizQuestion(

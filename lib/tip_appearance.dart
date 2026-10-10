@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum TipExpression { neutral, joyful, disappointed }
+
 enum TipCharacter {
   guide('鹿の案内人'),
   deer('鹿マーク');

@@ -144,6 +144,12 @@ class QuizStage extends StatelessWidget {
                       ? correctAnswerSpeech(question.answer, streak)
                       : '惜しい、今回は不正解！正解は「${question.answer}」だよ。',
               appearance: appearance,
+              expression:
+                  correct == null
+                      ? TipExpression.neutral
+                      : correct!
+                      ? TipExpression.joyful
+                      : TipExpression.disappointed,
               nextSpeechAt: nextSpeechAt,
               lipSyncDuration: const Duration(seconds: 3),
               speechKey: '${question.factId}:$correct',
