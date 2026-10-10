@@ -110,7 +110,7 @@ void main() {
         await tester.ensureVisible(option);
         await tester.tap(option);
         await tester.pumpAndSettle();
-        expect(find.textContaining('正解は「'), findsOneWidget);
+        expect(find.textContaining(i == 0 ? '正解は「' : '答えは「'), findsOneWidget);
         expect(find.byType(AnswerFeedback), findsOneWidget);
         expect(
           tester.widget<AnswerFeedback>(find.byType(AnswerFeedback)).correct,
@@ -121,7 +121,7 @@ void main() {
         await tester.tap(next);
         await tester.pumpAndSettle();
       }
-      expect(find.textContaining('予習完了！'), findsOneWidget);
+      expect(find.textContaining('おつかれさま！5問中4問正解だったよ'), findsOneWidget);
       expect(
         tester
             .widget<InteractiveViewer>(find.byType(InteractiveViewer))
@@ -267,7 +267,7 @@ void main() {
       expect(game.quiz, isNull);
       expect(game.mastered, contains('29205'));
       expect(game.wins, 1);
-      expect(find.text('5問全問正解！'), findsOneWidget);
+      expect(find.text('すごい、5問とも正解だよ！'), findsOneWidget);
       expect(find.text('制圧成功'), findsOneWidget);
       expect(find.text('橿原市'), findsWidgets);
       await tester.tap(find.text('地図へ戻る'));

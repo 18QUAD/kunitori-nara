@@ -103,7 +103,10 @@ void main() {
             );
           }
         } else {
-          expect(find.textContaining('正解は「奈良市」'), findsOneWidget);
+          expect(
+            find.textContaining(correct ? '答えは「奈良市」だよ' : '正解は「奈良市」だよ'),
+            findsOneWidget,
+          );
           expect(find.byType(OutlinedButton), findsNothing);
           expect(
             tester.getRect(find.byType(AnswerFeedback)).bottom,
@@ -209,7 +212,7 @@ void main() {
         await tester.tap(find.text(i == 3 ? '結果を見る' : '次の問題'));
         await tester.pumpAndSettle();
       }
-      expect(find.text('予習完了！ 3 / 4問正解'), findsOneWidget);
+      expect(find.text('おつかれさま！4問中3問正解だったよ。また一緒に予習しようね！'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

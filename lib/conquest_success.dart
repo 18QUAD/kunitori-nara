@@ -72,11 +72,11 @@ class ConquestSuccess extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  '5問全問正解！',
+                  'すごい、5問とも正解だよ！',
                   style: TextStyle(color: Color(0xFF7AE1BB), fontSize: 20),
                 ),
                 const SizedBox(height: 8),
-                const Text('この市町村の制圧を達成しました。', textAlign: TextAlign.center),
+                Text('$cityNameを制圧できたね。おめでとう！', textAlign: TextAlign.center),
                 const SizedBox(height: 28),
                 FilledButton.icon(
                   onPressed: () => Navigator.of(context).pop(),

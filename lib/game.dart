@@ -572,7 +572,7 @@ class Game {
       wins++;
       mastered.add(q.cityId);
       titles.add('大和の知恵者');
-      message = '5問全問正解！ ${atlas.cities[q.cityId]}を制圧しました。';
+      message = 'すごい、5問とも正解だよ！ ${atlas.cities[q.cityId]}を制圧できたね。おめでとう！';
     } else {
       losses++;
       final officeTown = atlas.officeTownIds[q.cityId]!;
@@ -580,7 +580,7 @@ class Game {
       progress.remove(officeTown);
       mastered.remove(q.cityId);
       message =
-          '${choice == null ? '時間切れ' : '不正解'}。正解は「${q.answer}」。${atlas.offices[q.cityId]!.name}所在地の${atlas.towns[officeTown]!.name}の支配を失いました。再攻略して挑戦できます。';
+          '${choice == null ? '時間切れになっちゃったね' : '今回は不正解だったね'}。正解は「${q.answer}」だよ。${atlas.offices[q.cityId]!.name}所在地の${atlas.towns[officeTown]!.name}の支配を失ったけれど、再攻略すればまた挑戦できるよ！';
     }
     if (attackTarget != null && !isReachable(attackTarget!)) {
       _resumePendingTarget();

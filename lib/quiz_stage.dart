@@ -99,7 +99,9 @@ class QuizStage extends StatelessWidget {
               question:
                   correct == null
                       ? question.question
-                      : '${correct! ? '正解！' : '不正解'}\n正解は「${question.answer}」',
+                      : correct!
+                      ? '正解！答えは「${question.answer}」だよ。よく知ってるね！'
+                      : '惜しい、今回は不正解！正解は「${question.answer}」だよ。',
               appearance: appearance,
               nextSpeechAt: nextSpeechAt,
               lipSyncDuration: const Duration(seconds: 3),

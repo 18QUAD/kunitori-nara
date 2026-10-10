@@ -94,7 +94,7 @@ class _PracticeQuizState extends State<PracticeQuiz> {
                       padding: const EdgeInsets.only(right: 12, bottom: 8),
                       child: QuizPrompt(
                         question:
-                            '予習完了！ ${controller.correctCount} / ${controller.questions.length}問正解',
+                            'おつかれさま！${controller.questions.length}問中${controller.correctCount}問正解だったよ。また一緒に予習しようね！',
                         appearance: widget.appearance,
                         lipSyncDuration: const Duration(seconds: 3),
                       ),
