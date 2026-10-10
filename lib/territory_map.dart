@@ -505,7 +505,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                     child: IconButtonTheme(
                       data: IconButtonThemeData(
                         style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: 0.7),
+                          backgroundColor: Colors.white,
                           foregroundColor: const Color(0xFF102A32),
                           disabledBackgroundColor: Colors.white54,
                           disabledForegroundColor: Colors.black38,
