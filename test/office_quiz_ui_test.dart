@@ -10,6 +10,9 @@ import 'package:kunitori/practice_quiz.dart';
 import 'package:kunitori/quiz_prompt.dart';
 import 'package:kunitori/game.dart';
 import 'package:kunitori/territory_map.dart';
+import 'package:kunitori/tip_presenter.dart';
+import 'package:kunitori/tip_appearance.dart';
+import 'package:kunitori/tip_character.dart';
 
 void main() {
   testWidgets(
@@ -262,17 +265,26 @@ void main() {
           answerFeedbackDisplayDuration - const Duration(milliseconds: 2500),
         );
         await tester.pumpAndSettle();
-        expect(find.byType(AnswerFeedback), findsNothing);
+        expect(
+          find.byType(AnswerFeedback),
+          i == 4 ? findsOneWidget : findsNothing,
+        );
       }
       expect(game.quiz, isNull);
       expect(game.mastered, contains('29205'));
       expect(game.wins, 1);
-      expect(find.text('すごい、5問とも正解だよ！'), findsOneWidget);
-      expect(find.text('制圧成功'), findsOneWidget);
-      expect(find.text('橿原市'), findsWidgets);
-      await tester.tap(find.text('地図へ戻る'));
+      expect(find.byType(Dialog), findsNothing);
+      expect(find.text('制圧完了'), findsOneWidget);
+      expect(find.text('橿原市の制圧おめでとう！次の町を選んでね！'), findsOneWidget);
+      final celebration = tester.widget<TipPresenter>(
+        find.byType(TipPresenter),
+      );
+      expect(celebration.expression, TipExpression.joyful);
+      expect(celebration.lipSyncDuration, const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 20));
       await tester.pumpAndSettle();
-      expect(find.text('制圧成功'), findsNothing);
+      expect(find.text('制圧完了'), findsNothing);
+      expect(find.text('橿原市の制圧おめでとう！次の町を選んでね！'), findsOneWidget);
       expect(find.byType(TerritoryMap), findsOneWidget);
       final prefs = await SharedPreferences.getInstance();
       final restored = Game.restore(
@@ -280,6 +292,83 @@ void main() {
         jsonDecode(prefs.getString('kunitori.nara.v1')!),
       );
       expect(restored.mastered, game.mastered);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'town conquest celebrates once and holds speech until another town is selected',
+    (tester) async {
+      rootBundle.clear();
+      final atlas = Atlas.fromJson(
+        jsonDecode(File('assets/data/nara.json').readAsStringSync()),
+      );
+      final home = atlas.officeTownIds['29205']!;
+      final saved = Game(atlas)..setHome(home);
+      final target = atlas.towns.values.firstWhere(
+        (t) =>
+            t.id != home &&
+            t.neighbors.contains(home) &&
+            !atlas.officeTownIds.values.contains(t.id),
+      );
+      saved.selectAttackTarget(target.id);
+      saved.progress[target.id] = saved.requiredTaps(target) - 1;
+      SharedPreferences.setMockInitialValues({
+        'flutter.kunitori.nara.v1': jsonEncode(saved.toJson()),
+      });
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(const KunitoriApp());
+      for (
+        var i = 0;
+        i < 100 && find.byType(TerritoryMap).evaluate().isEmpty;
+        i++
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      final game = tester.widget<TerritoryMap>(find.byType(TerritoryMap)).game;
+      await tester.tap(find.byKey(const Key('attack')));
+      await tester.pump();
+      expect(game.owned, contains(target.id));
+      expect(find.text('制圧完了'), findsOneWidget);
+      final speech = '${target.name}の制圧おめでとう！次の町を選んでね！';
+      expect(find.text(speech), findsOneWidget);
+      final presenter = tester.widget<TipPresenter>(find.byType(TipPresenter));
+      expect(presenter.expression, TipExpression.joyful);
+      expect(presenter.lipSyncDuration, const Duration(seconds: 3));
+      final characterState = tester.state(find.byType(TipCharacterView));
+      await tester.pump(const Duration(seconds: 4));
+      expect(tester.state(find.byType(TipCharacterView)), same(characterState));
+      expect(find.byKey(const Key('guide-closed-mouth')), findsOneWidget);
+      final character = find.byType(TipCharacterView);
+      final mouth = tester.widget<TipCharacterView>(character);
+      expect(mouth.expression, TipExpression.joyful);
+      expect(find.text('制圧完了'), findsNothing);
+      final seen = {...game.seen};
+      await tester.pump(const Duration(seconds: 20));
+      expect(find.text(speech), findsOneWidget);
+      expect(game.seen, seen);
+      final next = atlas.towns.values.firstWhere(
+        (t) =>
+            game.isReachable(t.id) &&
+            !game.owned.contains(t.id) &&
+            !atlas.officeTownIds.values.contains(t.id),
+      );
+      tester
+          .widget<TerritoryMap>(find.byType(TerritoryMap))
+          .onSelected(next.id);
+      await tester.pumpAndSettle();
+      expect(find.text(speech), findsNothing);
+      expect(
+        tester.widget<TipPresenter>(find.byType(TipPresenter)).expression,
+        TipExpression.neutral,
+      );
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     },

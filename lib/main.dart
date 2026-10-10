@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
 import 'browser_insets.dart';
-import 'conquest_success.dart';
 import 'practice_quiz.dart';
 import 'answer_feedback.dart';
 import 'tip_appearance.dart';
@@ -169,6 +168,31 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _feedbackCorrect = false;
   PracticeQuizController? _practice;
   String? _practiceCityName;
+  String? _conquestName, _conquestTownId;
+  int _conquestSequence = 0;
+  bool _conquestEffect = false;
+  Timer? _conquestTimer;
+
+  void _celebrateConquest(String name, String townId) {
+    tipsTimer?.cancel();
+    _nextTipAt = null;
+    _conquestTimer?.cancel();
+    _conquestName = name;
+    _conquestTownId = townId;
+    _conquestSequence++;
+    _conquestEffect = true;
+    _conquestTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _conquestEffect = false);
+    });
+  }
+
+  void _clearConquestFor(String? townId) {
+    if (_conquestName == null || townId == _conquestTownId) return;
+    _conquestTimer?.cancel();
+    _conquestName = _conquestTownId = null;
+    _conquestEffect = false;
+  }
+
   bool get _quizActive =>
       game?.quiz != null || _feedbackQuiz != null || _practice != null;
   @override
@@ -182,6 +206,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void dispose() {
     timer?.cancel();
     tipsTimer?.cancel();
+    _conquestTimer?.cancel();
     _practice?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     if (store != null) store!.onChanged = null;
@@ -300,6 +325,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
     if (confirmed != true || !mounted) return;
     setState(() {
+      _clearConquestFor(null);
       game = Game(atlas!);
       _restoredMapView = null;
       selected = null;
@@ -321,19 +347,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _rememberVisibleFact() {
-    if (!tipAppearance.showTips) return;
+    if (!tipAppearance.showTips || _conquestName != null) return;
     final f = visibleFact;
     if (f != null) game!.seen.add(f.id);
   }
 
   void _startTipsTimer() {
     tipsTimer?.cancel();
+    if (_conquestName != null) return;
     _nextTipAt = DateTime.now().add(const Duration(seconds: 5));
     tipsTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       final lifecycle = WidgetsBinding.instance.lifecycleState;
       if (!mounted ||
           !tipAppearance.showTips ||
           _quizActive ||
+          _conquestName != null ||
           visibleFact == null ||
           (lifecycle != null && lifecycle != AppLifecycleState.resumed)) {
         return;
@@ -369,6 +397,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return false;
     }
     setState(() {
+      _clearConquestFor(id);
       selected = id;
       factIndex = 0;
       _rememberVisibleFact();
@@ -407,7 +436,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
     _quizPromptOpen = false;
     if (!mounted || confirmed != true || game != g) return;
-    setState(() => g.startQuizAt(townId, DateTime.now()));
+    setState(() {
+      _clearConquestFor(null);
+      g.startQuizAt(townId, DateTime.now());
+    });
+    _startTipsTimer();
     _save();
   }
 
@@ -426,6 +459,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final target = game!.attackTarget ?? game!.home;
     if (target == null) return;
     setState(() {
+      _clearConquestFor(target);
       selected = target;
       factIndex = 0;
       _rememberVisibleFact();
@@ -448,6 +482,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     setState(() {
       final newCity =
           g.attackTarget == null ? null : atlas!.towns[g.attackTarget]!.cityId;
+      if (won) _celebrateConquest(atlas!.towns[selected!]!.name, selected!);
       if (oldCity != newCity) factIndex = 0;
       _rememberVisibleFact();
     });
@@ -711,11 +746,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Widget _tipPresenter() => TipPresenter(
     text:
+        (_conquestName == null ? null : '$_conquestNameの制圧おめでとう！次の町を選んでね！') ??
         visibleFact?.text ??
         (cityFilter == null ? '市区町村を選び、次に町から本拠地を選びましょう。' : '町を選んで本拠地を決めましょう。'),
     appearance: tipAppearance,
-    speechKey: '${visibleFact?.id}:$factIndex',
-    nextSpeechAt: _nextTipAt,
+    speechKey:
+        _conquestName == null
+            ? '${visibleFact?.id}:$factIndex'
+            : 'conquest:$_conquestSequence',
+    nextSpeechAt: _conquestName == null ? _nextTipAt : null,
+    lipSyncDuration: _conquestName == null ? null : const Duration(seconds: 3),
+    expression:
+        _conquestName == null ? TipExpression.neutral : TipExpression.joyful,
   );
 
   void _tipSettings() => showModalBottomSheet<void>(
@@ -930,8 +972,29 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ],
                   ),
                 ),
+                if (showTips && _conquestEffect)
+                  Positioned.fill(
+                    bottom:
+                        tipAppearance.showTips
+                            ? _tipMaxHeight(constraints) + 16
+                            : 0,
+                    child: IgnorePointer(
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: AnswerFeedback(
+                            key: ValueKey('conquest-effect:$_conquestSequence'),
+                            correct: true,
+                            streak: 5,
+                            text: '制圧完了',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (showTips && tipAppearance.showTips)
                   Positioned(
+                    key: const Key('map-tips-overlay'),
                     left: 0,
                     right: 12,
                     bottom: 8,
@@ -996,10 +1059,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
     if (game != g || g.quiz != null) return;
     if (correct == true) {
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => ConquestSuccess(cityName: atlas!.cities[q.cityId]!),
+      setState(
+        () => _celebrateConquest(
+          atlas!.cities[q.cityId]!,
+          atlas!.officeTownIds[q.cityId]!,
+        ),
       );
     } else {
       _showQuizOutcome();

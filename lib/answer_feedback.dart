@@ -6,13 +6,20 @@ const answerFeedbackDisplayDuration = Duration(seconds: 3);
 
 /// Shared answer feedback for practice and conquest, with bounded motion.
 class AnswerFeedback extends StatelessWidget {
-  const AnswerFeedback({super.key, required this.correct, this.streak = 1});
+  const AnswerFeedback({
+    super.key,
+    required this.correct,
+    this.streak = 1,
+    this.text,
+  });
 
   final bool correct;
   final int streak;
+  final String? text;
 
   String get label =>
-      correct
+      text ??
+      (correct
           ? [
             'good！',
             'nice！',
@@ -20,7 +27,7 @@ class AnswerFeedback extends StatelessWidget {
             'brilliant！',
             'perfect！',
           ][(streak.clamp(1, 5)) - 1]
-          : 'bad';
+          : 'bad');
 
   @override
   Widget build(BuildContext context) {
