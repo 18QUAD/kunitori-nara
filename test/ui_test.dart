@@ -111,7 +111,10 @@ void main() {
     expect(find.widgetWithText(ListTile, '油留木町'), findsOneWidget);
     await tester.tap(find.widgetWithText(ListTile, '油留木町'));
     await tester.pumpAndSettle();
-    expect(find.text('奈良県 奈良市 油留木町'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('current-location'))).data,
+      '油留木町',
+    );
     await tester.ensureVisible(find.text('ここを本拠地にする'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('ここを本拠地にする'));

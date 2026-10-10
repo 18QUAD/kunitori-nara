@@ -554,9 +554,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   child: Tooltip(
                     message: location,
                     child: Text(
-                      location,
+                      town?.name ??
+                          (city == null ? '奈良県' : atlas!.cities[city]!),
                       key: const Key('current-location'),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 16,

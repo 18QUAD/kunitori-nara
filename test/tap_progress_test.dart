@@ -36,7 +36,7 @@ void main() {
           DefaultTextStyle.of(
             tester.element(find.byKey(const Key('attack-progress'))),
           ).style;
-      expect(style.fontSize, 13);
+      expect(style.fontSize, 22);
       expect(style.fontWeight, FontWeight.w900);
       final populationRect = tester.getRect(
         find.byKey(const Key('attack-population')),
