@@ -925,24 +925,27 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: FilledButton(
-            key: const Key('attack'),
-            onPressed: can ? _attack : null,
-            style: FilledButton.styleFrom(
-              backgroundColor: gold,
-              foregroundColor: ink,
-            ),
-            child: Semantics(
-              label: can ? 'タップで進軍 · 1人' : '隣接する自領が必要です',
-              child:
-                  can
-                      ? Image.asset(
-                        'assets/icons/tap.png',
-                        width: 56,
-                        height: 56,
-                        excludeFromSemantics: true,
-                      )
-                      : const Icon(Icons.lock_outline, size: 48),
+          child: Semantics(
+            identifier: 'attack-tap',
+            child: FilledButton(
+              key: const Key('attack'),
+              onPressed: can ? _attack : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: gold,
+                foregroundColor: ink,
+              ),
+              child: Semantics(
+                label: can ? 'タップで進軍 · 1人' : '隣接する自領が必要です',
+                child:
+                    can
+                        ? Image.asset(
+                          'assets/icons/tap.png',
+                          width: 56,
+                          height: 56,
+                          excludeFromSemantics: true,
+                        )
+                        : const Icon(Icons.lock_outline, size: 48),
+              ),
             ),
           ),
         ),

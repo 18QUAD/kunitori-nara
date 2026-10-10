@@ -18,6 +18,13 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
   const host=document.getElementById('app-host');
   const text=[...host.querySelectorAll('flt-semantics span')].find(e=>e.textContent.length>15);
   if(!text)throw Error('No game text found');
+  const attack=host.querySelector('[flt-semantics-identifier="attack-tap"]');
+  if(!attack)throw Error('No attack guard marker');
+  const rect=attack.getBoundingClientRect();
+  if(rect.width<300)throw Error('Guard does not cover full attack area');
+  const touchStart=(target,x,y)=>{const event=new Event('touchstart',{bubbles:true,cancelable:true});Object.defineProperty(event,'changedTouches',{value:[{clientX:x,clientY:y}]});target.dispatchEvent(event);return event.defaultPrevented};
+  if(!touchStart(attack,rect.left+15,rect.top+rect.height/2))throw Error('Attack native gesture not blocked');
+  if(touchStart(text,20,200))throw Error('Map gesture blocked');
   const style=getComputedStyle(text);if(style.userSelect!=='none'||style.webkitUserSelect!=='none')throw Error('Selectable game text');
   for(const type of ['selectstart','contextmenu']){
    const event=new Event(type,{bubbles:true,cancelable:true});text.dispatchEvent(event);if(!event.defaultPrevented)throw Error(type+' not blocked');
@@ -34,8 +41,26 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
   const range=document.createRange();range.selectNodeContents(editor);getSelection().removeAllRanges();getSelection().addRange(range);await new Promise(r=>setTimeout(r,30));if(getSelection().toString()!=='編集テスト')throw Error('Editable selection cleared');getSelection().removeAllRanges();editor.remove();
   return text.textContent;
  });
+ const game=()=>page.evaluate(()=>JSON.parse(JSON.parse(localStorage.getItem('flutter.kunitori.nara.v1'))));
  for(let i=0;i<8;i++)await attack.tap();
+ await assertCount(8);
+ const box=await attack.boundingBox();const cdp=await page.context().newCDPSession(page);
+ const point={x:box.x+box.width/2,y:box.y+box.height/2};
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});
+ await page.waitForTimeout(900);
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ await assertCount(9);
+ const mapBefore=await page.evaluate(()=>localStorage.getItem('flutter.kunitori.nara.mapView.v1'));
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:100,y:280}]});
+ for(let step=1;step<=5;step++){
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:100+step*15,y:280+step*10}]});
+  await page.waitForTimeout(40);
+ }
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ await page.waitForFunction(before=>{const value=localStorage.getItem('flutter.kunitori.nara.mapView.v1');return value&&value!==before},mapBefore,{timeout:5000});
+ assert.equal((await game()).totalTaps,9);
+ async function assertCount(count){await page.waitForFunction(expected=>{const stored=localStorage.getItem('flutter.kunitori.nara.v1');return stored&&JSON.parse(JSON.parse(stored)).totalTaps===expected},count,{timeout:5000});}
  assert(await attack.count());assert.equal(await page.evaluate(()=>getSelection().isCollapsed),true);assert.equal(errors.length,0);
- console.log('PASS: game CSS, selection/context menus, selectionchange/pointer cleanup, editable exceptions and repeated mobile taps',result);
+ console.log('PASS: game CSS, selection/context menus, selectionchange/pointer cleanup, editable exceptions full attack guard, exact tap counts, long press and map drag',result);
  await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
