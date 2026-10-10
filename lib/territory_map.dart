@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'game.dart';
+import 'map_view.dart';
 import 'relief.dart';
 import 'water.dart';
 import 'urban.dart';
@@ -26,6 +27,8 @@ class TerritoryMap extends StatefulWidget {
     this.fitScale = 0.9,
     this.controlsBottomInset = 8,
     this.showControls = true,
+    this.initialView,
+    this.onViewChanged,
   });
   final List<Widget> controls, secondaryControls;
   final Atlas atlas;
@@ -34,6 +37,8 @@ class TerritoryMap extends StatefulWidget {
   final int focusVersion, centerVersion;
   final double fitScale, controlsBottomInset;
   final bool showControls;
+  final MapViewState? initialView;
+  final ValueChanged<MapViewState>? onViewChanged;
   final ValueChanged<String> onSelected, onCitySelected;
   @override
   State<TerritoryMap> createState() => _TerritoryMapState();
@@ -48,6 +53,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
   late Map<String, Path> cityOutlines;
   late Map<String, Rect> cityBounds;
   Size? viewport;
+  bool _initialized = false;
+  MapViewState? _pendingRestore;
   late Map<String, Offset> officePoints;
   MountainLayer? mountains;
   bool mountainsFailed = false;
@@ -117,6 +124,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
   @override
   void initState() {
     super.initState();
+    _pendingRestore = widget.initialView;
+    showGeography = widget.initialView?.showGeography ?? true;
+    controller.addListener(_publishView);
     _buildPaths();
     _buildCities();
     officePoints = {
@@ -130,6 +140,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
 
   @override
   void dispose() {
+    controller.removeListener(_publishView);
     controller.dispose();
     relief?.image.dispose();
     super.dispose();
@@ -209,14 +220,49 @@ class _TerritoryMapState extends State<TerritoryMap> {
   @override
   void didUpdateWidget(TerritoryMap old) {
     super.didUpdateWidget(old);
-    if (old.centerVersion != widget.centerVersion &&
+    if (old.game != widget.game) {
+      showGeography = true;
+      _pendingRestore = null;
+      _fit();
+    } else if (old.centerVersion != widget.centerVersion &&
         old.cityId != null &&
         widget.cityId != null) {
       _centerSelected();
     } else if (old.cityId != widget.cityId ||
         old.focusVersion != widget.focusVersion) {
       _fit();
+    } else if (old.selected != widget.selected) {
+      _publishView();
     }
+  }
+
+  MapViewState? _captureView() {
+    final size = viewport;
+    if (!_initialized || size == null) return null;
+    return MapViewState(
+      center: controller.toScene(Offset(size.width / 2, size.height / 2)),
+      scale: controller.value.getMaxScaleOnAxis(),
+      selected: widget.selected,
+      cityId: widget.cityId,
+      showGeography: showGeography,
+    );
+  }
+
+  void _publishView() {
+    final view = _captureView();
+    if (view != null) widget.onViewChanged?.call(view);
+  }
+
+  void _applyView(MapViewState view) {
+    final size = viewport!;
+    _initialized = true;
+    controller.value =
+        Matrix4.identity()
+          ..translate(
+            size.width / 2 - view.center.dx * view.scale,
+            size.height / 2 - view.center.dy * view.scale,
+          )
+          ..scale(view.scale);
   }
 
   void _centerSelected() {
@@ -251,6 +297,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
     final scale =
         math.min(size.width / box.width, size.height / box.height) *
         widget.fitScale;
+    _initialized = true;
     controller.value =
         Matrix4.identity()
           ..translate(
@@ -270,9 +317,16 @@ class _TerritoryMapState extends State<TerritoryMap> {
     builder: (context, c) {
       final size = Size(c.maxWidth, c.maxHeight);
       if (viewport != size) {
+        final retained = _pendingRestore ?? _captureView();
+        _pendingRestore = null;
         viewport = size;
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _fit();
+          if (!mounted) return;
+          if (retained != null) {
+            _applyView(retained);
+          } else {
+            _fit();
+          }
         });
       }
       return Stack(
@@ -487,6 +541,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                             onPressed: () {
                               setState(() => showGeography = !showGeography);
                               // Retry failed layers when the shared overlay is enabled.
+                              _publishView();
                               if (showGeography && reliefFailed) {
                                 setState(() => reliefFailed = false);
                                 _loadRelief();

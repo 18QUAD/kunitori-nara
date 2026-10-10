@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
+import 'map_view.dart';
 
 /// Serial writes, coalescing quick taps while a previous write is in flight.
 /// A failed write remains retryable and never displays a false "saved" status.
@@ -8,7 +9,8 @@ class SaveStore {
   SaveStore(this.preferences);
   final SharedPreferences preferences;
   static const key = 'kunitori.nara.v1';
-  String? _pending;
+  static const mapViewKey = 'kunitori.nara.mapView.v1';
+  final Map<String, String> _pending = {};
   Future<void>? _writing;
   String? error;
   void Function()? onChanged;
@@ -20,8 +22,26 @@ class SaveStore {
         : Game.restore(atlas, jsonDecode(raw) as Map<String, dynamic>);
   }
 
-  Future<void> save(Game game) {
-    _pending = jsonEncode(game.toJson());
+  MapViewState? loadMapView(Atlas atlas) {
+    try {
+      final raw = preferences.getString(mapViewKey);
+      return raw == null
+          ? null
+          : MapViewState.fromJson(
+            jsonDecode(raw) as Map<String, dynamic>,
+            atlas,
+          );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveMapView(MapViewState view) =>
+      _saveValue(mapViewKey, jsonEncode(view.toJson()));
+  Future<void> save(Game game) => _saveValue(key, jsonEncode(game.toJson()));
+
+  Future<void> _saveValue(String storageKey, String value) {
+    _pending[storageKey] = value;
     if (_writing != null) return _writing!;
     final future = _drain();
     _writing = future;
@@ -33,15 +53,15 @@ class SaveStore {
 
   Future<void> _drain() async {
     error = null;
-    while (_pending != null) {
-      final value = _pending!;
-      _pending = null;
+    while (_pending.isNotEmpty) {
+      final storageKey = _pending.keys.first;
+      final value = _pending.remove(storageKey)!;
       try {
-        if (!await preferences.setString(key, value)) {
+        if (!await preferences.setString(storageKey, value)) {
           throw StateError('書き込み失敗');
         }
       } catch (_) {
-        _pending ??= value;
+        _pending.putIfAbsent(storageKey, () => value);
         error = '保存できませんでした。空き容量を確認して再試行してください。';
         break;
       }

@@ -15,6 +15,7 @@ import 'tip_presenter.dart';
 import 'quiz_stage.dart';
 import 'tip_settings.dart';
 import 'save_store.dart';
+import 'map_view.dart';
 import 'territory_map.dart';
 
 const ink = Color(0xFF101C2B),
@@ -153,6 +154,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Atlas? atlas;
   Game? game;
   SaveStore? store;
+  MapViewState? _restoredMapView;
   TipAppearanceStore? tipAppearanceStore;
   TipAppearance tipAppearance = const TipAppearance();
   String? error, selected;
@@ -210,8 +212,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       saver.onChanged = () {
         if (mounted) setState(() {});
       };
-      selected = g.attackTarget ?? g.home;
-      if (selected != null) cityFilter = data.towns[selected]!.cityId;
+      _restoredMapView = saver.loadMapView(data);
+      selected =
+          _restoredMapView == null
+              ? g.attackTarget ?? g.home
+              : _restoredMapView!.selected;
+      cityFilter =
+          _restoredMapView == null
+              ? (selected == null ? null : data.towns[selected]!.cityId)
+              : _restoredMapView!.cityId;
       final expiredOnLoad = g.expire(DateTime.now());
       _rememberVisibleFact();
       setState(() {});
@@ -292,6 +301,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (confirmed != true || !mounted) return;
     setState(() {
       game = Game(atlas!);
+      _restoredMapView = null;
       selected = null;
       cityFilter = null;
       factIndex = 0;
@@ -887,6 +897,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     cityId: cityFilter,
                     focusVersion: mapFocus,
                     centerVersion: mapCenter,
+                    initialView: _restoredMapView,
+                    onViewChanged: (view) {
+                      _restoredMapView = view;
+                      if (store != null) unawaited(store!.saveMapView(view));
+                    },
                     fitScale: 1,
                     showControls: showControls,
                     controlsBottomInset:
