@@ -49,34 +49,82 @@ class AnswerFeedback extends StatelessWidget {
       },
       child: Semantics(
         liveRegion: true,
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color, width: 2),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                correct ? Icons.check_circle_outline : Icons.cancel_outlined,
-                color: color,
-                size: 72,
+        child: Transform.rotate(
+          angle: reducedMotion ? 0 : -0.06,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 56,
+                fontWeight: FontWeight.w900,
+                fontStyle: FontStyle.italic,
+                letterSpacing: 1.5,
+                foreground:
+                    Paint()
+                      ..shader = LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors:
+                            correct
+                                ? [
+                                  [
+                                    const Color(0xFFEDFFF4),
+                                    const Color(0xFF38DE9A),
+                                  ],
+                                  [
+                                    const Color(0xFFE9FBFF),
+                                    const Color(0xFF48BFFF),
+                                  ],
+                                  [
+                                    const Color(0xFFFFF6B4),
+                                    const Color(0xFFFFAA3C),
+                                  ],
+                                  [
+                                    const Color(0xFFFFE5FF),
+                                    const Color(0xFFDB75FF),
+                                  ],
+                                  [
+                                    Colors.white,
+                                    const Color(0xFFFFD34C),
+                                    const Color(0xFFFF8A32),
+                                  ],
+                                ][streak.clamp(1, 5) - 1]
+                                : [const Color(0xFFFFD9DE), color],
+                      ).createShader(const Rect.fromLTWH(0, 0, 320, 72)),
+                shadows: const [
+                  Shadow(color: Color(0xFF101C2B), offset: Offset(-2, -2)),
+                  Shadow(color: Color(0xFF101C2B), offset: Offset(2, -2)),
+                  Shadow(color: Color(0xFF101C2B), offset: Offset(-2, 2)),
+                  Shadow(color: Color(0xFF101C2B), offset: Offset(2, 2)),
+                  Shadow(color: Color(0xFF101C2B), offset: Offset(-3, 0)),
+                  Shadow(color: Color(0xFF101C2B), offset: Offset(3, 0)),
+                  Shadow(color: Color(0xFF101C2B), offset: Offset(0, -3)),
+                  Shadow(color: Color(0xFF101C2B), offset: Offset(0, 3)),
+                  Shadow(
+                    color: Color(0xCC000000),
+                    offset: Offset(5, 7),
+                    blurRadius: 4,
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+String correctAnswerSpeech(String answer, int streak) {
+  final encouragement =
+      [
+        'よく知ってるね！',
+        '2問連続正解！いい調子だね！',
+        '3問連続正解！すごい、物知りだね！',
+        '4問連続正解！その調子、あと少しだよ！',
+        '5問連続正解！全問クリア、お見事だよ！',
+      ][streak.clamp(1, 5) - 1];
+  return '正解！答えは「$answer」だよ。$encouragement';
 }

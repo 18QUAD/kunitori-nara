@@ -117,20 +117,12 @@ class QuizStage extends StatelessWidget {
                       child: Center(
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF101C2B,
-                              ).withValues(alpha: 0.55),
-                              borderRadius: BorderRadius.circular(20),
+                          child: AnswerFeedback(
+                            key: ValueKey(
+                              '${question.factId}-$streak-$correct',
                             ),
-                            child: AnswerFeedback(
-                              key: ValueKey(
-                                '${question.factId}-$streak-$correct',
-                              ),
-                              correct: correct!,
-                              streak: streak,
-                            ),
+                            correct: correct!,
+                            streak: streak,
                           ),
                         ),
                       ),
@@ -149,7 +141,7 @@ class QuizStage extends StatelessWidget {
                   correct == null
                       ? question.question
                       : correct!
-                      ? '正解！答えは「${question.answer}」だよ。よく知ってるね！'
+                      ? correctAnswerSpeech(question.answer, streak)
                       : '惜しい、今回は不正解！正解は「${question.answer}」だよ。',
               appearance: appearance,
               nextSpeechAt: nextSpeechAt,

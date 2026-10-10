@@ -6,6 +6,13 @@ import 'package:kunitori/practice_quiz.dart';
 import 'package:kunitori/quiz_stage.dart';
 
 void main() {
+  const question = QuizQuestion(
+    factId: 'test',
+    question: '奈良県の県庁所在地はどこですか？',
+    answer: '奈良市',
+    choices: ['奈良市', '大阪市', '京都市', '鹿の王国'],
+  );
+
   testWidgets('effects follow all five streak levels and wrong answer', (
     tester,
   ) async {
@@ -35,6 +42,35 @@ void main() {
     }
   });
 
+  testWidgets('correct replies follow every streak level', (tester) async {
+    const encouragements = [
+      'よく知ってるね！',
+      '2問連続正解！いい調子だね！',
+      '3問連続正解！すごい、物知りだね！',
+      '4問連続正解！その調子、あと少しだよ！',
+      '5問連続正解！全問クリア、お見事だよ！',
+    ];
+    for (var i = 0; i < 5; i++) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: QuizStage(
+              title: '予習',
+              question: question,
+              correct: true,
+              streak: i + 1,
+              onAnswer: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('正解！答えは「奈良市」だよ。${encouragements[i]}'), findsOneWidget);
+      expect(find.byType(OutlinedButton), findsNWidgets(4));
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('reduced motion feedback stays still', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -55,13 +91,6 @@ void main() {
     }
     await tester.pumpAndSettle();
   });
-
-  const question = QuizQuestion(
-    factId: 'test',
-    question: '奈良県の県庁所在地はどこですか？',
-    answer: '奈良市',
-    choices: ['奈良市', '大阪市', '京都市', '鹿の王国'],
-  );
 
   testWidgets(
     'small phone places options/effects above question/result bubble',
@@ -225,6 +254,11 @@ void main() {
           find.text(['good！', 'nice！', 'bad', 'good！'][i]),
           findsOneWidget,
         );
+        if (i == 0 || i == 3) {
+          expect(find.textContaining('よく知ってるね！'), findsOneWidget);
+        } else if (i == 1) {
+          expect(find.textContaining('2問連続正解！いい調子だね！'), findsOneWidget);
+        }
         await tester.tap(find.text(i == 3 ? '結果を見る' : '次の問題'));
         await tester.pumpAndSettle();
       }
