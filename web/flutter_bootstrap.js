@@ -9,12 +9,37 @@ for (const build of _flutter.buildConfig.builds) {
 // The large viewport provides real page pixels behind floating browser controls.
 const appHost = document.getElementById('app-host');
 // Keep native selection menus off game controls; editing retains its normal menu.
+const editableSelector = 'input, textarea, [contenteditable]:not([contenteditable="false"])';
+function elementAt(node) {
+  return node instanceof Element ? node : node?.parentElement;
+}
+function isEditable(node) {
+  return !!elementAt(node)?.closest(editableSelector);
+}
+function clearGameSelection() {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed || !selection.rangeCount) return;
+  // Safari can create a selection without a cancelable selectstart event.
+  // Only remove ranges in the game, never a text field's editing selection.
+  if (isEditable(selection.anchorNode) || isEditable(selection.focusNode)) return;
+  for (let i = 0; i < selection.rangeCount; i++) {
+    if (selection.getRangeAt(i).intersectsNode(appHost)) {
+      selection.removeAllRanges();
+      return;
+    }
+  }
+}
+document.addEventListener('selectionchange', clearGameSelection);
+appHost.addEventListener('pointerdown', (event) => {
+  if (!event.composedPath().some(isEditable)) clearGameSelection();
+}, {capture: true, passive: true});
 for (const type of ['selectstart', 'contextmenu']) {
   appHost.addEventListener(type, (event) => {
-    if (!event.target.closest?.('input, textarea, [contenteditable="true"]')) {
+    if (!event.composedPath().some(isEditable)) {
       event.preventDefault();
+      clearGameSelection();
     }
-  });
+  }, {capture: true});
 }
 const safeAreaProbe = document.getElementById('safe-area-probe');
 let topInset = 0;
