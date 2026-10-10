@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'game.dart';
 import 'quiz_stage.dart';
@@ -6,16 +5,8 @@ import 'quiz_prompt.dart';
 import 'tip_appearance.dart';
 
 class PracticeQuizController extends ChangeNotifier {
-  PracticeQuizController(this.questions) {
-    if (questions.isNotEmpty) {
-      _introTimer = Timer(const Duration(seconds: 3), () {
-        introducing = false;
-        notifyListeners();
-      });
-    }
-  }
-  static const introduction = '時間制限なし。領土・戦績には影響しません。';
-  Timer? _introTimer;
+  PracticeQuizController(this.questions);
+  static const introduction = '時間制限はないよ。領土や戦績も変わらないから、気軽に予習してみよう！';
   bool introducing = true;
   final List<QuizQuestion> questions;
   int index = 0, correctCount = 0, streak = 0;
@@ -36,10 +27,10 @@ class PracticeQuizController extends ChangeNotifier {
     notifyListeners();
   }
 
-  @override
-  void dispose() {
-    _introTimer?.cancel();
-    super.dispose();
+  void start() {
+    if (!introducing || finished) return;
+    introducing = false;
+    notifyListeners();
   }
 
   void advance() {
@@ -113,7 +104,18 @@ class _PracticeQuizState extends State<PracticeQuiz> {
                 : controller.introducing
                 ? Column(
                   children: [
-                    const Expanded(child: SizedBox()),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: QuizTitle(
+                            title:
+                                '${widget.cityName} · クイズ予習 全${controller.questions.length}問',
+                          ),
+                        ),
+                      ),
+                    ),
                     Padding(
                       padding: const EdgeInsets.only(right: 12, bottom: 8),
                       child: QuizPrompt(
@@ -173,8 +175,19 @@ class PracticeQuizControls extends StatelessWidget {
               children: [
                 TextButton(
                   onPressed: onClose,
-                  child: Text(controller.finished ? '地図へ戻る' : '予習を終了'),
+                  child: Text(
+                    controller.finished
+                        ? '地図へ戻る'
+                        : controller.introducing
+                        ? 'やめる'
+                        : '予習を終了',
+                  ),
                 ),
+                if (controller.introducing && !controller.finished)
+                  FilledButton(
+                    onPressed: controller.start,
+                    child: const Text('開始する'),
+                  ),
                 if (!controller.finished && controller.choice != null)
                   FilledButton(
                     onPressed: controller.advance,

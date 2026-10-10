@@ -122,14 +122,17 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = PracticeQuizController([question]);
+    addTearDown(controller.dispose);
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
         home: Scaffold(
           body: SizedBox(
             height: 340,
             child: PracticeQuiz(
               cityName: '宇陀市',
               questions: [question],
+              controller: controller,
               inline: true,
             ),
           ),
@@ -138,7 +141,11 @@ void main() {
     );
     expect(find.text(PracticeQuizController.introduction), findsOneWidget);
     expect(find.text(question.question), findsNothing);
-    await tester.pump(const Duration(seconds: 3));
+    expect(find.text('宇陀市 · クイズ予習 全1問'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 20));
+    expect(find.byType(OutlinedButton), findsNothing);
+    controller.start();
+    await tester.pump();
     final title = tester.widget<Text>(find.text('宇陀市 · クイズ予習 1/1問'));
     expect(title.maxLines, 1);
     final bubble = tester.getRect(find.byKey(const Key('tips-region')));
@@ -152,9 +159,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('closing during practice introduction cancels its transition', (
-    tester,
-  ) async {
+  testWidgets('practice can be cancelled without starting', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: PracticeQuiz(cityName: '奈良市', questions: [question]),
@@ -179,9 +184,12 @@ void main() {
       );
       expect(find.text(PracticeQuizController.introduction), findsOneWidget);
       expect(find.byType(OutlinedButton), findsNothing);
-      await tester.pump(const Duration(milliseconds: 2999));
+      await tester.pump(const Duration(seconds: 20));
       expect(find.byType(OutlinedButton), findsNothing);
-      await tester.pump(const Duration(milliseconds: 1));
+      expect(find.text('奈良市 · クイズ予習 全4問'), findsOneWidget);
+      expect(find.text('やめる'), findsOneWidget);
+      await tester.tap(find.text('開始する'));
+      await tester.pump();
       expect(find.text(PracticeQuizController.introduction), findsNothing);
       for (var i = 0; i < 4; i++) {
         final answer = i == 2 ? '大阪市' : '奈良市';

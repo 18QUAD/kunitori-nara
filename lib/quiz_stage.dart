@@ -62,41 +62,7 @@ class QuizStage extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF101C2B,
-                              ).withValues(alpha: 0.8),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              children: [
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    title,
-                                    maxLines: 1,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                if (seconds != null)
-                                  Text(
-                                    '残り $seconds 秒',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color:
-                                          seconds! <= 5
-                                              ? Colors.redAccent
-                                              : const Color(0xFF7AE1BB),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
+                          QuizTitle(title: title, seconds: seconds),
                           const SizedBox(height: 8),
                           for (final answer in question.choices)
                             Padding(
@@ -141,6 +107,45 @@ class QuizStage extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    ),
+  );
+}
+
+/// The same compact heading is shown before starting and during questions.
+class QuizTitle extends StatelessWidget {
+  const QuizTitle({super.key, required this.title, this.seconds});
+  final String title;
+  final int? seconds;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: const Color(0xFF101C2B).withValues(alpha: 0.8),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            title,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        if (seconds != null)
+          Text(
+            '残り $seconds 秒',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: seconds! <= 5 ? Colors.redAccent : const Color(0xFF7AE1BB),
+            ),
+          ),
       ],
     ),
   );
