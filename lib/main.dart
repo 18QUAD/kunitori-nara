@@ -755,7 +755,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             ? '${visibleFact?.id}:$factIndex'
             : 'conquest:$_conquestSequence',
     nextSpeechAt: _conquestName == null ? _nextTipAt : null,
-    lipSyncDuration: _conquestName == null ? null : const Duration(seconds: 3),
+    lipSyncDuration: const Duration(seconds: 3),
     expression:
         _conquestName == null ? TipExpression.neutral : TipExpression.joyful,
   );
