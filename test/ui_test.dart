@@ -323,6 +323,7 @@ void main() {
       await tester.tap(find.text('キャラ・吹き出し'));
       await tester.pumpAndSettle();
       final field = find.byType(DropdownButtonFormField<TipSize>);
+      await tester.scrollUntilVisible(field, 150);
       await tester.ensureVisible(field);
       await tester.pumpAndSettle();
       await tester.tap(field);

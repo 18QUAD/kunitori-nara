@@ -16,6 +16,7 @@ import 'tip_settings.dart';
 import 'save_store.dart';
 import 'map_view.dart';
 import 'territory_map.dart';
+import 'tap_progress.dart';
 
 const ink = Color(0xFF101C2B),
     panel = Color(0xFF192A3A),
@@ -566,10 +567,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 ),
                 if (town != null) ...[
                   const SizedBox(width: 8),
-                  Text(
-                    '${number(g.owned.contains(town.id) ? town.population : g.progress[town.id] ?? 0)} / ${number(town.population)}',
-                    key: const Key('attack-progress'),
-                    style: const TextStyle(color: gold, fontSize: 13),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: math.min(
+                        200,
+                        MediaQuery.sizeOf(context).width * .45,
+                      ),
+                    ),
+                    child: TapProgress(
+                      townId: town.id,
+                      value:
+                          g.owned.contains(town.id)
+                              ? town.population
+                              : g.progress[town.id] ?? 0,
+                      population: town.population,
+                      tapCount: g.totalTaps,
+                    ),
                   ),
                 ],
               ],
