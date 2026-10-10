@@ -36,59 +36,108 @@ class QuizStage extends StatelessWidget {
           child: Padding(
             key: const Key('quiz-upper-region'),
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            child:
-                correct != null
-                    ? Center(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF101C2B,
-                            ).withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: AnswerFeedback(
-                            key: ValueKey(
-                              '${question.factId}-$streak-$correct',
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      QuizTitle(
+                        title: title,
+                        seconds: correct == null ? seconds : null,
+                      ),
+                      const SizedBox(height: 8),
+                      for (final answer in question.choices)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: OutlinedButton(
+                            onPressed:
+                                correct == null ? () => onAnswer(answer) : null,
+                            style: OutlinedButton.styleFrom(
+                              alignment: Alignment.centerLeft,
+                              minimumSize: const Size.fromHeight(42),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              backgroundColor: const Color(
+                                0xFF192A3A,
+                              ).withValues(alpha: 0.8),
+                              disabledBackgroundColor: const Color(
+                                0xFF192A3A,
+                              ).withValues(alpha: 0.8),
+                              foregroundColor: Colors.white,
+                              disabledForegroundColor: Colors.white,
+                              side:
+                                  correct == null
+                                      ? null
+                                      : BorderSide(
+                                        color:
+                                            answer == question.answer
+                                                ? const Color(0xFF7AE1BB)
+                                                : const Color(0xFFFF8080),
+                                      ),
                             ),
-                            correct: correct!,
-                            streak: streak,
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child:
+                                      correct == null
+                                          ? null
+                                          : Icon(
+                                            answer == question.answer
+                                                ? Icons.circle_outlined
+                                                : Icons.close,
+                                            color:
+                                                answer == question.answer
+                                                    ? const Color(0xFF7AE1BB)
+                                                    : const Color(0xFFFF8080),
+                                            semanticLabel:
+                                                answer == question.answer
+                                                    ? '正解'
+                                                    : '不正解',
+                                          ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(answer)),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (correct != null)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF101C2B,
+                              ).withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: AnswerFeedback(
+                              key: ValueKey(
+                                '${question.factId}-$streak-$correct',
+                              ),
+                              correct: correct!,
+                              streak: streak,
+                            ),
                           ),
                         ),
                       ),
-                    )
-                    : SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          QuizTitle(title: title, seconds: seconds),
-                          const SizedBox(height: 8),
-                          for (final answer in question.choices)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: OutlinedButton(
-                                onPressed: () => onAnswer(answer),
-                                style: OutlinedButton.styleFrom(
-                                  alignment: Alignment.centerLeft,
-                                  minimumSize: const Size.fromHeight(42),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 8,
-                                  ),
-                                  backgroundColor: const Color(
-                                    0xFF192A3A,
-                                  ).withValues(alpha: 0.8),
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: Text(answer),
-                              ),
-                            ),
-                        ],
-                      ),
                     ),
+                  ),
+              ],
+            ),
           ),
         ),
         Padding(

@@ -95,22 +95,38 @@ void main() {
         expect(upper.bottom, lessThanOrEqualTo(bubble.top));
         if (correct == null) {
           expect(find.text(question.question), findsOneWidget);
+          expect(find.byIcon(Icons.circle_outlined), findsNothing);
+          expect(find.byIcon(Icons.close), findsNothing);
           expect(find.byType(OutlinedButton), findsNWidgets(4));
-          for (var option = 0; option < 4; option++) {
-            expect(
-              tester.getRect(find.byType(OutlinedButton).at(option)).bottom,
-              lessThan(bubble.top),
-            );
-          }
         } else {
           expect(
             find.textContaining(correct ? '答えは「奈良市」だよ' : '正解は「奈良市」だよ'),
             findsOneWidget,
           );
-          expect(find.byType(OutlinedButton), findsNothing);
+          expect(find.byType(OutlinedButton), findsNWidgets(4));
+          expect(find.byIcon(Icons.circle_outlined), findsOneWidget);
+          expect(find.byIcon(Icons.close), findsNWidgets(3));
+          for (final button in tester.widgetList<OutlinedButton>(
+            find.byType(OutlinedButton),
+          )) {
+            expect(button.onPressed, isNull);
+          }
+          expect(
+            find.descendant(
+              of: find.widgetWithText(OutlinedButton, question.answer),
+              matching: find.byIcon(Icons.circle_outlined),
+            ),
+            findsOneWidget,
+          );
           expect(
             tester.getRect(find.byType(AnswerFeedback)).bottom,
             lessThanOrEqualTo(bubble.top),
+          );
+        }
+        for (var option = 0; option < 4; option++) {
+          expect(
+            tester.getRect(find.byType(OutlinedButton).at(option)).bottom,
+            lessThan(bubble.top),
           );
         }
         expect(tester.takeException(), isNull);
