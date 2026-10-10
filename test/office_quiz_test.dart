@@ -24,17 +24,25 @@ void main() {
   }
 
   test(
-    'all offices allow practice before conquest without changing game data',
+    'practice unlocks only while each office town is owned and does not require the entire city',
     () {
       final game = Game(atlas);
-      final before = jsonEncode(game.toJson());
       for (final office in atlas.officeTownIds.values) {
+        expect(game.canPracticeAt(office), isFalse);
+        expect(game.practiceQuestionsAt(office), isEmpty);
+        game.owned.add(office);
+        final before = jsonEncode(game.toJson());
         final questions = game.practiceQuestionsAt(office);
         expect(questions, hasLength(5));
         expect(questions.map((q) => q.factId).toSet(), hasLength(5));
         expect(questions.every((q) => q.choices.contains(q.answer)), isTrue);
         expect(jsonEncode(game.toJson()), before);
-        expect(game.canStartQuizAt(office), isFalse);
+        expect(game.canPracticeAt(office), isTrue);
+        if (atlas.byCity[atlas.towns[office]!.cityId]!.length > 1) {
+          expect(game.canStartQuizAt(office), isFalse);
+        }
+        game.owned.remove(office);
+        expect(game.practiceQuestionsAt(office), isEmpty);
       }
       final ordinaryTown = atlas.towns.keys.firstWhere(
         (id) => !atlas.officeTownIds.values.contains(id),
@@ -48,6 +56,7 @@ void main() {
     final jokesSeen = <String>{};
     for (final difficulty in Difficulty.values) {
       final game = Game(atlas, random: Random(42))..difficulty = difficulty;
+      game.owned.addAll(atlas.officeTownIds.values);
       for (final office in atlas.officeTownIds.values) {
         for (var attempt = 0; attempt < 10; attempt++) {
           for (final q in game.practiceQuestionsAt(office)) {

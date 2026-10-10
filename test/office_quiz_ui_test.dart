@@ -16,15 +16,16 @@ import 'package:kunitori/tip_character.dart';
 
 void main() {
   testWidgets(
-    'unowned office offers practice, answers reveal solutions without conquest',
+    'office practice unlocks after capture, keeps the full attack area before capture and preserves progress',
     (tester) async {
       rootBundle.clear();
       final atlas = Atlas.fromJson(
         jsonDecode(File('assets/data/nara.json').readAsStringSync()),
       );
       final office = atlas.officeTownIds['29205']!;
-      final saved = Game(atlas)..setHome(office);
-      saved.owned.clear();
+      final saved = Game(atlas)..setHome(atlas.towns[office]!.neighbors.first);
+      saved.selectAttackTarget(office);
+      saved.progress[office] = saved.requiredTaps(atlas.towns[office]!) - 1;
       SharedPreferences.setMockInitialValues({
         'flutter.kunitori.nara.v1': jsonEncode(saved.toJson()),
       });
@@ -68,7 +69,23 @@ void main() {
       await tester.pumpAndSettle();
       await tapOffice();
       expect(find.text('クイズを開始'), findsNothing);
+      expect(find.text('クイズを予習'), findsNothing);
+      final attackRect = tester.getRect(find.byKey(const Key('attack')));
+      final actionRect = tester.getRect(find.byKey(const Key('action-region')));
+      expect(attackRect.height, closeTo(actionRect.height - 16, .01));
+      await tester.tap(find.byKey(const Key('attack')));
+      await tester.pumpAndSettle();
+      expect(game.owned, contains(office));
+      expect(find.byKey(const Key('attack')), findsNothing);
       expect(find.text('クイズを予習'), findsOneWidget);
+      final practiceRect = tester.getRect(
+        find.ancestor(
+          of: find.text('クイズを予習'),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+        ),
+      );
+      expect(practiceRect.top, greaterThanOrEqualTo(actionRect.top));
+      expect(practiceRect.bottom, lessThanOrEqualTo(actionRect.bottom));
       final mapController =
           tester
               .widget<InteractiveViewer>(find.byType(InteractiveViewer))
@@ -203,6 +220,20 @@ void main() {
       );
       expect(find.text('クイズを開始'), findsOneWidget);
       expect(game.quiz, isNull);
+      final practiceRect = tester.getRect(
+        find.ancestor(
+          of: find.text('クイズを予習'),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+        ),
+      );
+      final quizRect = tester.getRect(
+        find.ancestor(
+          of: find.text('制圧クイズに挑戦'),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+        ),
+      );
+      expect(practiceRect.overlaps(quizRect), isFalse);
+      expect(find.byKey(const Key('attack')), findsNothing);
       await tester.tap(find.text('キャンセル'));
       await tester.pumpAndSettle();
       expect(game.quiz, isNull);

@@ -511,10 +511,16 @@ class Game {
     );
   }
 
-  List<QuizQuestion> practiceQuestionsAt(String townId) {
+  bool canPracticeAt(String townId) {
     final town = atlas.towns[townId];
-    if (town == null || atlas.officeTownIds[town.cityId] != townId) return [];
-    return _quizQuestions(town.cityId);
+    return town != null &&
+        atlas.officeTownIds[town.cityId] == townId &&
+        owned.contains(townId);
+  }
+
+  List<QuizQuestion> practiceQuestionsAt(String townId) {
+    if (!canPracticeAt(townId)) return [];
+    return _quizQuestions(atlas.towns[townId]!.cityId);
   }
 
   List<QuizQuestion> _quizQuestions(String city) {

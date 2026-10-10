@@ -800,19 +800,32 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   );
 
   Widget _actionPanel() {
+    final g = game!;
     final townId = selected;
-    if (townId == null || !atlas!.officeTownIds.values.contains(townId)) {
+    if (townId == null || !g.canPracticeAt(townId)) {
       return _territoryActionPanel();
     }
-    return Column(
+    // Captured offices have their own actions; an attack button never shares
+    // space with practice, and quiz/practice buttons have separate hit areas.
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(child: _territoryActionPanel()),
-        const SizedBox(height: 4),
-        TextButton.icon(
-          onPressed: () => _startPractice(townId),
-          icon: const Icon(Icons.school_outlined),
-          label: const Text('クイズを予習'),
+        if (g.canStartQuizAt(townId)) ...[
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () => _confirmQuiz(townId),
+              icon: const Icon(Icons.quiz_outlined),
+              label: const Text('制圧クイズに挑戦'),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+        Expanded(
+          child: TextButton.icon(
+            onPressed: () => _startPractice(townId),
+            icon: const Icon(Icons.school_outlined),
+            label: const Text('クイズを予習'),
+          ),
         ),
       ],
     );
