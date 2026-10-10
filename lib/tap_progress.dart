@@ -76,7 +76,7 @@ class _TapProgressState extends State<TapProgress>
           child: DefaultTextStyle.merge(
             style: const TextStyle(
               color: Color(0xFFEEC47C),
-              fontSize: 22,
+              fontSize: 13,
               fontWeight: FontWeight.w900,
               fontVariations: [FontVariation('wght', 900)],
               fontFeatures: [FontFeature.tabularFigures()],
