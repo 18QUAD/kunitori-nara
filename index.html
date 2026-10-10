@@ -40,14 +40,14 @@
     #app-host { position: relative; width: 100%; height: 100vh; height: 100lvh; background: #101C2B; }
     /* Repeated taps must not select Flutter's accessibility text on iOS. */
     #app-host, #app-host * {
-      -webkit-user-select: none;
-      user-select: none;
-      -webkit-touch-callout: none;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+      -webkit-touch-callout: none !important;
     }
     #app-host input, #app-host textarea, #app-host [contenteditable="true"] {
-      -webkit-user-select: text;
-      user-select: text;
-      -webkit-touch-callout: default;
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      -webkit-touch-callout: default !important;
     }
     #safe-area-probe {
       position: fixed; visibility: hidden; pointer-events: none;
@@ -59,6 +59,6 @@
 <body>
   <div id="app-host"></div>
   <div id="safe-area-probe" aria-hidden="true"></div>
-  <script src="flutter_bootstrap.js?v=office-practice-unlock-v1" async></script>
+  <script src="flutter_bootstrap.js?v=selection-guard-v2" async></script>
 </body>
 </html>
