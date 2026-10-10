@@ -33,20 +33,6 @@ document.addEventListener('selectionchange', clearGameSelection);
 appHost.addEventListener('pointerdown', (event) => {
   if (!event.composedPath().some(isEditable)) clearGameSelection();
 }, {capture: true, passive: true});
-// Cancel native long-press/selection gestures only on the attack button.
-// Flutter continues to receive pointer events; do not synthesize extra clicks.
-appHost.addEventListener('touchstart', (event) => {
-  if (!window.PointerEvent || event.composedPath().some(isEditable)) return;
-  const attack = appHost.querySelector('[flt-semantics-identifier="attack-tap"]');
-  if (!attack) return;
-  const rect = attack.getBoundingClientRect();
-  if ([...event.changedTouches].some((touch) =>
-    touch.clientX >= rect.left && touch.clientX <= rect.right &&
-    touch.clientY >= rect.top && touch.clientY <= rect.bottom)) {
-    if (event.cancelable) event.preventDefault();
-    clearGameSelection();
-  }
-}, {capture: true, passive: false});
 for (const type of ['selectstart', 'contextmenu']) {
   appHost.addEventListener(type, (event) => {
     if (!event.composedPath().some(isEditable)) {

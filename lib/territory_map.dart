@@ -249,6 +249,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
   }
 
   void _publishView() {
+    // The visible office semantics must follow pan/zoom, not just repaint.
+    if (mounted) setState(() {});
     final view = _captureView();
     if (view != null) widget.onViewChanged?.call(view);
   }
@@ -410,6 +412,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       widget.cityId == null
                           ? prefecturePath
                           : cityPaths[widget.cityId]!,
+                      size,
                     ),
                   ),
                 ),
@@ -616,6 +619,7 @@ class _MapPainter extends CustomPainter {
     this.mountains,
     this.reliefBounds,
     this.reliefClip,
+    this.viewportSize,
   ) : super(repaint: transform);
   final TransformationController transform;
   final Map<String, Path> paths;
@@ -632,6 +636,7 @@ class _MapPainter extends CustomPainter {
   final MountainLayer? mountains;
   final Rect? reliefBounds;
   final Path reliefClip;
+  final Size viewportSize;
   @override
   void paint(Canvas canvas, Size size) {
     final zoom = transform.value.getMaxScaleOnAxis();
@@ -805,24 +810,33 @@ class _MapPainter extends CustomPainter {
   @override
   SemanticsBuilderCallback get semanticsBuilder => (size) {
     final zoom = transform.value.getMaxScaleOnAxis();
-    return [
-      for (final office in atlas.offices.values)
-        if (cityId == null || office.cityId == cityId)
-          CustomPainterSemantics(
-            key: ValueKey('office-${office.cityId}'),
-            rect: Rect.fromCircle(
-              center: officePoints[office.cityId]!,
-              radius: 14 / zoom,
-            ),
-            properties: SemanticsProperties(
-              label:
-                  '${office.name}（${atlas.towns[atlas.officeTownIds[office.cityId]]!.name}）',
-              button: true,
-              onTap: () => onOfficeSelected(office.cityId),
-              textDirection: TextDirection.ltr,
-            ),
+    final visible = Rect.fromPoints(
+      transform.toScene(Offset.zero),
+      transform.toScene(Offset(viewportSize.width, viewportSize.height)),
+    );
+    final nodes = <CustomPainterSemantics>[];
+    for (final office in atlas.offices.values) {
+      if (cityId != null && office.cityId != cityId) continue;
+      final rect = Rect.fromCircle(
+        center: officePoints[office.cityId]!,
+        radius: 14 / zoom,
+      ).intersect(visible);
+      if (rect.isEmpty) continue;
+      nodes.add(
+        CustomPainterSemantics(
+          key: ValueKey('office-${office.cityId}'),
+          rect: rect,
+          properties: SemanticsProperties(
+            label:
+                '${office.name}（${atlas.towns[atlas.officeTownIds[office.cityId]]!.name}）',
+            button: true,
+            onTap: () => onOfficeSelected(office.cityId),
+            textDirection: TextDirection.ltr,
           ),
-    ];
+        ),
+      );
+    }
+    return nodes;
   };
 
   @override

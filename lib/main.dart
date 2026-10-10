@@ -17,6 +17,7 @@ import 'save_store.dart';
 import 'map_view.dart';
 import 'territory_map.dart';
 import 'tap_progress.dart';
+import 'attack_button.dart';
 
 const ink = Color(0xFF101C2B),
     panel = Color(0xFF192A3A),
@@ -925,8 +926,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: Semantics(
-            identifier: 'attack-tap',
+          child: protectAttackTap(
+            onPressed: can ? _attack : null,
             child: FilledButton(
               key: const Key('attack'),
               onPressed: can ? _attack : null,
