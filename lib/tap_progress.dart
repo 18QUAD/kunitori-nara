@@ -70,18 +70,38 @@ class _TapProgressState extends State<TapProgress>
     child: Padding(
       // Leave room for the pulse inside the width allocated by the header.
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: ScaleTransition(
-        key: const Key('tap-progress-pulse'),
-        scale: _scale,
-        child: Text(
-          '${number(widget.value)} / ${number(widget.population)}',
-          key: const Key('attack-progress'),
-          maxLines: 1,
-          style: const TextStyle(
-            color: Color(0xFFEEC47C),
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            fontVariations: [FontVariation('wght', 900)],
+      child: Semantics(
+        label: '${number(widget.value)} / ${number(widget.population)}',
+        child: ExcludeSemantics(
+          child: DefaultTextStyle.merge(
+            style: const TextStyle(
+              color: Color(0xFFEEC47C),
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              fontVariations: [FontVariation('wght', 900)],
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+            maxLines: 1,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ScaleTransition(
+                    key: const Key('tap-progress-pulse'),
+                    scale: _scale,
+                    child: Text(
+                      number(widget.value),
+                      key: const Key('attack-progress'),
+                    ),
+                  ),
+                ),
+                Text(
+                  '/ ${number(widget.population)}',
+                  key: const Key('attack-population'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

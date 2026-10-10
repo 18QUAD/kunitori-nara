@@ -128,7 +128,7 @@ void main() {
             .towns['292010010']!;
     expect(
       tester.widget<Text>(find.byKey(const Key('attack-progress'))).data,
-      '${number(homeTown.population)} / ${number(homeTown.population)}',
+      number(homeTown.population),
     );
     final initialScale =
         tester
@@ -193,7 +193,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.widget<Text>(find.byKey(const Key('attack-progress'))).data,
-      startsWith('10 / '),
+      '10',
     );
     expect(
       tester.widget<Text>(find.byKey(const Key('city-progress'))).data,

@@ -32,21 +32,38 @@ void main() {
               .value;
       await tester.pumpWidget(scene(0));
       expect(scale(), 1);
-      final text = tester.widget<Text>(
-        find.byKey(const Key('attack-progress')),
+      final style =
+          DefaultTextStyle.of(
+            tester.element(find.byKey(const Key('attack-progress'))),
+          ).style;
+      expect(style.fontSize, 22);
+      expect(style.fontWeight, FontWeight.w900);
+      final populationRect = tester.getRect(
+        find.byKey(const Key('attack-population')),
       );
-      expect(text.style!.fontSize, 22);
-      expect(text.style!.fontWeight, FontWeight.w900);
       await tester.pumpWidget(scene(1));
       await tester.pump(const Duration(milliseconds: 96));
       expect(scale(), closeTo(1.13, .001));
+      expect(
+        tester.getRect(find.byKey(const Key('attack-population'))),
+        populationRect,
+      );
+      expect(
+        tester.getRect(find.byKey(const Key('attack-progress'))).height,
+        greaterThan(populationRect.height),
+      );
       await tester.pumpWidget(scene(2));
       expect(scale(), 1);
       await tester.pump(const Duration(milliseconds: 96));
       expect(scale(), greaterThan(1.1));
       await tester.pump(const Duration(milliseconds: 144));
       expect(scale(), 1);
-      expect(find.text('2 / 12,000'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('/ 12,000'), findsOneWidget);
+      expect(
+        tester.getRect(find.byKey(const Key('attack-population'))),
+        populationRect,
+      );
       await tester.pumpWidget(scene(2));
       await tester.pump(const Duration(milliseconds: 96));
       expect(scale(), 1);
