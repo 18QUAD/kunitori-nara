@@ -803,7 +803,7 @@ class _MapPainter extends CustomPainter {
         zoom,
         isCity: office.isCity,
         ready: game.canStartQuizAt(atlas.officeTownIds[office.cityId]!),
-        mastered: overview && game.mastered.contains(office.cityId),
+        mastered: game.mastered.contains(office.cityId),
       );
     }
   }
