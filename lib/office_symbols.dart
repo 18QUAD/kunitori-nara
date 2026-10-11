@@ -7,6 +7,7 @@ void paintOfficeSymbol(
   double zoom, {
   required bool isCity,
   bool ready = false,
+  bool mastered = false,
 }) {
   canvas.save();
   canvas.translate(center.dx, center.dy);
@@ -14,7 +15,12 @@ void paintOfficeSymbol(
   canvas.drawCircle(Offset.zero, 9, Paint()..color = const Color(0xEE101C2B));
   final stroke =
       Paint()
-        ..color = ready ? const Color(0xFFEEC47C) : Colors.white
+        ..color =
+            mastered
+                ? const Color(0xFF7AE1BB)
+                : ready
+                ? const Color(0xFFEEC47C)
+                : Colors.white
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.6;
   canvas.drawCircle(Offset.zero, 6, stroke);
