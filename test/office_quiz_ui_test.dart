@@ -303,29 +303,29 @@ void main() {
         tester.widget<TerritoryMap>(find.byType(TerritoryMap)).cityId,
         '29205',
       );
-      expect(find.text('クイズを開始'), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text('橿原市の全地域制圧おめでとう！'), findsOneWidget);
       expect(game.quiz, isNull);
-      final practiceRect = tester.getRect(
-        find.ancestor(
-          of: find.text('クイズを予習'),
-          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
-        ),
-      );
-      final quizRect = tester.getRect(
-        find.ancestor(
-          of: find.text('制圧クイズに挑戦'),
-          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
-        ),
-      );
-      expect(practiceRect.overlaps(quizRect), isFalse);
-      expect(find.byKey(const Key('attack')), findsNothing);
-      await tester.tap(find.text('キャンセル'));
+      Future<void> readGuide() async {
+        for (var i = 0; i < 7; i++) {
+          await tester.tap(find.byKey(const Key('conquest-next')));
+          await tester.pumpAndSettle();
+        }
+      }
+
+      await readGuide();
+      expect(find.textContaining('クイズを始める？'), findsOneWidget);
+      await tester.tap(find.text('あとで'));
       await tester.pumpAndSettle();
       expect(game.quiz, isNull);
       expect(game.owned, saved.owned);
       expect(game.losses, 0);
-      await tapOffice();
-      await tester.tap(find.text('クイズを開始'));
+      // The action button, like an office map tap, opens the character guide.
+      await tester.tap(find.text('制圧クイズに挑戦'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      await readGuide();
+      await tester.tap(find.text('役所へ移動して挑戦'));
       await tester.pumpAndSettle();
       for (var i = 0; i < 5; i++) {
         expect(find.text('橿原市 · 制圧クイズ ${i + 1} / 5問'), findsOneWidget);

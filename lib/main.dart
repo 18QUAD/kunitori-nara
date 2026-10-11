@@ -164,7 +164,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Timer? timer, tipsTimer;
   DateTime? _nextTipAt, _feedbackEndsAt;
   bool corrupt = false;
-  bool _quizPromptOpen = false;
   bool _answerFeedbackOpen = false;
   Quiz? _feedbackQuiz;
   bool _feedbackCorrect = false;
@@ -460,39 +459,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _confirmQuiz(String townId) async {
-    final g = game!;
-    if (_quizPromptOpen || !g.canStartQuizAt(townId)) return;
-    _quizPromptOpen = true;
+    if (_completedCity != null || !game!.canStartQuizAt(townId)) return;
+    tipsTimer?.cancel();
+    _nextTipAt = null;
+    _conquestTimer?.cancel();
     final town = atlas!.towns[townId]!;
-    final office = atlas!.offices[town.cityId]!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('${atlas!.cities[town.cityId]}の制圧クイズ'),
-            content: Text(
-              '${office.name}（${town.name}）から挑戦します。\n4択5問に全問正解でクリア。制限時間は1問${g.difficulty.seconds}秒です。\n不正解・時間切れで、この役所所在地の支配を失います。本拠地の場合も対象です。\n開始前のキャンセルでは領土を失いません。',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('キャンセル'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('クイズを開始'),
-              ),
-            ],
-          ),
-    );
-    _quizPromptOpen = false;
-    if (!mounted || confirmed != true || game != g) return;
     setState(() {
-      _clearConquestFor(null);
-      g.startQuizAt(townId, DateTime.now());
+      _completedCity = town.cityId;
+      _conquestName = atlas!.cities[town.cityId];
+      _conquestTownId = townId;
+      _conquestSequence++;
+      _conquestPage = 0;
+      _conquestEffect = false;
+      _allRegionsEffect = false;
     });
-    _startTipsTimer();
-    _save();
   }
 
   void _focusOffice(String city) {
