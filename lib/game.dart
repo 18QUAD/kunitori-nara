@@ -360,6 +360,7 @@ class Game {
   String? home, attackTarget;
   final Set<String> owned = {},
       mastered = {},
+      conquestGuideSeen = {},
       seen = {},
       everOwned = {},
       titles = {};
@@ -613,6 +614,7 @@ class Game {
     'attackTarget': attackTarget,
     'owned': owned.toList(),
     'mastered': mastered.toList(),
+    'conquestGuideSeen': conquestGuideSeen.toList(),
     'seen': seen.toList(),
     'everOwned': everOwned.toList(),
     'titles': titles.toList(),
@@ -692,6 +694,19 @@ class Game {
       throw const FormatException('対応していない地域単位です。');
     }
     if (legacyUnits) g._migrateTownUnits();
+    if (j.containsKey('conquestGuideSeen')) {
+      g.conquestGuideSeen.addAll(List<String>.from(j['conquestGuideSeen']));
+    } else {
+      // Older saves already reached these municipalities' first conquest.
+      g.conquestGuideSeen.addAll(
+        atlas.cities.keys.where(
+          (city) => atlas.byCity[city]!.every(
+            (town) => g.everOwned.contains(town.id),
+          ),
+        ),
+      );
+    }
+
     // Retain acquired territories and adapt legacy partial progress to the new cap.
     if (j['tapRule'] == null) {
       for (final id in g.progress.keys.toList()) {
@@ -757,6 +772,7 @@ class Game {
         !g.everOwned.containsAll(g.owned) ||
         !validIds.containsAll(g.progress.keys) ||
         !atlas.cities.keys.toSet().containsAll(g.mastered) ||
+        !atlas.cities.keys.toSet().containsAll(g.conquestGuideSeen) ||
         !validFacts.containsAll(g.seen) ||
         g.totalTaps < 0 ||
         g.wins < 0 ||

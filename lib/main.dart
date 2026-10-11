@@ -217,7 +217,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _completedCity =
         game!.cityOwned(city) && !game!.mastered.contains(city) ? city : null;
     _allRegionsEffect = false;
-    _conquestPage = 0;
+    _conquestPage =
+        _completedCity != null && !game!.conquestGuideSeen.add(city)
+            ? _conquestPages.length - 1
+            : 0;
     _conquestTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       setState(() {
@@ -469,10 +472,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _conquestName = atlas!.cities[town.cityId];
       _conquestTownId = townId;
       _conquestSequence++;
-      _conquestPage = 0;
+      _conquestPage =
+          game!.conquestGuideSeen.add(town.cityId)
+              ? 0
+              : _conquestPages.length - 1;
       _conquestEffect = false;
       _allRegionsEffect = false;
     });
+    _save();
   }
 
   void _focusOffice(String city) {

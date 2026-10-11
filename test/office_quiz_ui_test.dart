@@ -324,7 +324,8 @@ void main() {
       await tester.tap(find.text('制圧クイズに挑戦'));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
-      await readGuide();
+      expect(find.byKey(const Key('conquest-next')), findsNothing);
+      expect(find.text('橿原市の全地域制圧おめでとう！'), findsNothing);
       await tester.tap(find.text('役所へ移動して挑戦'));
       await tester.pumpAndSettle();
       for (var i = 0; i < 5; i++) {

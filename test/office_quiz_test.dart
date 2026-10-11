@@ -285,6 +285,18 @@ void main() {
       expect(before.difference(game.owned), {atlas.officeTownIds['29402']!});
     },
   );
+  test('conquest guide history survives restore and quiz failure', () {
+    final game = ready('29205');
+    game.conquestGuideSeen.add('29205');
+    final restored = Game.restore(atlas, game.toJson());
+    expect(restored.conquestGuideSeen, {'29205'});
+    restored.startQuizAt(atlas.officeTownIds['29205']!, now);
+    restored.answer(null, now);
+    expect(restored.conquestGuideSeen, {'29205'});
+    final oldSave = game.toJson()..remove('conquestGuideSeen');
+    expect(Game.restore(atlas, oldSave).conquestGuideSeen, contains('29205'));
+    expect(Game(atlas).conquestGuideSeen, isEmpty);
+  });
   test('malformed pending questions and unknown rules are rejected', () {
     final game = ready('29205')
       ..startQuizAt(atlas.officeTownIds['29205']!, now);
