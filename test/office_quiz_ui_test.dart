@@ -15,6 +15,91 @@ import 'package:kunitori/tip_appearance.dart';
 import 'package:kunitori/tip_character.dart';
 
 void main() {
+  for (final start in [false, true]) {
+    testWidgets(
+      'full city capture guides then ${start ? "starts quiz" : "defers"}',
+      (tester) async {
+        rootBundle.clear();
+        final atlas = Atlas.fromJson(
+          jsonDecode(File('assets/data/nara.json').readAsStringSync()),
+        );
+        const city = '29205';
+        final office = atlas.officeTownIds[city]!;
+        final target = atlas.byCity[city]!.firstWhere(
+          (t) => t.id != office && t.neighbors.isNotEmpty,
+        );
+        final saved = Game(atlas)..setHome(office);
+        saved.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
+        saved.owned.remove(target.id);
+        saved.everOwned.addAll(saved.owned);
+        saved.selectAttackTarget(target.id);
+        saved.progress[target.id] = saved.requiredTaps(target) - 1;
+        SharedPreferences.setMockInitialValues({
+          'flutter.kunitori.nara.v1': jsonEncode(saved.toJson()),
+        });
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(const KunitoriApp());
+        for (
+          var i = 0;
+          i < 100 && find.byType(TerritoryMap).evaluate().isEmpty;
+          i++
+        ) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 100)),
+          );
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+        final game =
+            tester.widget<TerritoryMap>(find.byType(TerritoryMap)).game;
+        await tester.tap(find.byKey(const Key('attack')));
+        await tester.pump();
+        expect(game.cityOwned(city), isTrue);
+        expect(find.text('制圧完了'), findsOneWidget);
+        expect(
+          tester
+              .widget<FilledButton>(find.byKey(const Key('conquest-next')))
+              .onPressed,
+          isNull,
+        );
+        await tester.pump(const Duration(seconds: 3));
+        expect(find.text('全地域制圧'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+        expect(find.text('全地域制圧'), findsNothing);
+        expect(find.text('橿原市の全地域制圧おめでとう！'), findsOneWidget);
+        final owned = {...game.owned};
+        for (var i = 0; i < 7; i++) {
+          expect(game.quiz, isNull);
+          await tester.tap(find.byKey(const Key('conquest-next')));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+        }
+        expect(find.text('次へ'), findsNothing);
+        await tester.tap(find.text(start ? '役所へ移動して挑戦' : 'あとで'));
+        await tester.pumpAndSettle();
+        expect(game.owned, owned);
+        expect(game.losses, 0);
+        if (start) {
+          expect(game.quiz, isNotNull);
+          expect(
+            tester.widget<TerritoryMap>(find.byType(TerritoryMap)).selected,
+            office,
+          );
+          expect(find.text('クイズを開始'), findsNothing);
+        } else {
+          expect(game.quiz, isNull);
+          expect(find.byKey(const Key('conquest-next')), findsNothing);
+        }
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
   testWidgets(
     'office practice unlocks after capture, keeps the full attack area before capture and preserves progress',
     (tester) async {

@@ -174,6 +174,37 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   int _conquestSequence = 0;
   bool _conquestEffect = false;
   Timer? _conquestTimer;
+  String? _completedCity;
+  bool _allRegionsEffect = false;
+  int _conquestPage = 0;
+
+  List<String> get _conquestPages => [
+    '${atlas!.cities[_completedCity]}の全地域制圧おめでとう！',
+    '完全制覇には、制圧クイズに全問正解する必要があるよ。',
+    'クイズは役所所在地から挑戦する、4択5問だよ。',
+    '5問すべて正解で完全制覇！1問の制限時間は${game!.difficulty.seconds}秒だよ。',
+    '不正解や時間切れで、役所所在地の支配を失うよ。',
+    '役所所在地が本拠地の場合も対象だよ。気をつけてね。',
+    '開始前にキャンセルしても、領土は失わないよ。',
+    '${atlas!.offices[_completedCity]!.name}へ移動して、クイズを始める？',
+  ];
+
+  void _finishConquestGuide({required bool startQuiz}) {
+    final city = _completedCity!;
+    setState(() => _clearConquestFor(null));
+    _startTipsTimer();
+    if (startQuiz) {
+      final townId = atlas!.officeTownIds[city]!;
+      setState(() {
+        cityFilter = city;
+        selected = townId;
+        mapFocus++;
+        mapCenter++;
+        game!.startQuizAt(townId, DateTime.now());
+      });
+      _save();
+    }
+  }
 
   void _celebrateConquest(String name, String townId) {
     tipsTimer?.cancel();
@@ -183,8 +214,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _conquestTownId = townId;
     _conquestSequence++;
     _conquestEffect = true;
+    final city = atlas!.towns[townId]!.cityId;
+    _completedCity =
+        game!.cityOwned(city) && !game!.mastered.contains(city) ? city : null;
+    _allRegionsEffect = false;
+    _conquestPage = 0;
     _conquestTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _conquestEffect = false);
+      if (!mounted) return;
+      setState(() {
+        _conquestEffect = false;
+        _allRegionsEffect = _completedCity != null;
+      });
+      if (_allRegionsEffect) {
+        _conquestTimer = Timer(const Duration(seconds: 3), () {
+          if (mounted) setState(() => _allRegionsEffect = false);
+        });
+      }
     });
   }
 
@@ -192,6 +237,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (_conquestName == null || townId == _conquestTownId) return;
     _conquestTimer?.cancel();
     _conquestName = _conquestTownId = null;
+    _completedCity = null;
+    _allRegionsEffect = false;
     _conquestEffect = false;
   }
 
@@ -378,6 +425,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _selectCity(String? id) {
+    if (_completedCity != null) return;
     setState(() {
       cityFilter = id;
       selected = null;
@@ -390,6 +438,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   bool _select(String id) {
+    if (_completedCity != null) return false;
     final g = game!;
     final isOffice = atlas!.officeTownIds.values.contains(id);
     if (g.isReachable(id) && !g.selectAttackTarget(id) && !isOffice) {
@@ -755,20 +804,63 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   style: const TextStyle(color: Colors.white70),
                 ),
               )
+              : _completedCity != null
+              ? _conquestGuideControls()
               : _actionPanel(),
+    );
+  }
+
+  Widget _conquestGuideControls() {
+    final ready = !_conquestEffect && !_allRegionsEffect;
+    if (_conquestPage < _conquestPages.length - 1) {
+      return Center(
+        child: FilledButton(
+          key: const Key('conquest-next'),
+          onPressed: ready ? () => setState(() => _conquestPage++) : null,
+          child: const Text('次へ'),
+        ),
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: TextButton(
+            onPressed: () => _finishConquestGuide(startQuiz: false),
+            child: const Text('あとで'),
+          ),
+        ),
+        Expanded(
+          child: FilledButton(
+            onPressed: () => _finishConquestGuide(startQuiz: true),
+            child: const Text('役所へ移動して挑戦'),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _tipPresenter() => TipPresenter(
     text:
+        (_completedCity != null && !_conquestEffect && !_allRegionsEffect
+            ? _conquestPages[_conquestPage]
+            : null) ??
         (_conquestName == null ? null : '$_conquestNameの制圧おめでとう！次の町を選んでね！') ??
         visibleFact?.text ??
         (cityFilter == null ? '市区町村を選び、次に町から本拠地を選びましょう。' : '町を選んで本拠地を決めましょう。'),
-    appearance: tipAppearance,
+    appearance:
+        _completedCity != null
+            ? tipAppearance.copyWith(
+              showTips: true,
+              showCharacter: true,
+              showBubble: true,
+            )
+            : tipAppearance,
     speechKey:
         _conquestName == null
             ? '${visibleFact?.id}:$factIndex'
-            : 'conquest:$_conquestSequence',
+            : _completedCity == null
+            ? 'conquest:$_conquestSequence'
+            : 'conquest:$_conquestSequence:$_conquestPage:$_conquestEffect:$_allRegionsEffect',
     nextSpeechAt: _conquestName == null ? _nextTipAt : null,
     lipSyncDuration: const Duration(seconds: 3),
     expression:
@@ -976,9 +1068,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       if (store != null) unawaited(store!.saveMapView(view));
                     },
                     fitScale: 1,
-                    showControls: showControls,
+                    showControls: showControls && _completedCity == null,
                     controlsBottomInset:
-                        showTips && tipAppearance.showTips
+                        showTips &&
+                                (tipAppearance.showTips ||
+                                    _completedCity != null)
                             ? _tipMaxHeight(constraints) + 16
                             : 8,
                     onSelected: _select,
@@ -1003,10 +1097,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     ],
                   ),
                 ),
-                if (showTips && _conquestEffect)
+                if (showTips && (_conquestEffect || _allRegionsEffect))
                   Positioned.fill(
                     bottom:
-                        tipAppearance.showTips
+                        (tipAppearance.showTips || _completedCity != null)
                             ? _tipMaxHeight(constraints) + 16
                             : 0,
                     child: IgnorePointer(
@@ -1014,16 +1108,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: AnswerFeedback(
-                            key: ValueKey('conquest-effect:$_conquestSequence'),
+                            key: ValueKey(
+                              'conquest-effect:$_conquestSequence:$_allRegionsEffect',
+                            ),
                             correct: true,
                             streak: 5,
-                            text: '制圧完了',
+                            text: _allRegionsEffect ? '全地域制圧' : '制圧完了',
                           ),
                         ),
                       ),
                     ),
                   ),
-                if (showTips && tipAppearance.showTips)
+                if (showTips &&
+                    (tipAppearance.showTips || _completedCity != null))
                   Positioned(
                     key: const Key('map-tips-overlay'),
                     left: 0,
