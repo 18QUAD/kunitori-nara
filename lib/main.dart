@@ -304,7 +304,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (expiredOnLoad) _showQuizOutcome();
       if (g.home != null) _save();
       timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
-        if (!mounted || game!.quiz == null || _answerFeedbackOpen) return;
+        if (!mounted ||
+            game!.quiz == null ||
+            game!.quiz!.pausedRemaining != null ||
+            _answerFeedbackOpen) {
+          return;
+        }
         final q = game!.quiz!;
         if (!DateTime.now().isBefore(q.deadline)) {
           unawaited(_answerQuiz(q, null));
@@ -330,7 +335,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (game == null) return;
     if (state == AppLifecycleState.resumed && !_answerFeedbackOpen) {
       final q = game!.quiz;
-      if (q != null && !DateTime.now().isBefore(q.deadline)) {
+      if (q != null &&
+          q.pausedRemaining == null &&
+          !DateTime.now().isBefore(q.deadline)) {
         unawaited(_answerQuiz(q, null));
       } else {
         setState(() {});
@@ -784,16 +791,57 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 onClose: _closePractice,
               )
               : game!.quiz != null || _answerFeedbackOpen
-              ? Center(
-                child: Text(
-                  _answerFeedbackOpen ? '正解は吹き出しで確認できます' : '上の選択肢をタップして回答',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              )
+              ? _quizControls()
               : _completedCity != null
               ? _conquestGuideControls()
               : _actionPanel(),
+    );
+  }
+
+  Widget _quizControls() {
+    final q = game!.quiz;
+    if (_answerFeedbackOpen || q == null) {
+      return const Center(child: Text('正解は吹き出しで確認できます'));
+    }
+    if (q.pausedRemaining != null) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FilledButton(
+            onPressed: () {
+              setState(() => game!.quiz = null);
+              _startTipsTimer();
+              _save();
+            },
+            child: const Text('はい'),
+          ),
+          const SizedBox(width: 16),
+          OutlinedButton(
+            onPressed: () {
+              setState(() {
+                q.deadline = DateTime.now().add(q.pausedRemaining!);
+                q.pausedRemaining = null;
+              });
+              _save();
+            },
+            child: const Text('いいえ'),
+          ),
+        ],
+      );
+    }
+    return Center(
+      child: FilledButton(
+        onPressed: () {
+          final remaining = q.deadline.difference(DateTime.now());
+          if (remaining <= Duration.zero) {
+            unawaited(_answerQuiz(q, null));
+            return;
+          }
+          setState(() => q.pausedRemaining = remaining);
+          _save();
+        },
+        child: const Text('中止する'),
+      ),
     );
   }
 
@@ -1153,7 +1201,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   );
   Future<void> _answerQuiz(Quiz q, String? answer) async {
     final g = game!;
-    if (_answerFeedbackOpen || !identical(g.quiz, q)) return;
+    if (_answerFeedbackOpen ||
+        q.pausedRemaining != null ||
+        !identical(g.quiz, q)) {
+      return;
+    }
     _answerFeedbackOpen = true;
     final correct = g.answer(
       answer,
@@ -1189,11 +1241,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final q = _feedbackQuiz ?? game!.quiz!;
     final seconds = math.max(
       0,
-      (q.deadline.difference(DateTime.now()).inMilliseconds / 1000).ceil(),
+      ((q.pausedRemaining ?? q.deadline.difference(DateTime.now()))
+                  .inMilliseconds /
+              1000)
+          .ceil(),
     );
     return QuizStage(
       title: '${atlas!.cities[q.cityId]} · 制圧クイズ ${q.correctCount + 1} / 5問',
       question: q,
+      paused: q.pausedRemaining != null,
       appearance: tipAppearance,
       seconds: seconds,
       nextSpeechAt: _feedbackQuiz == null ? q.deadline : _feedbackEndsAt,

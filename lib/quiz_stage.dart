@@ -13,6 +13,7 @@ class QuizStage extends StatelessWidget {
     required this.onAnswer,
     this.appearance = const TipAppearance(),
     this.seconds,
+    this.paused = false,
     this.correct,
     this.streak = 0,
     this.nextSpeechAt,
@@ -22,6 +23,7 @@ class QuizStage extends StatelessWidget {
   final QuizQuestion question;
   final ValueChanged<String> onAnswer;
   final TipAppearance appearance;
+  final bool paused;
   final int? seconds;
   final bool? correct;
   final int streak;
@@ -48,7 +50,8 @@ class QuizStage extends StatelessWidget {
                         seconds: correct == null ? seconds : null,
                       ),
                       const SizedBox(height: 8),
-                      for (final answer in question.choices)
+                      for (final answer
+                          in paused ? <String>[] : question.choices)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 6),
                           child: OutlinedButton(
@@ -138,7 +141,9 @@ class QuizStage extends StatelessWidget {
             liveRegion: correct != null,
             child: QuizPrompt(
               question:
-                  correct == null
+                  paused
+                      ? '中止しても領土は失いませんがクイズは最初からやり直しになります。本当に中止しますか？'
+                      : correct == null
                       ? question.question
                       : correct!
                       ? correctAnswerSpeech(question.answer, streak)
@@ -150,9 +155,9 @@ class QuizStage extends StatelessWidget {
                       : correct!
                       ? TipExpression.joyful
                       : TipExpression.disappointed,
-              nextSpeechAt: nextSpeechAt,
+              nextSpeechAt: paused ? null : nextSpeechAt,
               lipSyncDuration: const Duration(seconds: 3),
-              speechKey: '${question.factId}:$correct',
+              speechKey: '${question.factId}:$correct:$paused',
             ),
           ),
         ),
@@ -175,27 +180,28 @@ class QuizTitle extends StatelessWidget {
       color: const Color(0xFF101C2B).withValues(alpha: 0.8),
       borderRadius: BorderRadius.circular(12),
     ),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
             title,
             maxLines: 1,
-            textAlign: TextAlign.center,
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-        ),
-        if (seconds != null)
-          Text(
-            '残り $seconds 秒',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: seconds! <= 5 ? Colors.redAccent : const Color(0xFF7AE1BB),
+          if (seconds != null) ...[
+            const SizedBox(width: 12),
+            Text(
+              '残り $seconds 秒',
+              style: TextStyle(
+                color:
+                    seconds! <= 5 ? Colors.redAccent : const Color(0xFF7AE1BB),
+              ),
             ),
-          ),
-      ],
+          ],
+        ],
+      ),
     ),
   );
 }

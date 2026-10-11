@@ -285,6 +285,17 @@ void main() {
       expect(before.difference(game.owned), {atlas.officeTownIds['29402']!});
     },
   );
+  test('paused quiz restores and cannot expire or accept an answer', () {
+    final game = ready('29205')
+      ..startQuizAt(atlas.officeTownIds['29205']!, now);
+    game.quiz!.pausedRemaining = const Duration(seconds: 7);
+    final restored = Game.restore(atlas, game.toJson());
+    expect(restored.quiz!.pausedRemaining, const Duration(seconds: 7));
+    expect(restored.expire(now.add(const Duration(hours: 1))), isFalse);
+    expect(restored.answer(restored.quiz!.answer, now), isNull);
+    expect(restored.losses, 0);
+    expect(restored.quiz!.correctCount, 0);
+  });
   test('conquest guide history survives restore and quiz failure', () {
     final game = ready('29205');
     game.conquestGuideSeen.add('29205');

@@ -15,6 +15,98 @@ import 'package:kunitori/tip_appearance.dart';
 import 'package:kunitori/tip_character.dart';
 
 void main() {
+  for (final abort in [true, false]) {
+    testWidgets(
+      'quiz stop confirmation ${abort ? "aborts" : "resumes"} without losing land',
+      (tester) async {
+        rootBundle.clear();
+        final atlas = Atlas.fromJson(
+          jsonDecode(File('assets/data/nara.json').readAsStringSync()),
+        );
+        const city = '29212';
+        final saved = Game(atlas)..setHome(atlas.officeTownIds[city]!);
+        saved.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
+        saved.everOwned.addAll(saved.owned);
+        saved.conquestGuideSeen.add(city);
+        saved.startQuizAt(saved.home!, DateTime.now());
+        // Leave enough wall-clock time for the large map to render in CI.
+        saved.quiz!.deadline = DateTime.now().add(const Duration(minutes: 10));
+        SharedPreferences.setMockInitialValues({
+          'flutter.kunitori.nara.v1': jsonEncode(saved.toJson()),
+        });
+        tester.view.physicalSize = const Size(390, 760);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(const KunitoriApp());
+        for (
+          var i = 0;
+          i < 100 && find.byType(TerritoryMap).evaluate().isEmpty;
+          i++
+        ) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 100)),
+          );
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+        final game =
+            tester.widget<TerritoryMap>(find.byType(TerritoryMap)).game;
+        final q = game.quiz!;
+        expect(find.byType(OutlinedButton), findsNWidgets(4));
+        final upper = tester.getRect(
+          find.byKey(const Key('quiz-upper-region')),
+        );
+        for (final button in find.byType(OutlinedButton).evaluate()) {
+          expect(
+            upper.contains(
+              tester.getRect(find.byWidget(button.widget)).bottomCenter,
+            ),
+            isTrue,
+          );
+        }
+        expect(find.text('上の選択肢をタップして回答'), findsNothing);
+        await tester.tap(find.text('中止する'));
+        await tester.pumpAndSettle();
+        final remaining = q.pausedRemaining!;
+        expect(
+          find.widgetWithText(OutlinedButton, q.choices.first),
+          findsNothing,
+        );
+        expect(
+          find.text('中止しても領土は失いませんがクイズは最初からやり直しになります。本当に中止しますか？'),
+          findsOneWidget,
+        );
+        await tester.pump(const Duration(seconds: 30));
+        expect(game.quiz, same(q));
+        expect(q.pausedRemaining, remaining);
+        await tester.tap(find.text(abort ? 'はい' : 'いいえ'));
+        await tester.pumpAndSettle();
+        expect(game.owned, saved.owned);
+        expect(game.losses, 0);
+        expect(game.wins, 0);
+        if (abort) {
+          expect(game.quiz, isNull);
+          await tester.tap(find.text('制圧クイズに挑戦'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('役所へ移動して挑戦'));
+          await tester.pumpAndSettle();
+          expect(game.quiz!.correctCount, 0);
+        } else {
+          expect(game.quiz, same(q));
+          expect(q.pausedRemaining, isNull);
+          expect(
+            (q.deadline.difference(DateTime.now()) - remaining).inMilliseconds
+                .abs(),
+            lessThan(1000),
+          );
+          expect(find.byType(OutlinedButton), findsNWidgets(4));
+        }
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
   for (final start in [false, true]) {
     testWidgets(
       'full city capture guides then ${start ? "starts quiz" : "defers"}',
@@ -338,7 +430,7 @@ void main() {
           isFalse,
         );
         expect(find.text('クイズを予習'), findsNothing);
-        expect(find.text('上の選択肢をタップして回答'), findsOneWidget);
+        expect(find.text('中止する'), findsOneWidget);
         expect(find.text('制圧成功'), findsNothing);
         final prompt = find.byType(QuizPrompt);
         expect(prompt, findsOneWidget);

@@ -322,11 +322,13 @@ class Quiz extends QuizQuestion {
     required super.answer,
     required super.choices,
     required this.deadline,
+    this.pausedRemaining,
     this.correctCount = 0,
     this.remaining = const [],
   });
   final String cityId;
-  final DateTime deadline;
+  DateTime deadline;
+  Duration? pausedRemaining;
   final int correctCount;
   final List<QuizQuestion> remaining;
   @override
@@ -334,6 +336,8 @@ class Quiz extends QuizQuestion {
     ...super.toJson(),
     'cityId': cityId,
     'deadline': deadline.toIso8601String(),
+    if (pausedRemaining != null)
+      'pausedRemainingMs': pausedRemaining!.inMilliseconds,
     'correctCount': correctCount,
     'remaining': remaining.map((q) => q.toJson()).toList(),
   };
@@ -344,6 +348,10 @@ class Quiz extends QuizQuestion {
     answer: j['answer'],
     choices: List<String>.from(j['choices']),
     deadline: DateTime.parse(j['deadline']),
+    pausedRemaining:
+        j['pausedRemainingMs'] == null
+            ? null
+            : Duration(milliseconds: j['pausedRemainingMs']),
     correctCount: j['correctCount'] ?? 0,
     remaining: [
       for (final q in j['remaining'] ?? [])
@@ -556,7 +564,7 @@ class Game {
     Duration nextQuestionDelay = Duration.zero,
   }) {
     final q = quiz;
-    if (q == null) return null;
+    if (q == null || q.pausedRemaining != null) return null;
     final correct = now.isBefore(q.deadline) && choice == q.answer;
     if (correct && q.remaining.isNotEmpty) {
       final next = q.remaining.first;
@@ -596,7 +604,9 @@ class Game {
   }
 
   bool expire(DateTime now) {
-    if (quiz != null && !now.isBefore(quiz!.deadline)) {
+    if (quiz != null &&
+        quiz!.pausedRemaining == null &&
+        !now.isBefore(quiz!.deadline)) {
       answer(null, now);
       return true;
     }
