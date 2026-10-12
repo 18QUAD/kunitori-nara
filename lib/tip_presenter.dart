@@ -13,6 +13,7 @@ class TipPresenter extends StatelessWidget {
     this.nextSpeechAt,
     this.lipSyncDuration,
     this.expression = TipExpression.neutral,
+    this.content,
   });
   final String text;
   final TipAppearance appearance;
@@ -21,6 +22,7 @@ class TipPresenter extends StatelessWidget {
   final DateTime? nextSpeechAt;
   final Duration? lipSyncDuration;
   final TipExpression expression;
+  final Widget? content;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +109,7 @@ class TipPresenter extends StatelessWidget {
                 ),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
+                    if (content != null) return content!;
                     var fontSize = expandForText ? 16.0 : a.size.fontSize;
                     TextStyle style() => TextStyle(
                       fontSize: fontSize,

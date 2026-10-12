@@ -957,48 +957,50 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Widget _tipPresenter() {
     _refreshAds();
     final ad = _visibleAd;
-    if (ad != null) {
-      return RegionalAdCard(
-        ad: ad,
-        cityName: atlas!.cities[ad.cityId]!,
-        maxHeight: tipAppearance.size.height,
-      );
-    }
-    return AbsorbPointer(
-      child: TipPresenter(
-        text:
-            (_completedCity != null && !_conquestEffect && !_allRegionsEffect
-                ? _conquestPages[_conquestPage]
-                : null) ??
-            (_conquestName == null
-                ? null
-                : '$_conquestNameの制圧おめでとう！次の町を選んでね！') ??
-            visibleFact?.text ??
-            (cityFilter == null
-                ? '市区町村を選び、次に町から本拠地を選びましょう。'
-                : '町を選んで本拠地を決めましょう。'),
-        appearance:
-            _completedCity != null
-                ? tipAppearance.copyWith(
-                  showTips: true,
-                  showCharacter: true,
-                  showBubble: true,
-                )
-                : tipAppearance,
-        speechKey:
-            _conquestName == null
-                ? '${visibleFact?.id}:$factIndex'
-                : _completedCity == null
-                ? 'conquest:$_conquestSequence'
-                : 'conquest:$_conquestSequence:$_conquestPage:$_conquestEffect:$_allRegionsEffect',
-        nextSpeechAt: _conquestName == null ? _nextTipAt : null,
-        lipSyncDuration: const Duration(seconds: 3),
-        expression:
-            _conquestName == null
-                ? TipExpression.neutral
-                : TipExpression.joyful,
-      ),
+    final presenter = TipPresenter(
+      content:
+          ad == null
+              ? null
+              : RegionalAdCard(
+                ad: ad,
+                cityName: atlas!.cities[ad.cityId]!,
+                maxHeight: tipAppearance.size.height,
+                embedded: true,
+                foreground:
+                    !tipAppearance.showBubble ||
+                            tipAppearance.bubbleStyle == TipBubbleStyle.mint
+                        ? Colors.white
+                        : const Color(0xFF382D20),
+              ),
+      text:
+          (_completedCity != null && !_conquestEffect && !_allRegionsEffect
+              ? _conquestPages[_conquestPage]
+              : null) ??
+          (_conquestName == null ? null : '$_conquestNameの制圧おめでとう！次の町を選んでね！') ??
+          visibleFact?.text ??
+          (cityFilter == null
+              ? '市区町村を選び、次に町から本拠地を選びましょう。'
+              : '町を選んで本拠地を決めましょう。'),
+      appearance:
+          _completedCity != null
+              ? tipAppearance.copyWith(
+                showTips: true,
+                showCharacter: true,
+                showBubble: true,
+              )
+              : tipAppearance,
+      speechKey:
+          _conquestName == null
+              ? '${visibleFact?.id}:$factIndex'
+              : _completedCity == null
+              ? 'conquest:$_conquestSequence'
+              : 'conquest:$_conquestSequence:$_conquestPage:$_conquestEffect:$_allRegionsEffect',
+      nextSpeechAt: _conquestName == null ? _nextTipAt : null,
+      lipSyncDuration: const Duration(seconds: 3),
+      expression:
+          _conquestName == null ? TipExpression.neutral : TipExpression.joyful,
     );
+    return ad == null ? AbsorbPointer(child: presenter) : presenter;
   }
 
   void _tipSettings() => showModalBottomSheet<void>(

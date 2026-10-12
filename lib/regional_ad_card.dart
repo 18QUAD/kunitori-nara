@@ -11,11 +11,15 @@ class RegionalAdCard extends StatelessWidget {
     required this.cityName,
     required this.maxHeight,
     this.onOpen,
+    this.embedded = false,
+    this.foreground = const Color(0xFF382D20),
   });
   final RegionalAd ad;
   final String cityName;
   final double maxHeight;
   final VoidCallback? onOpen;
+  final bool embedded;
+  final Color foreground;
 
   Future<void> _open(BuildContext context) async {
     if (onOpen != null) {
@@ -44,7 +48,26 @@ class RegionalAdCard extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
       final height = math.min(maxHeight, box.maxHeight);
-      final compact = height < 85;
+      final compact = height < 78;
+      final padding = embedded ? 4.0 : 8.0;
+      final width = math.max(0.0, box.maxWidth - padding * 2);
+      final secondary = foreground.withValues(alpha: .8);
+      Widget line(
+        String text,
+        double size, {
+        int lines = 1,
+        bool bold = false,
+      }) => Text(
+        text,
+        maxLines: lines,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: bold ? foreground : secondary,
+          fontSize: size,
+          height: 1.1,
+          fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
+        ),
+      );
       return Align(
         alignment: Alignment.bottomCenter,
         heightFactor: 1,
@@ -52,8 +75,8 @@ class RegionalAdCard extends StatelessWidget {
           key: const Key('regional-ad-card'),
           height: height,
           child: Material(
-            color: const Color(0xFFFFF2D7),
-            borderRadius: BorderRadius.circular(16),
+            color: embedded ? Colors.transparent : const Color(0xFFFFF2D7),
+            borderRadius: BorderRadius.circular(embedded ? 8 : 16),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: () => _open(context),
@@ -62,99 +85,82 @@ class RegionalAdCard extends StatelessWidget {
                 label:
                     '広告、$cityNameの${ad.label}、${ad.advertiser}、${ad.name}、${ad.service}で詳細を見る',
                 child: Padding(
-                  padding: EdgeInsets.all(compact ? 6 : 10),
-                  child: Row(
-                    children: [
-                      if (!compact &&
-                          box.maxWidth >= 340 &&
-                          ad.imageUrl != null)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 10),
-                          child: SizedBox(
-                            width: 64,
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: Image.network(
-                                    ad.imageUrl.toString(),
-                                    fit: BoxFit.contain,
-                                    errorBuilder:
-                                        (_, __, ___) => const Icon(
-                                          Icons.storefront,
-                                          color: Color(0xFF382D20),
-                                        ),
-                                  ),
-                                ),
-                                if (ad.category == 'hotel')
-                                  const Positioned(
-                                    left: 0,
-                                    bottom: 0,
-                                    child: ColoredBox(
-                                      color: Colors.white,
-                                      child: Text(
-                                        '楽天トラベル',
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 8,
-                                        ),
+                  padding: EdgeInsets.all(padding),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: width,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          if (!compact && width >= 200 && ad.imageUrl != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: SizedBox(
+                                width: 42,
+                                height: 54,
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: Image.network(
+                                        ad.imageUrl.toString(),
+                                        fit: BoxFit.contain,
+                                        errorBuilder:
+                                            (_, __, ___) => Icon(
+                                              Icons.storefront,
+                                              color: foreground,
+                                              size: 28,
+                                            ),
                                       ),
                                     ),
+                                    if (ad.category == 'hotel')
+                                      const Positioned(
+                                        left: 0,
+                                        bottom: 0,
+                                        child: ColoredBox(
+                                          color: Colors.white,
+                                          child: Text(
+                                            '楽天トラベル',
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 8,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                line('PR · $cityName · ${ad.label}', 9),
+                                if (ad.advertiser != ad.name)
+                                  line(ad.advertiser, 11, bold: true),
+                                line(
+                                  ad.name,
+                                  12,
+                                  lines: compact ? 1 : 2,
+                                  bold: true,
+                                ),
+                                line('${ad.service}で詳細を見る ↗', 9),
+                                const SizedBox(
+                                  height: 14,
+                                  child: ColoredBox(
+                                    color: Colors.white,
+                                    child: AdCredit(),
                                   ),
+                                ),
                               ],
                             ),
                           ),
-                        ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'PR · $cityName · ${ad.label}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFF72582A),
-                                fontSize: 10,
-                              ),
-                            ),
-                            if (!compact)
-                              Text(
-                                ad.advertiser,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xFF382D20),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            Flexible(
-                              child: Text(
-                                ad.name,
-                                maxLines: compact ? 1 : 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xFF382D20),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              '${ad.service}で詳細を見る ↗',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFF72582A),
-                                fontSize: 10,
-                              ),
-                            ),
-                            if (!compact)
-                              const SizedBox(height: 14, child: AdCredit()),
-                          ],
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),

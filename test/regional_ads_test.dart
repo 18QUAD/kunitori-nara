@@ -10,6 +10,8 @@ import 'package:kunitori/main.dart';
 import 'package:kunitori/regional_ads.dart';
 import 'package:kunitori/regional_ad_card.dart';
 import 'package:kunitori/save_store.dart';
+import 'package:kunitori/tip_presenter.dart';
+import 'package:kunitori/tip_appearance.dart';
 
 Map<String, dynamic> adJson(String city) => {
   'cityId': city,
@@ -181,9 +183,22 @@ void main() {
     await tester.pump();
     expect(requested, [city]);
     expect(find.byKey(const Key('regional-ad-card')), findsNothing);
+    final tipRect = tester.getRect(find.byKey(const Key('tips-region')));
+    final characterRect = tester.getRect(
+      find.byKey(const Key('tip-character')),
+    );
     await tester.pump(const Duration(seconds: 15));
     await tester.pump();
     expect(find.byKey(const Key('regional-ad-card')), findsOneWidget);
+    expect(tester.getRect(find.byKey(const Key('tips-region'))), tipRect);
+    expect(
+      tester.getRect(find.byKey(const Key('tip-character'))),
+      characterRect,
+    );
+    final bubble = tester.getRect(find.byKey(const Key('tip-bubble')));
+    final card = tester.getRect(find.byKey(const Key('regional-ad-card')));
+    expect(bubble.contains(card.topLeft), isTrue);
+    expect(bubble.contains(card.bottomRight), isTrue);
     final map = tester.getRect(find.byKey(const Key('fixed-region')));
     expect(
       map.contains(
@@ -196,4 +211,80 @@ void main() {
     expect(find.byKey(const Key('regional-ad-card')), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets(
+    'long advertisements stay within the same tips bubble across sizes',
+    (tester) async {
+      final ad =
+          RegionalAd.parse({
+            ...adJson('29201'),
+            'name': '奈良の地元企業の商品名が長い場合も吹き出しの内側に収まるように表示するテスト用の商品です',
+          }, '29201')!;
+      for (final width in [280.0, 320.0, 390.0]) {
+        for (final size in TipSize.values) {
+          for (final scale in [1.0, 2.0]) {
+            for (final right in [false, true]) {
+              final appearance = TipAppearance(
+                size: size,
+                characterOnRight: right,
+              );
+              Widget frame(Widget? content) => MaterialApp(
+                home: Scaffold(
+                  body: Center(
+                    child: MediaQuery(
+                      data: MediaQueryData(
+                        textScaler: TextScaler.linear(scale),
+                      ),
+                      child: SizedBox(
+                        width: width,
+                        height: size.height,
+                        child: TipPresenter(
+                          text: '通常のtips',
+                          appearance: appearance,
+                          content: content,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+              await tester.pumpWidget(frame(null));
+              final original = tester.getRect(
+                find.byKey(const Key('tips-region')),
+              );
+              await tester.pumpWidget(
+                frame(
+                  RegionalAdCard(
+                    ad: ad,
+                    cityName: '奈良市',
+                    maxHeight: size.height,
+                    embedded: true,
+                    onOpen: () {},
+                  ),
+                ),
+              );
+              expect(
+                tester.getRect(find.byKey(const Key('tips-region'))),
+                original,
+              );
+              final bubble = tester.getRect(
+                find.byKey(const Key('tip-bubble')),
+              );
+              final card = tester.getRect(
+                find.byKey(const Key('regional-ad-card')),
+              );
+              expect(bubble.contains(card.topLeft), isTrue);
+              expect(bubble.contains(card.bottomRight), isTrue);
+              expect(
+                tester.takeException(),
+                isNull,
+                reason: 'width=$width, size=$size, scale=$scale, right=$right',
+              );
+            }
+          }
+        }
+      }
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 }
