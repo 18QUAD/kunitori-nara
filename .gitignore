@@ -9,6 +9,8 @@ desktop.ini
 *.mobileprovision
 coverage/
 artifacts/
+node_modules/
+.wrangler/
 *.class
 *.log
 *.pyc

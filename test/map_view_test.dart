@@ -124,10 +124,12 @@ void main() {
       expect(mapButtons, findsNWidgets(5));
       for (final button in mapButtons.evaluate()) {
         final surface = tester.widget<Material>(
-          find.descendant(
-            of: find.byWidget(button.widget),
-            matching: find.byType(Material),
-          ).first,
+          find
+              .descendant(
+                of: find.byWidget(button.widget),
+                matching: find.byType(Material),
+              )
+              .first,
         );
         expect(surface.color, Colors.white);
       }

@@ -1,0 +1,43 @@
+name: Publish Flutter Web
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-web
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter analyze --no-pub
+      - run: flutter test --no-pub
+      - name: Build with public API endpoint
+        env:
+          REGIONAL_ADS_ENDPOINT: ${{ vars.REGIONAL_ADS_ENDPOINT }}
+        run: flutter build web --release --no-pub --base-href /kunitori-nara/ --dart-define="REGIONAL_ADS_ENDPOINT=$REGIONAL_ADS_ENDPOINT"
+      - name: Publish gh-pages
+        run: |
+          git fetch origin gh-pages:refs/remotes/origin/gh-pages
+          git worktree add /tmp/kunitori-pages origin/gh-pages
+          rsync -a --delete --exclude=.git build/web/ /tmp/kunitori-pages/
+          cd /tmp/kunitori-pages
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish Web from $GITHUB_SHA"
+            git push origin HEAD:gh-pages
+          fi

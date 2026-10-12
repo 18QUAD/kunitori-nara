@@ -36,6 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.3
   web: ^1.1.1
+  http: ^1.3.0
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +70,7 @@ flutter:
     - assets/characters/nara_guide_sad.png
     - assets/characters/nara_guide_sad_face_parts.png
     - assets/data/nara.json
+    - assets/data/affiliate_config.json
     - assets/data/nara_relief.png
     - assets/data/nara_relief.json
     - assets/data/nara_water.json

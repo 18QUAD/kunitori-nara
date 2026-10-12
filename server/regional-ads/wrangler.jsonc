@@ -1,0 +1,8 @@
+{
+  "name": "kunitori-nara-regional-ads",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-01",
+  "vars": {
+    "ALLOWED_ORIGIN": "https://18quad.github.io"
+  }
+}

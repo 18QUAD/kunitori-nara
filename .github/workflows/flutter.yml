@@ -48,6 +48,15 @@ jobs:
       - name: Run tests
         run: flutter test --no-pub --coverage
 
+      - name: Set up Node for advertising API checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test regional advertising API
+        working-directory: server/regional-ads
+        run: node --test worker.test.mjs
+
       - name: Build Android development APK
         run: flutter build apk --debug --no-pub
 

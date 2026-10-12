@@ -1,0 +1,185 @@
+{
+  "29201": {
+    "name": "奈良市",
+    "shops": [
+      {
+        "code": "suncoco",
+        "name": "ふとんのマルソウ",
+        "source": "https://www.rakuten.co.jp/suncoco/info.html"
+      }
+    ],
+    "furusatoShop": "f292010-nara"
+  },
+  "29202": {
+    "name": "大和高田市",
+    "shops": []
+  },
+  "29203": {
+    "name": "大和郡山市",
+    "shops": []
+  },
+  "29204": {
+    "name": "天理市",
+    "shops": []
+  },
+  "29205": {
+    "name": "橿原市",
+    "shops": [
+      {
+        "code": "yamatomahoroba",
+        "name": "大和まほろば 本舗",
+        "source": "https://www.rakuten.co.jp/yamatomahoroba/info.html"
+      }
+    ],
+    "furusatoShop": "f292052-kashihara"
+  },
+  "29206": {
+    "name": "桜井市",
+    "shops": [
+      {
+        "code": "miwasoumenkonisi",
+        "name": "三輪そうめん小西",
+        "source": "https://www.rakuten.co.jp/miwasoumenkonisi/info.html"
+      },
+      {
+        "code": "miwayamakatsu",
+        "name": "三輪山勝製麺",
+        "source": "https://item.rakuten.co.jp/miwayamakatsu/c/0000000100/"
+      }
+    ],
+    "furusatoShop": "f292061-sakurai"
+  },
+  "29207": {
+    "name": "五條市",
+    "shops": []
+  },
+  "29208": {
+    "name": "御所市",
+    "shops": []
+  },
+  "29209": {
+    "name": "生駒市",
+    "shops": []
+  },
+  "29210": {
+    "name": "香芝市",
+    "shops": []
+  },
+  "29211": {
+    "name": "葛城市",
+    "shops": []
+  },
+  "29212": {
+    "name": "宇陀市",
+    "shops": []
+  },
+  "29322": {
+    "name": "山添村",
+    "shops": []
+  },
+  "29342": {
+    "name": "平群町",
+    "shops": []
+  },
+  "29343": {
+    "name": "三郷町",
+    "shops": []
+  },
+  "29344": {
+    "name": "斑鳩町",
+    "shops": []
+  },
+  "29345": {
+    "name": "安堵町",
+    "shops": []
+  },
+  "29361": {
+    "name": "川西町",
+    "shops": []
+  },
+  "29362": {
+    "name": "三宅町",
+    "shops": []
+  },
+  "29363": {
+    "name": "田原本町",
+    "shops": []
+  },
+  "29385": {
+    "name": "曽爾村",
+    "shops": []
+  },
+  "29386": {
+    "name": "御杖村",
+    "shops": []
+  },
+  "29401": {
+    "name": "高取町",
+    "shops": []
+  },
+  "29402": {
+    "name": "明日香村",
+    "shops": []
+  },
+  "29424": {
+    "name": "上牧町",
+    "shops": []
+  },
+  "29425": {
+    "name": "王寺町",
+    "shops": []
+  },
+  "29426": {
+    "name": "広陵町",
+    "shops": []
+  },
+  "29427": {
+    "name": "河合町",
+    "shops": []
+  },
+  "29441": {
+    "name": "吉野町",
+    "shops": [],
+    "furusatoShop": "f294411-yoshino"
+  },
+  "29442": {
+    "name": "大淀町",
+    "shops": []
+  },
+  "29443": {
+    "name": "下市町",
+    "shops": []
+  },
+  "29444": {
+    "name": "黒滝村",
+    "shops": []
+  },
+  "29446": {
+    "name": "天川村",
+    "shops": []
+  },
+  "29447": {
+    "name": "野迫川村",
+    "shops": []
+  },
+  "29449": {
+    "name": "十津川村",
+    "shops": []
+  },
+  "29450": {
+    "name": "下北山村",
+    "shops": []
+  },
+  "29451": {
+    "name": "上北山村",
+    "shops": []
+  },
+  "29452": {
+    "name": "川上村",
+    "shops": []
+  },
+  "29453": {
+    "name": "東吉野村",
+    "shops": []
+  }
+}

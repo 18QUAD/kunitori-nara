@@ -108,7 +108,7 @@ python tools/import_wikipedia_tips.py --check
 
 今回の範囲は「地図→隣接→タップ攻略→地域情報→市町村クイズ→領土保存」。
 県全域・市町村への移動と町選択に対応。全国・地方を含む5階層地図、主要道路侵攻、
-対戦・チーム・シーズン、オンラインランキング、GDP・石高、企業広告は未実装です。
+対戦・チーム・シーズン、オンラインランキング、GDP・石高は未実装です。
 対戦の導入にはサーバー側の領土状態・タップ検証・シーズン集計・認証が必要です。
 
 ## クラウド開発（GitHub）
@@ -138,6 +138,64 @@ flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080
 Androidビルドはpush後にActionsで行います。Codespacesの起動はユーザー操作です。
 利用枠・料金はアカウント契約に依存します。使用後はCodespaceを停止してください。
 ゲームの端末内保存をクラウド同期する変更は含みません。
+
+## 奈良県の地域広告（楽天API）
+
+攻略中の町の市町村を優先し、攻略していないときは選択した町・市町村、未選択なら本拠地に合わせて広告を表示します。
+通常のtipsを3回表示した後、4回目に具体的な商品・返礼品・宿泊施設のPRカードを5秒表示します。
+カードをタップすると楽天の詳細ページを別画面で開きます。クイズ・制圧演出中、tips非表示時には広告を表示しません。
+ゲーム進行・保存データを楽天へ送りません。取得APIに送るのは市町村IDだけです。
+
+GitHub PagesにはAPIキー・楽天から取得した商品データを保存しません。
+`server/regional-ads/` のCloudflare WorkerがAPIを呼び、表示に必要な名称・画像URL・広告URLのみを返します。
+サーバーとアプリのキャッシュは最長1時間。失敗したカテゴリーは非表示にして5分後に再取得します。
+設定未完了・通信失敗・期限切れのときは通常のtipsを表示します。架空の広告や報酬の付かない代替リンクは表示しません。
+
+奈良県の全39市町村に対応します。地元企業は所在地の確認済みショップに限定し、初期登録は奈良市（ふとんのマルソウ）、
+橿原市（大和まほろば 本舗）、桜井市（三輪そうめん小西・三輪山勝製麺）です。
+返礼品は確認済み自治体ショップを優先し、未登録の市町村は検索結果のショップ名が対象自治体名と完全一致する場合のみ採用します。
+宿泊は施設の住所が奈良県と対象市町村に一致する場合のみ採用します。結果がない地域には他地域の広告を出しません。
+ショップの地域対応と確認元URLは `server/regional-ads/regions.json` に記録しています。
+
+### 稼働開始の手順
+
+1. [楽天アフィリエイト](https://affiliate.rakuten.co.jp/)の利用サイト情報に `https://18quad.github.io/kunitori-nara/` を登録します。
+2. [楽天ウェブサービス](https://webservice.rakuten.co.jp/)でアプリを登録し、アプリID・アクセスキー・アフィリエイトIDを取得します。
+   アプリの許可サイト／Originに公開サイトの `https://18quad.github.io` を設定し、トラベルAPIの利用承認が必要な場合は申請します。
+3. Cloudflare Workersを用意します。GitHubリポジトリの Settings → Secrets and variables → Actions に次のSecretsを登録します。
+   `RAKUTEN_APPLICATION_ID`、`RAKUTEN_ACCESS_KEY`、`RAKUTEN_AFFILIATE_ID`、`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`。
+   Cloudflareのトークンは対象アカウントのWorkersを編集・公開できる権限を設定してください。値はソースやチャットに貼り付けません。
+4. GitHub Actionsの **Deploy regional ads API → Run workflow** を実行します。
+5. 公開されたWorkerの `https://kunitori-nara-regional-ads.<自分のサブドメイン>.workers.dev/ads` を、
+   同じ設定画面の **Variables** に `REGIONAL_ADS_ENDPOINT` として登録します。このURLに秘密情報を含めません。
+6. **Publish Flutter Web → Run workflow** を実行します。公開後、奈良市などを攻略し、4回目のtipsでPRカードが出ることを確認します。
+
+キー取得・Worker公開・エンドポイント設定が完了するまでは広告非表示です。
+広告取得は地域選択時とキャッシュ期限後に自動実行され、個別商品の登録やリンク発行は不要です。
+APIの表示・素材利用条件と掲載商品の成果報酬対象は楽天の最新条件に従います。
+宿泊画像はAPIで取得し「楽天トラベル」を画像左下に表示します。価格・空室・寄付額はカード内では表示しません。
+
+### ローカル検証・デプロイ
+
+```sh
+flutter test test/regional_ads_test.dart
+cd server/regional-ads
+npm ci
+npm test
+# Cloudflareの認証を設定済みの場合
+npx wrangler secret put RAKUTEN_APPLICATION_ID
+npx wrangler secret put RAKUTEN_ACCESS_KEY
+npx wrangler secret put RAKUTEN_AFFILIATE_ID
+npm run deploy
+```
+
+APIの疎通は `/ads?city=29201`（奈良市）で確認できます。秘密情報はレスポンスには含めません。
+アプリの取得先は `assets/data/affiliate_config.json` の `endpoint` でも設定でき、
+`--dart-define=REGIONAL_ADS_ENDPOINT=https://.../ads` を指定した場合はそちらを優先します。
+
+参照：[商品検索API](https://webservice.rakuten.co.jp/documentation/ichiba-item-search)、
+[宿泊検索API](https://webservice.rakuten.co.jp/documentation/keyword-hotel-search)、
+[画像利用条件](https://travel.rakuten.co.jp/affiliate/guide/)。
 
 町単位の統合では、国勢調査の町コードと地名を使い、丁目・小字の人口・面積・境界を合算。同じ町コードに別の町名が混在する箇所は分離し、市町村が異なる同名の町は統合しません。旧保存の本拠地は所属する町に引き継ぎ、他の一部獲得済み地区は町の攻略人口に加算します。
 

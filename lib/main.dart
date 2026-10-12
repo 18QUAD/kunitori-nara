@@ -18,6 +18,8 @@ import 'map_view.dart';
 import 'territory_map.dart';
 import 'tap_progress.dart';
 import 'attack_button.dart';
+import 'regional_ads.dart';
+import 'regional_ad_card.dart';
 
 const ink = Color(0xFF101C2B),
     panel = Color(0xFF192A3A),
@@ -32,7 +34,8 @@ Future<void> main() async {
 }
 
 class KunitoriApp extends StatelessWidget {
-  const KunitoriApp({super.key});
+  const KunitoriApp({super.key, this.adRepository});
+  final RegionalAdRepository? adRepository;
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'くにとり · 奈良',
@@ -141,12 +144,13 @@ class KunitoriApp extends StatelessWidget {
             );
           },
         ),
-    home: const GameScreen(),
+    home: GameScreen(adRepository: adRepository),
   );
 }
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  const GameScreen({super.key, this.adRepository});
+  final RegionalAdRepository? adRepository;
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
@@ -176,6 +180,65 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String? _completedCity;
   bool _allRegionsEffect = false;
   int _conquestPage = 0;
+  RegionalAdRepository? _adRepository;
+  RegionalAdBatch? _adBatch;
+  String? _adCity, _adRequestCity;
+  int _adRequestVersion = 0;
+
+  String? get _advertisingCity =>
+      game == null
+          ? null
+          : advertisingCity(
+            game!,
+            selectedTown: selected,
+            selectedCity: cityFilter,
+          );
+
+  RegionalAd? get _visibleAd {
+    final batch = _adBatch;
+    if (!tipAppearance.showTips ||
+        _quizActive ||
+        _conquestName != null ||
+        _completedCity != null ||
+        factIndex % 4 != 3 ||
+        batch == null ||
+        _adCity != _advertisingCity ||
+        batch.ads.isEmpty ||
+        !DateTime.now().isBefore(batch.expiresAt)) {
+      return null;
+    }
+    return batch.ads[(factIndex ~/ 4) % batch.ads.length];
+  }
+
+  void _refreshAds() {
+    final city = _advertisingCity;
+    final repository = _adRepository;
+    if (city == null ||
+        repository == null ||
+        repository.endpoint == null ||
+        !tipAppearance.showTips ||
+        _quizActive ||
+        _conquestName != null ||
+        _adRequestCity == city ||
+        (_adCity == city &&
+            _adBatch != null &&
+            DateTime.now().isBefore(_adBatch!.expiresAt))) {
+      return;
+    }
+    _adRequestCity = city;
+    final version = ++_adRequestVersion;
+    unawaited(
+      repository.load(city).then((batch) {
+        if (!mounted || version != _adRequestVersion) return;
+        _adRequestCity = null;
+        if (city != _advertisingCity) return;
+        setState(() {
+          _adCity = city;
+          _adBatch = batch;
+        });
+      }),
+    );
+  }
 
   List<String> get _conquestPages => [
     '${atlas!.cities[_completedCity]}の全地域制圧おめでとう！',
@@ -251,6 +314,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _load();
+    unawaited(
+      (widget.adRepository == null
+              ? RegionalAdRepository.configured()
+              : Future.value(widget.adRepository!))
+          .then((repository) {
+            if (!mounted) {
+              repository.dispose();
+              return;
+            }
+            setState(() => _adRepository = repository);
+          }),
+    );
   }
 
   @override
@@ -259,6 +334,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     tipsTimer?.cancel();
     _conquestTimer?.cancel();
     _practice?.dispose();
+    _adRepository?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     if (store != null) store!.onChanged = null;
     super.dispose();
@@ -405,7 +481,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _rememberVisibleFact() {
-    if (!tipAppearance.showTips || _conquestName != null) return;
+    if (!tipAppearance.showTips ||
+        _conquestName != null ||
+        _visibleAd != null) {
+      return;
+    }
     final f = visibleFact;
     if (f != null) game!.seen.add(f.id);
   }
@@ -874,33 +954,52 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _tipPresenter() => TipPresenter(
-    text:
-        (_completedCity != null && !_conquestEffect && !_allRegionsEffect
-            ? _conquestPages[_conquestPage]
-            : null) ??
-        (_conquestName == null ? null : '$_conquestNameの制圧おめでとう！次の町を選んでね！') ??
-        visibleFact?.text ??
-        (cityFilter == null ? '市区町村を選び、次に町から本拠地を選びましょう。' : '町を選んで本拠地を決めましょう。'),
-    appearance:
-        _completedCity != null
-            ? tipAppearance.copyWith(
-              showTips: true,
-              showCharacter: true,
-              showBubble: true,
-            )
-            : tipAppearance,
-    speechKey:
-        _conquestName == null
-            ? '${visibleFact?.id}:$factIndex'
-            : _completedCity == null
-            ? 'conquest:$_conquestSequence'
-            : 'conquest:$_conquestSequence:$_conquestPage:$_conquestEffect:$_allRegionsEffect',
-    nextSpeechAt: _conquestName == null ? _nextTipAt : null,
-    lipSyncDuration: const Duration(seconds: 3),
-    expression:
-        _conquestName == null ? TipExpression.neutral : TipExpression.joyful,
-  );
+  Widget _tipPresenter() {
+    _refreshAds();
+    final ad = _visibleAd;
+    if (ad != null) {
+      return RegionalAdCard(
+        ad: ad,
+        cityName: atlas!.cities[ad.cityId]!,
+        maxHeight: tipAppearance.size.height,
+      );
+    }
+    return AbsorbPointer(
+      child: TipPresenter(
+        text:
+            (_completedCity != null && !_conquestEffect && !_allRegionsEffect
+                ? _conquestPages[_conquestPage]
+                : null) ??
+            (_conquestName == null
+                ? null
+                : '$_conquestNameの制圧おめでとう！次の町を選んでね！') ??
+            visibleFact?.text ??
+            (cityFilter == null
+                ? '市区町村を選び、次に町から本拠地を選びましょう。'
+                : '町を選んで本拠地を決めましょう。'),
+        appearance:
+            _completedCity != null
+                ? tipAppearance.copyWith(
+                  showTips: true,
+                  showCharacter: true,
+                  showBubble: true,
+                )
+                : tipAppearance,
+        speechKey:
+            _conquestName == null
+                ? '${visibleFact?.id}:$factIndex'
+                : _completedCity == null
+                ? 'conquest:$_conquestSequence'
+                : 'conquest:$_conquestSequence:$_conquestPage:$_conquestEffect:$_allRegionsEffect',
+        nextSpeechAt: _conquestName == null ? _nextTipAt : null,
+        lipSyncDuration: const Duration(seconds: 3),
+        expression:
+            _conquestName == null
+                ? TipExpression.neutral
+                : TipExpression.joyful,
+      ),
+    );
+  }
 
   void _tipSettings() => showModalBottomSheet<void>(
     context: context,
@@ -1161,13 +1260,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     left: 0,
                     right: 12,
                     bottom: 8,
-                    child: AbsorbPointer(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxHeight: _tipMaxHeight(constraints),
-                        ),
-                        child: _tipPresenter(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: _tipMaxHeight(constraints),
                       ),
+                      child: _tipPresenter(),
                     ),
                   ),
               ],
