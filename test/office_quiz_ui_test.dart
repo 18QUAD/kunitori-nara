@@ -13,6 +13,27 @@ import 'package:kunitori/territory_map.dart';
 import 'package:kunitori/tip_presenter.dart';
 import 'package:kunitori/tip_appearance.dart';
 import 'package:kunitori/tip_character.dart';
+import 'package:kunitori/action_button_style.dart';
+
+void expectColoredActions(WidgetTester tester) {
+  final buttons = find.descendant(
+    of: find.byKey(const Key('action-region')),
+    matching: find.byWidgetPredicate((widget) => widget is ButtonStyleButton),
+  );
+  expect(buttons, findsWidgets);
+  for (final element in buttons.evaluate()) {
+    expect(element.widget, isA<FilledButton>());
+    final material = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byWidget(element.widget),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(material.color, isIn([actionPrimary, actionSecondary]));
+  }
+}
 
 void main() {
   for (final abort in [true, false]) {
@@ -87,6 +108,7 @@ void main() {
         expect(game.wins, 0);
         if (abort) {
           expect(game.quiz, isNull);
+          expectColoredActions(tester);
           await tester.tap(find.text('制圧クイズに挑戦'));
           await tester.pumpAndSettle();
           expect(find.textContaining('クイズを始める？'), findsNothing);
@@ -173,6 +195,7 @@ void main() {
           expect(find.byKey(const Key('conquest-next')), findsNothing);
           expect(find.text('役所へ移動して挑戦'), findsNothing);
           expect(game.quiz, isNull);
+          expectColoredActions(tester);
           expect(
             tester.getSize(find.byKey(const Key('office-action'))).height,
             closeTo(attackHeight, .01),
@@ -286,6 +309,7 @@ void main() {
       expect(game.owned, contains(office));
       expect(find.byKey(const Key('attack')), findsNothing);
       expect(find.text('クイズを予習'), findsOneWidget);
+      expectColoredActions(tester);
       final practiceRect = tester.getRect(
         find.ancestor(
           of: find.text('クイズを予習'),
@@ -303,6 +327,7 @@ void main() {
       await tester.tap(find.text('クイズを予習'));
       await tester.pumpAndSettle();
       expect(find.text(PracticeQuizController.introduction), findsOneWidget);
+      expectColoredActions(tester);
       expect(find.byType(OutlinedButton), findsNothing);
       expect(find.text('橿原市 · クイズ予習 全5問'), findsOneWidget);
       await tester.pump(const Duration(seconds: 10));

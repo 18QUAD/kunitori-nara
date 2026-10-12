@@ -18,6 +18,7 @@ import 'map_view.dart';
 import 'territory_map.dart';
 import 'tap_progress.dart';
 import 'attack_button.dart';
+import 'action_button_style.dart';
 import 'regional_ads.dart';
 import 'regional_ad_card.dart';
 
@@ -876,17 +877,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return Padding(
       key: const Key('action-region'),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child:
-          _practice != null
-              ? PracticeQuizControls(
-                controller: _practice!,
-                onClose: _closePractice,
-              )
-              : game!.quiz != null || _answerFeedbackOpen
-              ? _quizControls()
-              : _completedCity != null
-              ? _conquestGuideControls()
-              : _actionPanel(),
+      child: FilledButtonTheme(
+        data: FilledButtonThemeData(style: actionButtonStyle()),
+        child:
+            _practice != null
+                ? PracticeQuizControls(
+                  controller: _practice!,
+                  onClose: _closePractice,
+                )
+                : game!.quiz != null || _answerFeedbackOpen
+                ? _quizControls()
+                : _completedCity != null
+                ? _conquestGuideControls()
+                : _actionPanel(),
+      ),
     );
   }
 
@@ -908,7 +912,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             child: const Text('はい'),
           ),
           const SizedBox(width: 16),
-          OutlinedButton(
+          FilledButton(
+            style: actionButtonStyle(secondary: true),
             onPressed: () {
               setState(() {
                 q.deadline = DateTime.now().add(q.pausedRemaining!);
@@ -951,11 +956,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     return Row(
       children: [
         Expanded(
-          child: TextButton(
+          child: FilledButton(
+            style: actionButtonStyle(secondary: true),
             onPressed: () => _finishConquestGuide(startQuiz: false),
             child: const Text('あとで'),
           ),
         ),
+        const SizedBox(width: 8),
         Expanded(
           child: FilledButton(
             onPressed: () => _finishConquestGuide(startQuiz: true),
@@ -1062,7 +1069,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           const SizedBox(width: 8),
         ],
         Expanded(
-          child: TextButton.icon(
+          child: FilledButton.icon(
+            style: actionButtonStyle(secondary: true),
             onPressed: () => _startPractice(townId),
             icon: const Icon(Icons.school_outlined),
             label: const Text('クイズを予習'),
@@ -1170,10 +1178,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             child: FilledButton(
               key: const Key('attack'),
               onPressed: can ? _attack : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: gold,
-                foregroundColor: ink,
-              ),
               child: Semantics(
                 label: can ? 'タップで進軍 · 1人' : '隣接する自領が必要です',
                 child:

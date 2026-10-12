@@ -2,6 +2,7 @@ import 'dart:js_interop';
 import 'package:flutter/material.dart';
 import 'package:web/web.dart' as web;
 import 'browser_insets.dart';
+import 'action_button_style.dart';
 
 Widget protectAttackTap({required Widget child, VoidCallback? onPressed}) =>
     _NativeAttackButton(onPressed: onPressed);
@@ -26,6 +27,12 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
     final button = _button;
     if (button == null) return;
     final enabled = widget.onPressed != null;
+    final background = (enabled
+            ? actionPrimary
+            : actionPrimary.withValues(alpha: .35))
+        .toARGB32()
+        .toRadixString(16)
+        .padLeft(8, '0');
     button.disabled = !enabled;
     button.setAttribute('aria-label', enabled ? 'タップで進軍 · 1人' : '隣接する自領が必要です');
     final image =
@@ -49,7 +56,7 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
         'visibility:${_routeCurrent && _portraitAllowed && _rect != null ? 'visible' : 'hidden'};'
         'border-radius:999px;box-sizing:border-box;cursor:pointer;appearance:none;'
         '-webkit-appearance:none;'
-        'background:${enabled ? '#eec47c' : '#263341'} url("$image") '
+        'background:#${background.substring(2)}${background.substring(0, 2)} url("$image") '
         'center / ${enabled ? 56 : 48}px ${enabled ? 56 : 48}px no-repeat;'
         'touch-action:manipulation;-webkit-user-select:none;user-select:none;'
         '-webkit-touch-callout:none;';

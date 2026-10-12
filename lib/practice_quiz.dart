@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'action_button_style.dart';
 import 'game.dart';
 import 'quiz_stage.dart';
 import 'quiz_prompt.dart';
@@ -176,9 +177,12 @@ class PracticeQuizControls extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             OverflowBar(
+              spacing: 8,
+              overflowSpacing: 8,
               alignment: MainAxisAlignment.center,
               children: [
-                TextButton(
+                FilledButton(
+                  style: actionButtonStyle(secondary: true),
                   onPressed: onClose,
                   child: Text(
                     controller.finished
