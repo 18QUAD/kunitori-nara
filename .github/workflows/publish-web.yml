@@ -36,6 +36,21 @@ jobs:
           for (const ad of body.ads) counts[ad.category] = (counts[ad.category] || 0) + 1;
           console.log('Nara advertising categories:', JSON.stringify(counts));
           if (!body.ads.length) throw new Error('No Nara advertisements returned; check Rakuten API credentials and access.');
+          url.searchParams.set('city', '29386');
+          const mitsueResponse = await fetch(url, {signal: AbortSignal.timeout(60000)});
+          if (!mitsueResponse.ok) throw new Error(`Mitsue advertising API HTTP ${mitsueResponse.status}`);
+          const mitsue = await mitsueResponse.json();
+          for (const ad of mitsue.ads.filter(ad => ad.category === 'hotel')) {
+            const link = new URL(ad.url);
+            const destination = link.searchParams.get('pc');
+            if (!destination) throw new Error('Hotel affiliate link has no destination');
+            const target = new URL(destination);
+            console.log('Mitsue hotel link:', JSON.stringify({name: ad.name, host: target.hostname, path: target.pathname}));
+            if (!target.hostname.endsWith('travel.rakuten.co.jp')) throw new Error('Unexpected hotel link host');
+            if (ad.name.replace(/[\s　]/g, '') === 'ログハウス・バディ' && !target.pathname.includes('/192011/')) {
+              throw new Error('Loghouse Buddy affiliate destination does not match the displayed hotel');
+            }
+          }
           JS
       - uses: subosito/flutter-action@v2
         with:

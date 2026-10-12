@@ -12,6 +12,7 @@ import 'package:kunitori/regional_ad_card.dart';
 import 'package:kunitori/save_store.dart';
 import 'package:kunitori/tip_presenter.dart';
 import 'package:kunitori/tip_appearance.dart';
+import 'package:kunitori/ad_credit.dart';
 
 Map<String, dynamic> adJson(String city) => {
   'cityId': city,
@@ -114,7 +115,7 @@ void main() {
                   ad: RegionalAd.parse(adJson('29201'), '29201')!,
                   cityName: '奈良市',
                   maxHeight: height,
-                  onOpen: () => opens++,
+                  onOpen: (_) => opens++,
                 ),
               ),
             ),
@@ -124,9 +125,50 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('PR · 奈良市 · 地元企業'), findsOneWidget);
       expect(find.text('楽天市場で詳細を見る ↗'), findsOneWidget);
+      expect(find.byType(AdCredit), findsNothing);
       await tester.tap(find.byKey(const Key('regional-ad-card')));
     }
     expect(opens, 3);
+  });
+
+  testWidgets('a displayed advertisement keeps its link during a press', (
+    tester,
+  ) async {
+    final opened = <Uri>[];
+    final first = RegionalAd.parse(adJson('29201'), '29201')!;
+    final second =
+        RegionalAd.parse({
+          ...adJson('29201'),
+          'name': '次の商品',
+          'url': 'https://hb.afl.rakuten.co.jp/hgc/next/',
+        }, '29201')!;
+    Widget card(RegionalAd ad) => MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(
+            width: 280,
+            height: 100,
+            child: RegionalAdCard(
+              ad: ad,
+              cityName: '奈良市',
+              maxHeight: 100,
+              onOpen: opened.add,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpWidget(card(first));
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('regional-ad-card'))),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpWidget(card(second));
+    await gesture.up();
+    await tester.pump();
+    expect(opened, [first.url]);
+    await tester.tap(find.byKey(const Key('regional-ad-card')));
+    expect(opened, [first.url, second.url]);
   });
 
   testWidgets('campaign city wins over map selection; ads rotate inside tips', (
@@ -259,7 +301,7 @@ void main() {
                     cityName: '奈良市',
                     maxHeight: size.height,
                     embedded: true,
-                    onOpen: () {},
+                    onOpen: (_) {},
                   ),
                 ),
               );

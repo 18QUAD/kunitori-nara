@@ -20,6 +20,7 @@ import 'tap_progress.dart';
 import 'attack_button.dart';
 import 'regional_ads.dart';
 import 'regional_ad_card.dart';
+import 'ad_credit.dart';
 
 const ink = Color(0xFF101C2B),
     panel = Color(0xFF192A3A),
@@ -1541,6 +1542,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   const Text(
                     '地図・統計と出典',
                     style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    '楽天広告のデータ提供元',
+                    style: TextStyle(fontSize: 13, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 6),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: 280,
+                      height: 20,
+                      child: ColoredBox(color: Colors.white, child: AdCredit()),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   const SelectableText(

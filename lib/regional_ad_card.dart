@@ -2,9 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'regional_ads.dart';
-import 'ad_credit.dart';
 
-class RegionalAdCard extends StatelessWidget {
+class RegionalAdCard extends StatefulWidget {
   const RegionalAdCard({
     super.key,
     required this.ad,
@@ -17,18 +16,30 @@ class RegionalAdCard extends StatelessWidget {
   final RegionalAd ad;
   final String cityName;
   final double maxHeight;
-  final VoidCallback? onOpen;
+  final ValueChanged<Uri>? onOpen;
   final bool embedded;
   final Color foreground;
 
-  Future<void> _open(BuildContext context) async {
-    if (onOpen != null) {
-      onOpen!();
+  @override
+  State<RegionalAdCard> createState() => _RegionalAdCardState();
+}
+
+class _RegionalAdCardState extends State<RegionalAdCard> {
+  RegionalAd? _pressedAd;
+  RegionalAd get ad => widget.ad;
+  String get cityName => widget.cityName;
+  double get maxHeight => widget.maxHeight;
+  bool get embedded => widget.embedded;
+  Color get foreground => widget.foreground;
+
+  Future<void> _open(BuildContext context, RegionalAd target) async {
+    if (widget.onOpen != null) {
+      widget.onOpen!(target.url);
       return;
     }
     try {
       if (await launchUrl(
-        ad.url,
+        target.url,
         mode: LaunchMode.externalApplication,
         webOnlyWindowName: '_blank',
       )) {
@@ -78,87 +89,88 @@ class RegionalAdCard extends StatelessWidget {
             color: embedded ? Colors.transparent : const Color(0xFFFFF2D7),
             borderRadius: BorderRadius.circular(embedded ? 8 : 16),
             clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => _open(context),
-              child: Semantics(
-                button: true,
-                label:
-                    '広告、$cityNameの${ad.label}、${ad.advertiser}、${ad.name}、${ad.service}で詳細を見る',
-                child: Padding(
-                  padding: EdgeInsets.all(padding),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: SizedBox(
-                      width: width,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          if (!compact && width >= 200 && ad.imageUrl != null)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: SizedBox(
-                                width: 42,
-                                height: 54,
-                                child: Stack(
-                                  children: [
-                                    Positioned.fill(
-                                      child: Image.network(
-                                        ad.imageUrl.toString(),
-                                        fit: BoxFit.contain,
-                                        errorBuilder:
-                                            (_, __, ___) => Icon(
-                                              Icons.storefront,
-                                              color: foreground,
-                                              size: 28,
-                                            ),
+            child: Listener(
+              onPointerDown: (_) => _pressedAd = ad,
+              onPointerCancel: (_) => _pressedAd = null,
+              child: InkWell(
+                onTap: () {
+                  final target = _pressedAd ?? ad;
+                  _pressedAd = null;
+                  _open(context, target);
+                },
+                child: Semantics(
+                  button: true,
+                  label:
+                      '広告、$cityNameの${ad.label}、${ad.advertiser}、${ad.name}、${ad.service}で詳細を見る',
+                  child: Padding(
+                    padding: EdgeInsets.all(padding),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: width,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            if (!compact && width >= 200 && ad.imageUrl != null)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: SizedBox(
+                                  width: 42,
+                                  height: 54,
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: Image.network(
+                                          ad.imageUrl.toString(),
+                                          fit: BoxFit.contain,
+                                          errorBuilder:
+                                              (_, __, ___) => Icon(
+                                                Icons.storefront,
+                                                color: foreground,
+                                                size: 28,
+                                              ),
+                                        ),
                                       ),
-                                    ),
-                                    if (ad.category == 'hotel')
-                                      const Positioned(
-                                        left: 0,
-                                        bottom: 0,
-                                        child: ColoredBox(
-                                          color: Colors.white,
-                                          child: Text(
-                                            '楽天トラベル',
-                                            style: TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 8,
+                                      if (ad.category == 'hotel')
+                                        const Positioned(
+                                          left: 0,
+                                          bottom: 0,
+                                          child: ColoredBox(
+                                            color: Colors.white,
+                                            child: Text(
+                                              '楽天トラベル',
+                                              style: TextStyle(
+                                                color: Colors.black,
+                                                fontSize: 8,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                line('PR · $cityName · ${ad.label}', 9),
-                                if (ad.advertiser != ad.name)
-                                  line(ad.advertiser, 11, bold: true),
-                                line(
-                                  ad.name,
-                                  12,
-                                  lines: compact ? 1 : 2,
-                                  bold: true,
-                                ),
-                                line('${ad.service}で詳細を見る ↗', 9),
-                                const SizedBox(
-                                  height: 14,
-                                  child: ColoredBox(
-                                    color: Colors.white,
-                                    child: AdCredit(),
+                                    ],
                                   ),
                                 ),
-                              ],
+                              ),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  line('PR · $cityName · ${ad.label}', 9),
+                                  if (ad.advertiser != ad.name)
+                                    line(ad.advertiser, 11, bold: true),
+                                  line(
+                                    ad.name,
+                                    12,
+                                    lines: compact ? 1 : 2,
+                                    bold: true,
+                                  ),
+                                  line('${ad.service}で詳細を見る ↗', 9),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
