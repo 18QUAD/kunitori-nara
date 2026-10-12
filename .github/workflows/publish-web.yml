@@ -16,6 +16,26 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
+      - name: Verify Nara advertising API
+        env:
+          REGIONAL_ADS_ENDPOINT: ${{ vars.REGIONAL_ADS_ENDPOINT }}
+        run: |
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';
+          const config = JSON.parse(fs.readFileSync('assets/data/affiliate_config.json', 'utf8'));
+          const endpoint = process.env.REGIONAL_ADS_ENDPOINT || config.endpoint;
+          if (!endpoint) { console.log('Ads disabled: no endpoint configured.'); process.exit(0); }
+          const url = new URL(endpoint);
+          url.searchParams.set('city', '29201');
+          const response = await fetch(url, {signal: AbortSignal.timeout(60000)});
+          if (!response.ok) throw new Error(`Advertising API HTTP ${response.status}`);
+          const body = await response.json();
+          if (body.cityId !== '29201' || !Array.isArray(body.ads)) throw new Error('Invalid advertising response');
+          const counts = {};
+          for (const ad of body.ads) counts[ad.category] = (counts[ad.category] || 0) + 1;
+          console.log('Nara advertising categories:', JSON.stringify(counts));
+          if (!body.ads.length) throw new Error('No Nara advertisements returned; check Rakuten API credentials and access.');
+          JS
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.3'
