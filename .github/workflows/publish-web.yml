@@ -30,6 +30,7 @@ jobs:
         run: flutter build web --release --no-pub --base-href /kunitori-nara/ --dart-define="REGIONAL_ADS_ENDPOINT=$REGIONAL_ADS_ENDPOINT"
       - name: Publish gh-pages
         run: |
+          touch build/web/.nojekyll
           git fetch origin gh-pages:refs/remotes/origin/gh-pages
           git worktree add /tmp/kunitori-pages origin/gh-pages
           rsync -a --delete --exclude=.git build/web/ /tmp/kunitori-pages/
