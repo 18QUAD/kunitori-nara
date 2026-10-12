@@ -530,7 +530,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _save();
   }
 
-  bool _select(String id) {
+  bool _select(String id, {bool startQuiz = true}) {
     if (_completedCity != null) return false;
     final g = game!;
     final isOffice = atlas!.officeTownIds.values.contains(id);
@@ -548,7 +548,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
     _startTipsTimer();
     _save();
-    if (g.canStartQuizAt(id)) unawaited(_confirmQuiz(id));
+    if (startQuiz && g.canStartQuizAt(id)) unawaited(_confirmQuiz(id));
     return true;
   }
 
@@ -589,7 +589,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       mapFocus++;
       mapCenter++;
     });
-    _select(townId);
+    _select(townId, startQuiz: false);
   }
 
   void _focusCampaign() {
@@ -1139,25 +1139,23 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child:
-                cityReady
-                    ? const SizedBox.shrink()
-                    : const Center(
-                      child: Text(
-                        'この地域はあなたの領土です',
-                        style: TextStyle(color: mint),
-                      ),
-                    ),
-          ),
           if (quizAvailable || cityReady)
-            FilledButton.icon(
-              onPressed:
-                  quizAvailable
-                      ? () => _confirmQuiz(town.id)
-                      : () => _focusOffice(town.cityId),
-              icon: Icon(quizAvailable ? Icons.quiz_outlined : Icons.search),
-              label: Text(quizAvailable ? '制圧クイズに挑戦' : '役所所在地へ'),
+            Expanded(
+              child: FilledButton.icon(
+                key: const Key('office-action'),
+                onPressed:
+                    quizAvailable
+                        ? () => _confirmQuiz(town.id)
+                        : () => _focusOffice(town.cityId),
+                icon: Icon(quizAvailable ? Icons.quiz_outlined : Icons.search),
+                label: Text(quizAvailable ? '制圧クイズに挑戦' : '役所所在地へ'),
+              ),
+            )
+          else
+            const Expanded(
+              child: Center(
+                child: Text('この地域はあなたの領土です', style: TextStyle(color: mint)),
+              ),
             ),
         ],
       );

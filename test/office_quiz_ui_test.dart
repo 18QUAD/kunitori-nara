@@ -151,6 +151,8 @@ void main() {
         await tester.pumpAndSettle();
         final game =
             tester.widget<TerritoryMap>(find.byType(TerritoryMap)).game;
+        final attackHeight =
+            tester.getSize(find.byKey(const Key('attack'))).height;
         await tester.tap(find.byKey(const Key('attack')));
         await tester.pump();
         expect(game.cityOwned(city), isTrue);
@@ -171,7 +173,19 @@ void main() {
           expect(find.byKey(const Key('conquest-next')), findsNothing);
           expect(find.text('役所へ移動して挑戦'), findsNothing);
           expect(game.quiz, isNull);
+          expect(
+            tester.getSize(find.byKey(const Key('office-action'))).height,
+            closeTo(attackHeight, .01),
+          );
           await tester.tap(find.text('役所所在地へ'));
+          await tester.pumpAndSettle();
+          expect(game.quiz, isNull);
+          expect(
+            tester.widget<TerritoryMap>(find.byType(TerritoryMap)).selected,
+            office,
+          );
+          expect(find.textContaining('クイズを始める？'), findsNothing);
+          await tester.tap(find.text('制圧クイズに挑戦'));
           await tester.pumpAndSettle();
           expect(game.quiz, isNotNull);
           expect(find.textContaining('クイズを始める？'), findsNothing);
