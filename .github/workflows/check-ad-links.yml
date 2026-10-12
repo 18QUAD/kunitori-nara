@@ -1,0 +1,48 @@
+name: Check regional ad destinations
+
+on:
+  workflow_dispatch:
+    inputs:
+      city:
+        description: Municipality ID
+        default: '29386'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check mobile hotel affiliate destination
+        env:
+          CITY_ID: ${{ inputs.city }}
+        run: |
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';
+          const {endpoint} = JSON.parse(fs.readFileSync('assets/data/affiliate_config.json', 'utf8'));
+          const url = new URL(endpoint);
+          url.searchParams.set('city', process.env.CITY_ID);
+          const response = await fetch(url, {signal: AbortSignal.timeout(60000)});
+          if (!response.ok) throw new Error(`Advertising API HTTP ${response.status}`);
+          const body = await response.json();
+          for (const ad of body.ads.filter(ad => ad.category === 'hotel')) {
+            const link = new URL(ad.url);
+            if (link.hostname !== 'hb.afl.rakuten.co.jp') throw new Error('Unexpected affiliate host');
+            const landing = await fetch(link, {signal: AbortSignal.timeout(30000), headers: {
+              'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+            }});
+            const actual = new URL(landing.url);
+            const hotelNo = actual.searchParams.get('f_no') || actual.searchParams.get('hotelNo') || actual.searchParams.get('f_hotel_no');
+            console.log('Mobile affiliate landing:', JSON.stringify({name: ad.name, status: landing.status,
+              host: actual.hostname, path: actual.pathname, hotelNo}));
+            await landing.body?.cancel();
+            if (ad.name.replace(/[\s　]/g, '') === 'ログハウス・バディ' &&
+              !actual.pathname.includes('/192011/') && hotelNo !== '192011') {
+              throw new Error('Mobile affiliate link does not land on Loghouse Buddy');
+            }
+          }
+          JS
