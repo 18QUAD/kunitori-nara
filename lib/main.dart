@@ -1140,14 +1140,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: Center(
-              child: Text(
+            child:
                 cityReady
-                    ? '${atlas!.offices[town.cityId]!.name}のある${atlas!.towns[atlas!.officeTownIds[town.cityId]]!.name}をタップして制圧クイズに挑戦できます。'
-                    : 'この地域はあなたの領土です',
-                style: const TextStyle(color: mint),
-              ),
-            ),
+                    ? const SizedBox.shrink()
+                    : const Center(
+                      child: Text(
+                        'この地域はあなたの領土です',
+                        style: TextStyle(color: mint),
+                      ),
+                    ),
           ),
           if (quizAvailable || cityReady)
             FilledButton.icon(
