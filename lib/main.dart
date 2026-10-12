@@ -930,7 +930,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         ],
       );
     }
-    return Center(
+    return SizedBox.expand(
       child: FilledButton(
         onPressed: () {
           final remaining = q.deadline.difference(DateTime.now());
@@ -949,7 +949,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Widget _conquestGuideControls() {
     final ready = !_conquestEffect && !_allRegionsEffect;
     if (_conquestPage < _conquestPages.length - 1) {
-      return Center(
+      return SizedBox.expand(
         child: FilledButton(
           key: const Key('conquest-next'),
           onPressed: ready ? () => setState(() => _conquestPage++) : null,

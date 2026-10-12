@@ -26,6 +26,13 @@ void expectColoredActions(WidgetTester tester) {
   }
   for (final element in buttons.evaluate()) {
     expect(element.widget, isA<FilledButton>());
+    expect(
+      tester.getSize(find.byWidget(element.widget)).height,
+      closeTo(
+        tester.getSize(find.byKey(const Key('action-region'))).height - 16,
+        .01,
+      ),
+    );
     final material = tester.widget<Material>(
       find
           .descendant(

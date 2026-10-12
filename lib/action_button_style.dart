@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-const actionPrimary = Color(0xFFDDE1E6);
-const actionForeground = Color(0xFF202631);
+const actionPrimary = Color(0xFFEDE2D1);
+const actionForeground = Color(0xFF30291F);
 
 ButtonStyle actionButtonStyle() => FilledButton.styleFrom(
   backgroundColor: actionPrimary,

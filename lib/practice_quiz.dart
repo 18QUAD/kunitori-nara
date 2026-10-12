@@ -153,7 +153,16 @@ class _PracticeQuizState extends State<PracticeQuiz> {
               child: Column(
                 children: [
                   Expanded(child: stage()),
-                  PracticeQuizControls(controller: controller, onClose: close),
+                  SizedBox(
+                    height: 104,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                      child: PracticeQuizControls(
+                        controller: controller,
+                        onClose: close,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -173,53 +182,45 @@ class PracticeQuizControls extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
     builder:
-        (context, _) => Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        (context, _) => Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(
-              height: 52,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: FilledButton(
-                      style: actionButtonStyle(),
-                      onPressed: onClose,
-                      child: Text(
-                        controller.finished
-                            ? '地図へ戻る'
-                            : controller.introducing
-                            ? 'やめる'
-                            : '予習を終了',
-                      ),
-                    ),
-                  ),
-                  if (!controller.finished &&
-                      (controller.introducing || controller.choice != null))
-                    const SizedBox(width: 8),
-                  if (controller.introducing && !controller.finished)
-                    Expanded(
-                      child: FilledButton(
-                        style: actionButtonStyle(),
-                        onPressed: controller.start,
-                        child: const Text('開始する'),
-                      ),
-                    ),
-                  if (!controller.finished && controller.choice != null)
-                    Expanded(
-                      child: FilledButton(
-                        style: actionButtonStyle(),
-                        onPressed: controller.advance,
-                        child: Text(
-                          controller.index + 1 == controller.questions.length
-                              ? '結果を見る'
-                              : '次の問題',
-                        ),
-                      ),
-                    ),
-                ],
+            Expanded(
+              child: FilledButton(
+                style: actionButtonStyle(),
+                onPressed: onClose,
+                child: Text(
+                  controller.finished
+                      ? '地図へ戻る'
+                      : controller.introducing
+                      ? 'やめる'
+                      : '予習を終了',
+                ),
               ),
             ),
+            if (!controller.finished &&
+                (controller.introducing || controller.choice != null))
+              const SizedBox(width: 8),
+            if (controller.introducing && !controller.finished)
+              Expanded(
+                child: FilledButton(
+                  style: actionButtonStyle(),
+                  onPressed: controller.start,
+                  child: const Text('開始する'),
+                ),
+              ),
+            if (!controller.finished && controller.choice != null)
+              Expanded(
+                child: FilledButton(
+                  style: actionButtonStyle(),
+                  onPressed: controller.advance,
+                  child: Text(
+                    controller.index + 1 == controller.questions.length
+                        ? '結果を見る'
+                        : '次の問題',
+                  ),
+                ),
+              ),
           ],
         ),
   );
