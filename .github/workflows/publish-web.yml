@@ -47,7 +47,12 @@ jobs:
             const target = new URL(destination);
             console.log('Mitsue hotel link:', JSON.stringify({name: ad.name, host: target.hostname, path: target.pathname}));
             if (!target.hostname.endsWith('travel.rakuten.co.jp')) throw new Error('Unexpected hotel link host');
-            if (ad.name.replace(/[\s　]/g, '') === 'ログハウス・バディ' && !target.pathname.includes('/192011/')) {
+            const landing = await fetch(target, {signal: AbortSignal.timeout(20000)});
+            const actual = new URL(landing.url);
+            console.log('Mitsue hotel landing:', JSON.stringify({name: ad.name, status: landing.status,
+              host: actual.hostname, path: actual.pathname, contentType: landing.headers.get('content-type')}));
+            await landing.body?.cancel();
+            if (ad.name.replace(/[\s　]/g, '') === 'ログハウス・バディ' && !actual.pathname.includes('/192011/')) {
               throw new Error('Loghouse Buddy affiliate destination does not match the displayed hotel');
             }
           }
