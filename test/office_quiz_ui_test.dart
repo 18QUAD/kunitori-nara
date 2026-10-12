@@ -89,8 +89,7 @@ void main() {
           expect(game.quiz, isNull);
           await tester.tap(find.text('制圧クイズに挑戦'));
           await tester.pumpAndSettle();
-          await tester.tap(find.text('役所へ移動して挑戦'));
-          await tester.pumpAndSettle();
+          expect(find.textContaining('クイズを始める？'), findsNothing);
           expect(game.quiz!.correctCount, 0);
         } else {
           expect(game.quiz, same(q));
@@ -107,9 +106,13 @@ void main() {
       },
     );
   }
-  for (final start in [false, true]) {
+  for (final (start, seen) in [(false, false), (true, false), (false, true)]) {
     testWidgets(
-      'full city capture guides then ${start ? "starts quiz" : "defers"}',
+      'full city capture ${seen
+          ? "skips repeated guide"
+          : start
+          ? "guides then starts quiz"
+          : "guides then defers"}',
       (tester) async {
         rootBundle.clear();
         final atlas = Atlas.fromJson(
@@ -124,6 +127,7 @@ void main() {
         saved.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
         saved.owned.remove(target.id);
         saved.everOwned.addAll(saved.owned);
+        if (seen) saved.conquestGuideSeen.add(city);
         saved.selectAttackTarget(target.id);
         saved.progress[target.id] = saved.requiredTaps(target) - 1;
         SharedPreferences.setMockInitialValues({
@@ -162,6 +166,19 @@ void main() {
         await tester.pump(const Duration(seconds: 3));
         await tester.pumpAndSettle();
         expect(find.text('全地域制圧'), findsNothing);
+        if (seen) {
+          expect(find.textContaining('クイズを始める？'), findsNothing);
+          expect(find.byKey(const Key('conquest-next')), findsNothing);
+          expect(find.text('役所へ移動して挑戦'), findsNothing);
+          expect(game.quiz, isNull);
+          await tester.tap(find.text('役所所在地へ'));
+          await tester.pumpAndSettle();
+          expect(game.quiz, isNotNull);
+          expect(find.textContaining('クイズを始める？'), findsNothing);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+          return;
+        }
         expect(find.text('橿原市の全地域制圧おめでとう！'), findsOneWidget);
         final owned = {...game.owned};
         for (var i = 0; i < 7; i++) {
@@ -412,14 +429,13 @@ void main() {
       expect(game.quiz, isNull);
       expect(game.owned, saved.owned);
       expect(game.losses, 0);
-      // The action button, like an office map tap, opens the character guide.
+      // After the first guide, the action button starts the quiz directly.
       await tester.tap(find.text('制圧クイズに挑戦'));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.byKey(const Key('conquest-next')), findsNothing);
       expect(find.text('橿原市の全地域制圧おめでとう！'), findsNothing);
-      await tester.tap(find.text('役所へ移動して挑戦'));
-      await tester.pumpAndSettle();
+      expect(find.textContaining('クイズを始める？'), findsNothing);
       for (var i = 0; i < 5; i++) {
         expect(find.text('橿原市 · 制圧クイズ ${i + 1} / 5問'), findsOneWidget);
         expect(find.byType(OutlinedButton), findsNWidgets(4));

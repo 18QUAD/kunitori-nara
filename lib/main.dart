@@ -280,10 +280,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _completedCity =
         game!.cityOwned(city) && !game!.mastered.contains(city) ? city : null;
     _allRegionsEffect = false;
-    _conquestPage =
-        _completedCity != null && !game!.conquestGuideSeen.add(city)
-            ? _conquestPages.length - 1
-            : 0;
+    final showGuide =
+        _completedCity != null && game!.conquestGuideSeen.add(city);
+    _conquestPage = 0;
     _conquestTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       setState(() {
@@ -292,7 +291,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       });
       if (_allRegionsEffect) {
         _conquestTimer = Timer(const Duration(seconds: 3), () {
-          if (mounted) setState(() => _allRegionsEffect = false);
+          if (!mounted) return;
+          setState(() {
+            _allRegionsEffect = false;
+            if (!showGuide) _clearConquestFor(null);
+          });
+          if (!showGuide) _startTipsTimer();
         });
       }
     });
@@ -550,10 +554,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Future<void> _confirmQuiz(String townId) async {
     if (_completedCity != null || !game!.canStartQuizAt(townId)) return;
+    final town = atlas!.towns[townId]!;
+    if (game!.conquestGuideSeen.contains(town.cityId)) {
+      setState(() {
+        _clearConquestFor(null);
+        game!.startQuizAt(townId, DateTime.now());
+      });
+      _save();
+      return;
+    }
     tipsTimer?.cancel();
     _nextTipAt = null;
     _conquestTimer?.cancel();
-    final town = atlas!.towns[townId]!;
     setState(() {
       _completedCity = town.cityId;
       _conquestName = atlas!.cities[town.cityId];
