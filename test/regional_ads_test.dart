@@ -12,7 +12,6 @@ import 'package:kunitori/regional_ad_card.dart';
 import 'package:kunitori/save_store.dart';
 import 'package:kunitori/tip_presenter.dart';
 import 'package:kunitori/tip_appearance.dart';
-import 'package:kunitori/ad_credit.dart';
 
 Map<String, dynamic> adJson(String city) => {
   'cityId': city,
@@ -125,7 +124,7 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('PR · 奈良市 · 地元企業'), findsOneWidget);
       expect(find.text('楽天市場で詳細を見る ↗'), findsOneWidget);
-      expect(find.byType(AdCredit), findsNothing);
+      expect(find.text('Supported by Rakuten Developers'), findsNothing);
       await tester.tap(find.byKey(const Key('regional-ad-card')));
     }
     expect(opens, 3);
