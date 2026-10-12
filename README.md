@@ -165,6 +165,9 @@ GitHub PagesにはAPIキー・楽天から取得した商品データを保存�
 3. Cloudflare Workersを用意します。GitHubリポジトリの Settings → Secrets and variables → Actions に次のSecretsを登録します。
    `RAKUTEN_APPLICATION_ID`、`RAKUTEN_ACCESS_KEY`、`RAKUTEN_AFFILIATE_ID`、`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`。
    Cloudflareのトークンは対象アカウントのWorkersを編集・公開できる権限を設定してください。値はソースやチャットに貼り付けません。
+   初めてWorkersを使う場合は、Cloudflareの Workers & Pages → Create application → Start with Hello World から、
+   `kunitori-nara-regional-ads` という名前で一度Deployし、`workers.dev` の初回設定を完了してください。
+   このHello Worldは次の手順で楽天広告APIに置き換わります。
 4. GitHub Actionsの **Deploy regional ads API → Run workflow** を実行します。
 5. 公開されたWorkerの `https://kunitori-nara-regional-ads.<自分のサブドメイン>.workers.dev/ads` を、
    同じ設定画面の **Variables** に `REGIONAL_ADS_ENDPOINT` として登録します。このURLに秘密情報を含めません。
