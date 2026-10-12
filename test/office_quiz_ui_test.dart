@@ -21,6 +21,9 @@ void expectColoredActions(WidgetTester tester) {
     matching: find.byWidgetPredicate((widget) => widget is ButtonStyleButton),
   );
   expect(buttons, findsWidgets);
+  if (buttons.evaluate().length == 2) {
+    expect(tester.getSize(buttons.at(0)), tester.getSize(buttons.at(1)));
+  }
   for (final element in buttons.evaluate()) {
     expect(element.widget, isA<FilledButton>());
     final material = tester.widget<Material>(
@@ -31,7 +34,7 @@ void expectColoredActions(WidgetTester tester) {
           )
           .first,
     );
-    expect(material.color, isIn([actionPrimary, actionSecondary]));
+    expect(material.color, actionPrimary);
   }
 }
 
@@ -89,6 +92,7 @@ void main() {
         expect(find.text('上の選択肢をタップして回答'), findsNothing);
         await tester.tap(find.text('中止する'));
         await tester.pumpAndSettle();
+        expectColoredActions(tester);
         final remaining = q.pausedRemaining!;
         expect(
           find.widgetWithText(OutlinedButton, q.choices.first),

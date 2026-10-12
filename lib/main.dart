@@ -901,27 +901,31 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     if (q.pausedRemaining != null) {
       return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          FilledButton(
-            onPressed: () {
-              setState(() => game!.quiz = null);
-              _startTipsTimer();
-              _save();
-            },
-            child: const Text('はい'),
+          Expanded(
+            child: FilledButton(
+              onPressed: () {
+                setState(() => game!.quiz = null);
+                _startTipsTimer();
+                _save();
+              },
+              child: const Text('はい'),
+            ),
           ),
-          const SizedBox(width: 16),
-          FilledButton(
-            style: actionButtonStyle(secondary: true),
-            onPressed: () {
-              setState(() {
-                q.deadline = DateTime.now().add(q.pausedRemaining!);
-                q.pausedRemaining = null;
-              });
-              _save();
-            },
-            child: const Text('いいえ'),
+          const SizedBox(width: 8),
+          Expanded(
+            child: FilledButton(
+              style: actionButtonStyle(),
+              onPressed: () {
+                setState(() {
+                  q.deadline = DateTime.now().add(q.pausedRemaining!);
+                  q.pausedRemaining = null;
+                });
+                _save();
+              },
+              child: const Text('いいえ'),
+            ),
           ),
         ],
       );
@@ -954,10 +958,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       );
     }
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           child: FilledButton(
-            style: actionButtonStyle(secondary: true),
+            style: actionButtonStyle(),
             onPressed: () => _finishConquestGuide(startQuiz: false),
             child: const Text('あとで'),
           ),
@@ -1070,7 +1075,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         ],
         Expanded(
           child: FilledButton.icon(
-            style: actionButtonStyle(secondary: true),
+            style: actionButtonStyle(),
             onPressed: () => _startPractice(townId),
             icon: const Icon(Icons.school_outlined),
             label: const Text('クイズを予習'),
