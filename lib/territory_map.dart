@@ -413,6 +413,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           ? prefecturePath
                           : cityPaths[widget.cityId]!,
                       size,
+                      paths,
                     ),
                   ),
                 ),
@@ -620,9 +621,11 @@ class _MapPainter extends CustomPainter {
     this.reliefBounds,
     this.reliefClip,
     this.viewportSize,
+    this.townPaths,
   ) : super(repaint: transform);
   final TransformationController transform;
   final Map<String, Path> paths;
+  final Map<String, Path> townPaths;
   final Map<String, Path> outlines;
   final Map<String, Rect> bounds;
   final Atlas atlas;
@@ -675,6 +678,13 @@ class _MapPainter extends CustomPainter {
                   ? const Color(0xFFEEC47C)
                   : const Color(0xFF43616A),
       );
+    }
+    if (overview) {
+      final conquered = Paint()..color = const Color(0xFF7AE1BB);
+      for (final townId in game.owned) {
+        final path = townPaths[townId];
+        if (path != null) canvas.drawPath(path, conquered);
+      }
     }
     final terrain = relief;
     final terrainRect = reliefBounds;

@@ -93,6 +93,85 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('overview colors owned towns without drawing town borders', (
+    tester,
+  ) async {
+    final atlas = Atlas.fromJson(
+      jsonDecode(File('assets/data/nara.json').readAsStringSync()),
+    );
+    const city = '29205';
+    final towns = atlas.byCity[city]!.take(2).toList();
+    final game = Game(atlas)..owned.add(towns.first.id);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TerritoryMap(
+          atlas: atlas,
+          game: game,
+          selected: null,
+          cityId: null,
+          focusVersion: 0,
+          onSelected: (_) {},
+          onCitySelected: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('起伏・市街地・山名・川・池・湖を非表示'));
+    await tester.pumpAndSettle();
+    final viewer = tester.widget<InteractiveViewer>(
+      find.byType(InteractiveViewer),
+    );
+    final box = (viewer.child as GestureDetector).child as SizedBox;
+    final dynamic painter = (box.child as CustomPaint).painter;
+    final outer = Path()..addRect(const Rect.fromLTWH(0, 0, 200, 100));
+    (painter.paths as Map<String, Path>)
+      ..clear()
+      ..[city] = outer;
+    (painter.outlines as Map<String, Path>)
+      ..clear()
+      ..[city] = outer;
+    (painter.bounds as Map<String, Rect>)
+      ..clear()
+      ..[city] = outer.getBounds();
+    (painter.townPaths as Map<String, Path>)
+      ..clear()
+      ..[towns[0].id] = (Path()..addRect(const Rect.fromLTWH(0, 0, 100, 100)))
+      ..[towns[1].id] =
+          (Path()..addRect(const Rect.fromLTWH(100, 0, 100, 100)));
+    viewer.transformationController!.value = Matrix4.identity();
+    Future<void> checkPixels({required bool fullyOwned}) async {
+      final recorder = ui.PictureRecorder();
+      painter.paint(Canvas(recorder), const Size(200, 100));
+      final picture = recorder.endRecording();
+      await tester.runAsync(() async {
+        final image = await picture.toImage(200, 100);
+        final bytes =
+            (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+        List<int> pixel(int x) => [
+          for (var c = 0; c < 3; c++) bytes.getUint8((20 * 200 + x) * 4 + c),
+        ];
+        expect(pixel(50), [0x7a, 0xe1, 0xbb]);
+        if (fullyOwned) {
+          expect(pixel(150), [0x7a, 0xe1, 0xbb]);
+        } else {
+          expect(pixel(150), isNot([0x7a, 0xe1, 0xbb]));
+        }
+        // The ownership edge has a color change, without a white town border.
+        expect(pixel(99), pixel(50));
+        expect(pixel(100), pixel(150));
+        image.dispose();
+      });
+      picture.dispose();
+    }
+
+    expect(game.cityOwned(city), isFalse);
+    await checkPixels(fullyOwned: false);
+    game.owned.addAll(atlas.byCity[city]!.map((town) => town.id));
+    await checkPixels(fullyOwned: true);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('selection and campaign stay red above white neighboring borders', (
     tester,
   ) async {
