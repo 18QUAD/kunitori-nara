@@ -9,13 +9,16 @@ class MapViewState {
     required this.selected,
     required this.cityId,
     this.showGeography = true,
+    this.prefectureId = '29',
+    this.nationalView = false,
   });
   static const dataset = 'nara-2020-v1';
   static const projection = '1100x1500-v1';
   final Offset center;
   final double scale;
   final String? selected, cityId;
-  final bool showGeography;
+  final bool showGeography, nationalView;
+  final String prefectureId;
 
   Map<String, dynamic> toJson() => {
     'dataset': dataset,
@@ -25,6 +28,8 @@ class MapViewState {
     'selected': selected,
     'cityId': cityId,
     'showGeography': showGeography,
+    'prefectureId': prefectureId,
+    'nationalView': nationalView,
   };
 
   static MapViewState? fromJson(Map<String, dynamic> data, Atlas atlas) {
@@ -35,6 +40,11 @@ class MapViewState {
     final zoom = data['scale'];
     final town = data['selected'];
     final city = data['cityId'];
+    final prefecture = data['prefectureId'] ?? '29';
+    if (prefecture is! String ||
+        !atlas.cities.keys.any((id) => id.startsWith(prefecture))) {
+      return null;
+    }
     if (point is! List ||
         point.length != 2 ||
         point.any((v) => v is! num) ||
@@ -60,6 +70,8 @@ class MapViewState {
       selected: town as String?,
       cityId: city as String?,
       showGeography: data['showGeography'] != false,
+      prefectureId: prefecture,
+      nationalView: data['nationalView'] == true,
     );
   }
 }

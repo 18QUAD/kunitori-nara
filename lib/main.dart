@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
+import 'national_atlas.dart';
+import 'national_map.dart';
 import 'browser_insets.dart';
 import 'practice_quiz.dart';
 import 'answer_feedback.dart';
@@ -157,6 +159,9 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
+  NationalAtlas? national;
+  bool nationalView = false;
+  String prefectureFilter = '29';
   Atlas? atlas;
   Game? game;
   SaveStore? store;
@@ -279,7 +284,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _conquestEffect = true;
     final city = atlas!.towns[townId]!.cityId;
     _completedCity =
-        game!.cityOwned(city) && !game!.mastered.contains(city) ? city : null;
+        game!.cityOwned(city) &&
+                !game!.mastered.contains(city) &&
+                atlas!.offices.containsKey(city)
+            ? city
+            : null;
     _allRegionsEffect = false;
     final showGuide =
         _completedCity != null && game!.conquestGuideSeen.add(city);
@@ -347,10 +356,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Future<void> _load() async {
     try {
-      final data = Atlas.fromJson(
-        jsonDecode(await rootBundle.loadString('assets/data/nara.json'))
-            as Map<String, dynamic>,
-      );
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      if (manifest.listAssets().contains('assets/data/japan.json')) {
+        national = await NationalAtlas.load();
+      }
+      final data =
+          national?.atlas ??
+          Atlas.fromJson(
+            jsonDecode(await rootBundle.loadString('assets/data/nara.json'))
+                as Map<String, dynamic>,
+          );
       final saver = SaveStore(await SharedPreferences.getInstance());
       final appearanceStore = TipAppearanceStore(saver.preferences);
       Game g;
@@ -378,6 +393,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           _restoredMapView == null
               ? (selected == null ? null : data.towns[selected]!.cityId)
               : _restoredMapView!.cityId;
+      prefectureFilter =
+          _restoredMapView?.prefectureId ??
+          (cityFilter ??
+                  (selected == null ? '29' : data.towns[selected]!.cityId))
+              .substring(0, 2);
+      nationalView =
+          national != null && (_restoredMapView?.nationalView ?? false);
       final expiredOnLoad = g.expire(DateTime.now());
       _rememberVisibleFact();
       setState(() {});
@@ -522,6 +544,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (_completedCity != null) return;
     setState(() {
       cityFilter = id;
+      if (id != null) prefectureFilter = id.substring(0, 2);
+      nationalView = false;
       selected = null;
       mapFocus = 0;
       factIndex = 0;
@@ -544,6 +568,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     setState(() {
       _clearConquestFor(id);
       selected = id;
+      final targetCity = atlas!.towns[id]!.cityId;
+      if (!targetCity.startsWith(prefectureFilter)) cityFilter = targetCity;
+      prefectureFilter = targetCity.substring(0, 2);
+      nationalView = false;
       factIndex = 0;
       _rememberVisibleFact();
     });
@@ -586,6 +614,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final townId = atlas!.officeTownIds[city]!;
     setState(() {
       cityFilter = city;
+      prefectureFilter = city.substring(0, 2);
+      nationalView = false;
       selected = townId;
       mapFocus++;
       mapCenter++;
@@ -602,6 +632,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       factIndex = 0;
       _rememberVisibleFact();
       cityFilter = atlas!.towns[target]!.cityId;
+      prefectureFilter = cityFilter!.substring(0, 2);
+      nationalView = false;
       mapFocus++;
       mapCenter++;
     });
@@ -662,7 +694,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 24),
-              Text('大和の地図をひらいています…'),
+              Text('地図をひらいています…'),
             ],
           ),
         ),
@@ -672,7 +704,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final town = selected == null ? null : atlas!.towns[selected];
     final city = town?.cityId ?? cityFilter;
     final location = [
-      '奈良県',
+      nationalView
+          ? '全国'
+          : national?.prefectures[prefectureFilter]?.name ?? '奈良県',
       if (city != null) atlas!.cities[city]!,
       if (town != null) town.name,
     ].join(' ');
@@ -692,7 +726,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     message: location,
                     child: Text(
                       town?.name ??
-                          (city == null ? '奈良県' : atlas!.cities[city]!),
+                          (city == null
+                              ? (nationalView
+                                  ? '全国'
+                                  : national
+                                          ?.prefectures[prefectureFilter]
+                                          ?.name ??
+                                      '奈良県')
+                              : atlas!.cities[city]!),
                       key: const Key('current-location'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -745,7 +786,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
                     child: Text(
-                      '奈良県 ${number(g.population)} / ${number(atlas!.towns.values.fold<int>(0, (sum, t) => sum + t.population))}',
+                      '${national == null ? '奈良県' : '全国'} ${number(g.population)} / ${number(atlas!.towns.values.fold<int>(0, (sum, t) => sum + t.population))}',
                       key: const Key('prefecture-progress'),
                       style: const TextStyle(fontSize: 12),
                     ),
@@ -1148,7 +1189,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (g.owned.contains(town.id)) {
       final quizAvailable = g.canStartQuizAt(town.id);
       final cityReady =
-          g.cityOwned(town.cityId) && !g.mastered.contains(town.cityId);
+          g.cityOwned(town.cityId) &&
+          !g.mastered.contains(town.cityId) &&
+          atlas!.offices.containsKey(town.cityId);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1202,6 +1245,63 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
+  void _selectPrefecture(String id) {
+    setState(() {
+      prefectureFilter = id;
+      nationalView = false;
+      cityFilter = null;
+      selected = null;
+      mapFocus = 0;
+      factIndex = 0;
+    });
+    _startTipsTimer();
+  }
+
+  void _showNational() {
+    if (_completedCity != null) return;
+    setState(() {
+      nationalView = true;
+      cityFilter = null;
+      selected = null;
+    });
+    if (store != null) {
+      unawaited(
+        store!.saveMapView(
+          MapViewState(
+            center: const Offset(550, 750),
+            scale: 1,
+            selected: null,
+            cityId: null,
+            prefectureId: prefectureFilter,
+            nationalView: true,
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _prefectureMap(Widget map) {
+    if (national == null || prefectureFilter == '29') return map;
+    return FutureBuilder<void>(
+      key: ValueKey('geometry:$prefectureFilter'),
+      future: national!.ensureGeometry(prefectureFilter),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: TextButton(
+              onPressed: () => setState(() {}),
+              child: const Text('県の地図を再読み込み'),
+            ),
+          );
+        }
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return map;
+      },
+    );
+  }
+
   Widget _map({bool showTips = true, bool showControls = true}) => ClipRRect(
     borderRadius: BorderRadius.circular(22),
     child: ColoredBox(
@@ -1211,47 +1311,83 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             (context, constraints) => Stack(
               children: [
                 Positioned.fill(
-                  child: TerritoryMap(
-                    atlas: atlas!,
-                    game: game!,
-                    selected: selected,
-                    cityId: cityFilter,
-                    focusVersion: mapFocus,
-                    centerVersion: mapCenter,
-                    initialView: _restoredMapView,
-                    onViewChanged: (view) {
-                      _restoredMapView = view;
-                      if (store != null) unawaited(store!.saveMapView(view));
-                    },
-                    fitScale: 1,
-                    showControls: showControls && _completedCity == null,
-                    controlsBottomInset:
-                        showTips &&
-                                (tipAppearance.showTips ||
-                                    _completedCity != null)
-                            ? _tipMaxHeight(constraints) + 16
-                            : 8,
-                    onSelected: _select,
-                    onCitySelected: _selectCity,
-                    controls: [
-                      IconButton.filledTonal(
-                        key: const Key('map-home'),
-                        tooltip: game!.attackTarget == null ? '本拠地へ' : '攻略中の町へ',
-                        onPressed:
-                            (game!.attackTarget ?? game!.home) == null
-                                ? null
-                                : _focusCampaign,
-                        icon: const Icon(Icons.home_outlined),
-                      ),
-                    ],
-                    secondaryControls: [
-                      IconButton.filledTonal(
-                        tooltip: '県全域を表示',
-                        onPressed: () => _selectCity(null),
-                        icon: const Icon(Icons.zoom_out_map),
-                      ),
-                    ],
-                  ),
+                  child:
+                      nationalView && national != null
+                          ? NationalMap(
+                            data: national!,
+                            game: game!,
+                            onPrefectureSelected: _selectPrefecture,
+                            controls: [
+                              IconButton.filledTonal(
+                                tooltip: '県全域を表示',
+                                onPressed: () => _selectCity(null),
+                                icon: const Icon(Icons.map_outlined),
+                              ),
+                            ],
+                          )
+                          : _prefectureMap(
+                            TerritoryMap(
+                              key: ValueKey(prefectureFilter),
+                              prefectureId: prefectureFilter,
+                              atlas: atlas!,
+                              game: game!,
+                              selected: selected,
+                              cityId: cityFilter,
+                              focusVersion: mapFocus,
+                              centerVersion: mapCenter,
+                              initialView:
+                                  _restoredMapView?.nationalView == false &&
+                                          _restoredMapView?.prefectureId ==
+                                              prefectureFilter
+                                      ? _restoredMapView
+                                      : null,
+                              onViewChanged: (view) {
+                                _restoredMapView = view;
+                                if (store != null) {
+                                  unawaited(store!.saveMapView(view));
+                                }
+                              },
+                              fitScale: 1,
+                              showControls:
+                                  showControls && _completedCity == null,
+                              controlsBottomInset:
+                                  showTips &&
+                                          (tipAppearance.showTips ||
+                                              _completedCity != null)
+                                      ? _tipMaxHeight(constraints) + 16
+                                      : 8,
+                              onSelected: _select,
+                              onCitySelected: _selectCity,
+                              controls: [
+                                IconButton.filledTonal(
+                                  key: const Key('map-home'),
+                                  tooltip:
+                                      game!.attackTarget == null
+                                          ? '本拠地へ'
+                                          : '攻略中の町へ',
+                                  onPressed:
+                                      (game!.attackTarget ?? game!.home) == null
+                                          ? null
+                                          : _focusCampaign,
+                                  icon: const Icon(Icons.home_outlined),
+                                ),
+                              ],
+                              secondaryControls: [
+                                if (national != null)
+                                  IconButton.filledTonal(
+                                    key: const Key('map-national'),
+                                    tooltip: '全国を表示',
+                                    onPressed: _showNational,
+                                    icon: const Icon(Icons.public),
+                                  ),
+                                IconButton.filledTonal(
+                                  tooltip: '県全域を表示',
+                                  onPressed: () => _selectCity(null),
+                                  icon: const Icon(Icons.map_outlined),
+                                ),
+                              ],
+                            ),
+                          ),
                 ),
                 if (showTips && (_conquestEffect || _allRegionsEffect))
                   Positioned.fill(

@@ -86,7 +86,7 @@ class Atlas {
           '292060420' ||
           '293430132' => _withoutChome(town.name),
           '294430010' => town.name.startsWith('大字新住') ? '大字新住' : '大字下市',
-          _ => '',
+          _ => town.cityId.startsWith('29') ? '' : _withoutChome(town.name),
         };
         parts.putIfAbsent(part, () => []).add(town);
       }
@@ -152,6 +152,28 @@ class Atlas {
     }
     for (final city in cities.entries) {
       final ts = byCity[city.key]!;
+      if (!city.key.startsWith('29')) {
+        facts[city.key] = [
+          for (final entry
+              in const {
+                'pending': 'この地域の歴史・文化tipsは準備中です。',
+                'rule': '人口1人につき1タップで町を攻略します。',
+                'map': '緑は自領、金色は進軍できる町です。',
+              }.entries)
+            LocalFact(
+              '${city.key}:placeholder:${entry.key}',
+              city.key,
+              '仮tips',
+              entry.value,
+              '',
+              '',
+              const [],
+              censusSource,
+              quizEligible: false,
+            ),
+        ];
+        continue;
+      }
       final population = ts.fold(0, (s, t) => s + t.population);
       final largest = [...ts]
         ..sort((a, b) => b.population.compareTo(a.population));
@@ -473,7 +495,9 @@ class Game {
     if (everOwned.length >= 10) titles.add('十郷の領主');
     if (everOwned.length >= 100) titles.add('大和の開拓者');
     message = '${town.name}を獲得しました！';
-    if (cityOwned(town.cityId) && !mastered.contains(town.cityId)) {
+    if (cityOwned(town.cityId) &&
+        !mastered.contains(town.cityId) &&
+        atlas.offices.containsKey(town.cityId)) {
       message =
           '${atlas.cities[town.cityId]}の全領土を獲得。${atlas.offices[town.cityId]!.name}のある町をタップして制圧クイズに挑戦できます。';
     }

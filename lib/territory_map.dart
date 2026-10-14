@@ -21,6 +21,7 @@ class TerritoryMap extends StatefulWidget {
     required this.focusVersion,
     required this.onSelected,
     required this.onCitySelected,
+    this.prefectureId = '29',
     this.controls = const [],
     this.secondaryControls = const [],
     this.centerVersion = 0,
@@ -30,6 +31,7 @@ class TerritoryMap extends StatefulWidget {
     this.initialView,
     this.onViewChanged,
   });
+  final String prefectureId;
   final List<Widget> controls, secondaryControls;
   final Atlas atlas;
   final Game game;
@@ -130,12 +132,17 @@ class _TerritoryMapState extends State<TerritoryMap> {
     _buildPaths();
     _buildCities();
     officePoints = {
-      for (final o in widget.atlas.offices.values) o.cityId: project(o.point),
+      for (final o in widget.atlas.offices.values.where(
+        (o) => o.cityId.startsWith(widget.prefectureId),
+      ))
+        o.cityId: project(o.point),
     };
-    _loadRelief();
-    _loadWater();
-    _loadUrban();
-    _loadMountains();
+    if (widget.prefectureId == '29') {
+      _loadRelief();
+      _loadWater();
+      _loadUrban();
+      _loadMountains();
+    }
   }
 
   @override
@@ -149,6 +156,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
   void _buildPaths() {
     final points =
         widget.atlas.towns.values
+            .where((t) => t.cityId.startsWith(widget.prefectureId))
             .expand((t) => t.polygons)
             .expand((p) => p)
             .expand((r) => r)
@@ -171,7 +179,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
     paths = {};
     townOutlines = {};
     bounds = {};
-    for (final t in widget.atlas.towns.values) {
+    for (final t in widget.atlas.towns.values.where(
+      (t) => t.cityId.startsWith(widget.prefectureId),
+    )) {
       final parts = <Path>[];
       for (final polygon in t.polygons) {
         final part = Path()..fillType = PathFillType.evenOdd;
@@ -198,7 +208,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
     cityPaths = {};
     cityOutlines = {};
     cityBounds = {};
-    for (final city in widget.atlas.byCity.entries) {
+    for (final city in widget.atlas.byCity.entries.where(
+      (e) => e.key.startsWith(widget.prefectureId),
+    )) {
       final outline = _union(city.value.map((t) => paths[t.id]!).toList());
       cityPaths[city.key] = outline;
       cityOutlines[city.key] = exteriorOutline(outline);
@@ -245,6 +257,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
       selected: widget.selected,
       cityId: widget.cityId,
       showGeography: showGeography,
+      prefectureId: widget.prefectureId,
     );
   }
 
@@ -284,7 +297,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
     if (size == null) return;
     final towns =
         widget.cityId == null
-            ? widget.atlas.towns.values
+            ? widget.atlas.towns.values.where(
+              (t) => t.cityId.startsWith(widget.prefectureId),
+            )
             : widget.atlas.byCity[widget.cityId]!;
     var box = towns
         .map((t) => bounds[t.id]!)
@@ -420,7 +435,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
               ),
             ),
           ),
-          if (showGeography)
+          if (showGeography && widget.prefectureId == '29')
             Positioned(
               left: 8,
               right: 68,
@@ -656,34 +671,31 @@ class _MapPainter extends CustomPainter {
           ..strokeWidth = 0.5 / zoom;
     for (final e in paths.entries) {
       if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
-      final ids = overview ? atlas.byCity[e.key]!.map((t) => t.id) : [e.key];
-      final owned =
-          overview
-              ? ids.every(game.owned.contains)
-              : game.owned.contains(e.key);
-      final reachable = ids.any(adjacent.contains);
       canvas.drawPath(
         e.value,
         Paint()
           ..color =
-              !overview
-                  ? townFillColor(
+              overview
+                  ? const Color(0xFF43616A)
+                  : townFillColor(
                     atlas.towns[e.key]!,
                     game,
-                    reachable: reachable,
-                  )
-                  : owned
-                  ? const Color(0xFF7AE1BB)
-                  : reachable
-                  ? const Color(0xFFEEC47C)
-                  : const Color(0xFF43616A),
+                    reachable: adjacent.contains(e.key),
+                  ),
       );
     }
     if (overview) {
-      final conquered = Paint()..color = const Color(0xFF7AE1BB);
-      for (final townId in game.owned) {
-        final path = townPaths[townId];
-        if (path != null) canvas.drawPath(path, conquered);
+      for (final entry in townPaths.entries) {
+        final town = atlas.towns[entry.key]!;
+        canvas.drawPath(
+          entry.value,
+          Paint()
+            ..color = townFillColor(
+              town,
+              game,
+              reachable: adjacent.contains(entry.key),
+            ),
+        );
       }
     }
     final terrain = relief;
