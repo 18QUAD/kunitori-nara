@@ -216,8 +216,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
   void _detailCity(String? city) {
     if (widget.prefectureId == '29' ||
         city == null ||
-        !detailedCities.add(city))
+        !detailedCities.add(city)) {
       return;
+    }
     for (final town in widget.atlas.byCity[city]!) {
       final path = _union([
         for (final polygon in town.polygons) _polygonPath([polygon]),
