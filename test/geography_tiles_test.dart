@@ -34,13 +34,18 @@ void main() {
   test(
     'real raster water preserves Lake Biwa and its island at multiple scales',
     () async {
-      Future<List<int>> pixel(double lon, double lat, int level) async {
+      Future<List<int>> pixel(
+        double lon,
+        double lat,
+        int level, {
+        String layer = 'detail',
+      }) async {
         final span = GeographyTileIndex.span(level);
         final x = ((lon - 120) / span).floor();
         final y = ((48 - lat) / span).floor();
         final bytes =
             File(
-              'assets/data/map_tiles_v2/${level}_${x}_${y}_detail.png',
+              'assets/data/map_tiles_v2/${level}_${x}_${y}_$layer.png',
             ).readAsBytesSync();
         final codec = await ui.instantiateImageCodec(bytes);
         final image = (await codec.getNextFrame()).image;
@@ -60,8 +65,29 @@ void main() {
         expect(water.take(3), [0x79, 0xD9, 0xFF]);
         expect(water[3], 255);
       }
+      for (final level in [2, 4]) {
+        expect(await pixel(136.05, 35.25, level, layer: 'overview'), [
+          0x79,
+          0xD9,
+          0xFF,
+          255,
+        ]);
+      }
       final island = await pixel(136.143, 35.4219, 4);
       expect(island, isNot([0x79, 0xD9, 0xFF, 255]));
+      final pond = await pixel(135.72145, 34.7427935, 4);
+      final overviewPond = await pixel(
+        135.72145,
+        34.7427935,
+        4,
+        layer: 'overview',
+      );
+      expect(pond[1], greaterThan(pond[0] + 25));
+      expect(overviewPond[0], greaterThan(overviewPond[1]));
+      expect(
+        await pixel(136.143, 35.4219, 4, layer: 'overview'),
+        isNot([0x79, 0xD9, 0xFF, 255]),
+      );
       // Building land at Tokyo's metropolitan government office remains lavender.
       final urban = await pixel(139.6917, 35.6896, 4);
       expect(urban[0], greaterThan(urban[1]));

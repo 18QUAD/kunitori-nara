@@ -136,6 +136,7 @@ class GeographyTiles extends StatefulWidget {
     required this.clip,
     required this.enabled,
     this.prefectureId,
+    this.nationalOverview = false,
   });
   final TransformationController transform;
   final Offset Function(math.Point<double>) project;
@@ -143,6 +144,7 @@ class GeographyTiles extends StatefulWidget {
   final Path clip;
   final bool enabled;
   final String? prefectureId;
+  final bool nationalOverview;
   @override
   State<GeographyTiles> createState() => _GeographyTilesState();
 }
@@ -185,7 +187,8 @@ class _GeographyTilesState extends State<GeographyTiles> {
         old.viewport != widget.viewport ||
         old.clip != widget.clip ||
         old.enabled != widget.enabled ||
-        old.prefectureId != widget.prefectureId) {
+        old.prefectureId != widget.prefectureId ||
+        old.nationalOverview != widget.nationalOverview) {
       _schedule();
     }
   }
@@ -229,6 +232,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
       widget.transform.toScene(Offset.zero),
       widget.transform.toScene(widget.viewport.bottomRight(Offset.zero)),
     );
+    final detailLayer = widget.nationalOverview ? 'overview' : 'detail';
     List<(int, int)> visible(int lod) {
       final span = GeographyTileIndex.span(lod);
       final margin = span * math.max(unit.dx.abs(), unit.dy.abs());
@@ -242,7 +246,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
         for (var x = xmin; x <= xmax; x++)
           for (var y = ymin; y <= ymax; y++)
             if (manifest.available.contains('${lod}_${x}_${y}_shade') ||
-                manifest.available.contains('${lod}_${x}_${y}_detail'))
+                manifest.available.contains('${lod}_${x}_${y}_$detailLayer'))
               (x, y),
       ];
     }
@@ -256,7 +260,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     final descriptors = <(String, Rect, String, Rect)>[];
     for (final (x, y) in cells) {
       final target = _sceneRect(level, x, y);
-      for (final layer in ['shade', 'detail']) {
+      for (final layer in ['shade', detailLayer]) {
         final key = '${level}_${x}_${y}_$layer';
         if (!manifest.available.contains(key)) continue;
         // Parent images fill the target until its sharper tile arrives.
@@ -412,7 +416,7 @@ class _GeographyPainter extends CustomPainter {
     canvas.clipRect(Offset.zero & size);
     canvas.translate(-origin.dx, -origin.dy);
     canvas.clipPath(clip);
-    for (final layer in ['shade', 'detail']) {
+    for (final layer in ['shade', 'detail', 'overview']) {
       for (final tile in tiles.where((t) => t.layer == layer)) {
         canvas.save();
         canvas.clipRect(tile.target);

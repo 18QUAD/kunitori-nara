@@ -65,6 +65,7 @@ let browser;
   assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /\/map_tiles\//.test(e.name)))), 'Current build must not load legacy tiles');
   await page.screenshot({path: path.join(output, 'nara-saved-campaign.png')});
   await toNational();
+  await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /map_tiles_v2\/.*_overview\.png/.test(e.name)));
   const map = page.getByLabel('全国地図', {exact: true});
   await map.waitFor();
   await page.waitForFunction(key => JSON.parse(JSON.parse(localStorage.getItem(key))).nationalView, mapKey);

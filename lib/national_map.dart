@@ -260,6 +260,7 @@ class _NationalMapState extends State<NationalMap> {
                           ),
                         ),
                         GeographyTiles(
+                          nationalOverview: true,
                           transform: transform,
                           project: project,
                           viewport: size,

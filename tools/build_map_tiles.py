@@ -215,6 +215,8 @@ def main():
     (labeldir/'national.json').write_text(json.dumps({'lines':[], 'areas':[], 'labels':water['labels']}, ensure_ascii=False,separators=(',',':')))
     from restore_nara_water_tiles import restore
     restore(OUT)
+    from build_national_water_tiles import build
+    build(OUT)
     print(f'{len(tiles)} base images, {sum(tiles.values())/1024**2:.1f} MiB', flush=True)
 
 if __name__ == '__main__':
