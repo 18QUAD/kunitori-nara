@@ -15,6 +15,28 @@ void main() {
     );
   });
 
+  test('startup retains no detailed coordinates, including Nara sources', () {
+    expect(national.residentGeometry, isNull);
+    expect(
+      national.atlas.towns.values.every((t) => t.polygons.isEmpty),
+      isTrue,
+    );
+    expect(
+      national.atlas.sourceTowns.values.every((t) => t.polygons.isEmpty),
+      isTrue,
+    );
+    final original = jsonDecode(
+      File('assets/data/nara.json').readAsStringSync(),
+    );
+    for (final row in original['towns']) {
+      row['polygons'] = [];
+    }
+    expect(
+      jsonDecode(File('assets/data/nara_metadata.json').readAsStringSync()),
+      original,
+    );
+  });
+
   test(
     'real census covers all 47 prefectures and the full national population',
     () {
@@ -142,16 +164,22 @@ void main() {
     () async {
       final atlas = national.atlas;
       String? previous;
-      for (final pref in ['01', '13', '27', '47']) {
+      for (final pref in ['29', '01', '29', '13', '27', '47']) {
         await national.ensureGeometry(pref);
         final towns =
             atlas.towns.values.where((t) => t.cityId.startsWith(pref)).toList();
         expect(towns.every((t) => t.polygons.isNotEmpty), isTrue, reason: pref);
-        expect(atlas.prefecturePolygons[pref], isNotEmpty);
+        if (pref == '29') {
+          for (final town in nara.towns.values) {
+            expect(atlas.towns[town.id]!.polygons, town.polygons);
+          }
+        } else {
+          expect(atlas.prefecturePolygons[pref], isNotEmpty);
+        }
         for (final city in atlas.cities.keys.where(
           (id) => id.startsWith(pref),
         )) {
-          expect(atlas.cityPolygons[city], isNotEmpty);
+          if (pref != '29') expect(atlas.cityPolygons[city], isNotEmpty);
         }
         if (previous != null) {
           expect(

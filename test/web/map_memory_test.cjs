@@ -20,13 +20,19 @@ let browser;
       selected:null,cityId:null,showGeography:true,prefectureId:'29',nationalView:true})));
   });
   await page.goto(process.env.BASE_URL || 'http://127.0.0.1:8766/kunitori-nara/',{waitUntil:'networkidle'});
+  await page.locator('flutter-view').waitFor({state:'attached',timeout:120000});
   const placeholder=page.locator('flt-semantics-placeholder');
+  const nationalMap=page.getByLabel('全国地図',{exact:true});
+  await Promise.race([
+    placeholder.waitFor({state:'attached',timeout:120000}),
+    nationalMap.waitFor({state:'attached',timeout:120000}),
+  ]);
   if(await placeholder.count()) await placeholder.evaluate(e=>e.click());
-  await page.getByLabel('全国地図',{exact:true}).waitFor({timeout:120000});
+  await nationalMap.waitFor({timeout:120000});
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Performance.enable');
   const samples=[];
-  for (const name of ['北海道','東京都','大阪府','北海道','東京都','大阪府']) {
+  for (const name of ['奈良県','北海道','東京都','大阪府','奈良県','北海道','東京都','大阪府']) {
     // Accessible prefecture hit areas overlap at the nationwide fit scale.
     await page.getByRole('button',{name,exact:true}).evaluate(e=>e.click());
     await page.getByRole('button',{name:'1段上の地図を表示',exact:true}).waitFor({timeout:60000});
@@ -52,8 +58,9 @@ let browser;
     samples.push(heap);
     console.log(name,'JS heap after collection:',Math.round(heap/1024/1024),'MiB');
   }
-  // Re-visiting the same three prefectures must not retain another copy of them.
-  assert(Math.max(...samples.slice(3)) <= Math.max(...samples.slice(0,3)) + 24*1024*1024, JSON.stringify(samples));
+  // Re-visiting Nara and the same large prefectures must not retain another copy.
+  const halfway=samples.length/2;
+  assert(Math.max(...samples.slice(halfway)) <= Math.max(...samples.slice(0,halfway)) + 24*1024*1024, JSON.stringify(samples));
   const saved=await page.evaluate(()=>JSON.parse(JSON.parse(localStorage.getItem('flutter.kunitori.nara.v1'))));
   assert.equal(saved.home,'29205043001');
   assert.equal(saved.progress['29205041001'],7);

@@ -79,7 +79,10 @@ void main() {
         () => Future<void>.delayed(const Duration(milliseconds: 100)),
       );
       await tester.pump(const Duration(milliseconds: 100));
-      if (find.text('旅のはじまり').evaluate().isNotEmpty) break;
+      if (find.text('旅のはじまり').evaluate().isNotEmpty &&
+          find.byType(TerritoryMap).evaluate().isNotEmpty) {
+        break;
+      }
     }
     await tester.pumpAndSettle();
     expect(find.text('くにとり'), findsNothing);

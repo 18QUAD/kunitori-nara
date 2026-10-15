@@ -106,6 +106,21 @@ void main() {
       }
 
       await waitForTiles();
+      for (var i = 0; i < 100 && national.data.residentGeometry != null; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pump();
+      }
+      expect(national.data.residentGeometry, isNull);
+      expect(
+        national.data.atlas.towns.values.every((t) => t.polygons.isEmpty),
+        isTrue,
+      );
+      expect(
+        national.data.atlas.sourceTowns.values.every((t) => t.polygons.isEmpty),
+        isTrue,
+      );
       Future<List<int>> hokkaidoPixel() async {
         final painter = nationalPainter();
         // The central Hokkaido mountains are far from borders and labels.
@@ -251,7 +266,7 @@ void main() {
       await tester.tap(find.byKey(const Key('map-up')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('map-home')));
-      await tester.pumpAndSettle();
+      await waitForMap();
       final map = tester.widget<TerritoryMap>(find.byType(TerritoryMap));
       expect(map.prefectureId, '29');
       expect(map.selected, target);

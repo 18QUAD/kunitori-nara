@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'coastal_assets.dart';
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/services.dart';
 import 'game.dart';
 
@@ -15,16 +16,26 @@ class NationalAtlas {
   String? _requested;
   Future<void>? _requestedLoad;
   static NationalAtlas? _cached;
-  Future<void> _geometryTail = Future.value();
+  Future<void>? _geometryTail;
   String? _resident;
   String? get residentGeometry => _resident;
 
   Future<T> _serial<T>(FutureOr<T> Function() action) {
-    final result = _geometryTail.then((_) => action());
-    _geometryTail = result.then<void>(
-      (_) {},
-      onError: (Object e, StackTrace st) {},
+    final previous = _geometryTail;
+    final result =
+        previous == null
+            ? Future<T>.sync(action)
+            : previous.then((_) => action());
+    late final Future<void> tail;
+    void finish() {
+      if (identical(_geometryTail, tail)) _geometryTail = null;
+    }
+
+    tail = result.then<void>(
+      (_) => finish(),
+      onError: (Object e, StackTrace st) => finish(),
     );
+    _geometryTail = tail;
     return result;
   }
 
@@ -34,9 +45,21 @@ class NationalAtlas {
     _requested = null;
     _requestedLoad = null;
     return _serial(() async {
-      await _readGeometry(id);
-      convert();
+      try {
+        await _readGeometry(id);
+        convert();
+      } finally {
+        _releaseGeometry();
+      }
     });
+  }
+
+  /// No detailed map is visible. Serialized with loads so old requests cannot
+  /// clear the next prefecture while its map is being built.
+  Future<void> releaseGeometry() {
+    _requested = null;
+    _requestedLoad = null;
+    return _serial(_releaseGeometry);
   }
 
   void _releaseGeometry() {
@@ -59,7 +82,7 @@ class NationalAtlas {
     final nara =
         jsonDecode(
               await rootBundle.loadString(
-                'assets/data/nara.json',
+                'assets/data/nara_metadata.json',
                 cache: false,
               ),
             )
@@ -107,7 +130,9 @@ class NationalAtlas {
   }
 
   Future<void> ensureGeometry(String prefecture) {
-    if (prefecture == '29') return Future.value();
+    if (_geometryTail == null && _resident == prefecture) {
+      return SynchronousFuture<void>(null);
+    }
     if (_requested == prefecture && _requestedLoad != null) {
       return _requestedLoad!;
     }
@@ -115,7 +140,9 @@ class NationalAtlas {
     final load = _serial(() => _readGeometry(prefecture));
     _requestedLoad = load;
     load.then<void>(
-      (_) {},
+      (_) {
+        if (identical(_requestedLoad, load)) _requestedLoad = null;
+      },
       onError: (Object error, StackTrace stack) {
         if (identical(_requestedLoad, load)) {
           _requested = null;
@@ -127,15 +154,20 @@ class NationalAtlas {
   }
 
   Future<void> _readGeometry(String prefecture) async {
-    if (prefecture == '29' || _resident == prefecture) return;
+    if (_resident == prefecture) return;
     _releaseGeometry();
 
     try {
       final data =
           jsonDecode(
-                await loadCoastalAsset(
-                  'assets/data/prefectures/$prefecture.json',
-                ),
+                await (prefecture == '29'
+                    ? rootBundle.loadString(
+                      'assets/data/nara.json',
+                      cache: false,
+                    )
+                    : loadCoastalAsset(
+                      'assets/data/prefectures/$prefecture.json',
+                    )),
               )
               as Map<String, dynamic>;
       // Decode everything before changing the live atlas, so retry is safe.
@@ -162,6 +194,7 @@ class NationalAtlas {
       }
       final cityShapes = <String, List<List<List<Point<double>>>>>{};
       for (final row in data['cities'] as List? ?? []) {
+        if (row['polygons'] == null) continue;
         cityShapes[row['id'] as String] =
             Prefecture.fromJson(row as Map<String, dynamic>).polygons;
       }

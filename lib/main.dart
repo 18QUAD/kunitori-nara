@@ -1288,7 +1288,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Widget _prefectureMap(Widget map) {
-    if (national == null || prefectureFilter == '29') return map;
+    if (national == null) return map;
     return FutureBuilder<void>(
       key: ValueKey('geometry:$prefectureFilter'),
       future: national!.ensureGeometry(prefectureFilter),

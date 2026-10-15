@@ -90,6 +90,7 @@ class _NationalMapState extends State<NationalMap> {
         ids.addAll(widget.data.atlas.towns[id]!.neighbors);
       }
       final converted = <String, Path>{};
+      if (ids.isEmpty) await widget.data.releaseGeometry();
       for (final pref in ids.map((id) => id.substring(0, 2)).toSet()) {
         if (!mounted) return;
         await widget.data.withGeometry(pref, () {

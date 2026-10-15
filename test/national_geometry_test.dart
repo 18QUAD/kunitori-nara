@@ -19,7 +19,8 @@ void main() {
           for (final p in ['26', '27']) {'id': '${p}201', 'name': '検証市$p'},
         ],
         'towns': [
-          ...original['towns'],
+          for (final row in original['towns'])
+            <String, dynamic>{...row, 'polygons': []},
           for (final p in ['26', '27'])
             {
               'id': '${p}201001001',
@@ -37,7 +38,6 @@ void main() {
       game.selectAttackTarget('29205041001');
       game.tap('29205041001', DateTime.utc(2026));
       final saved = game.toJson();
-      final naraShape = atlas.towns['29205043001']!.polygons.length;
       final reads = <String, int>{};
       var active = 0, peak = 0;
       var fail = false;
@@ -49,7 +49,12 @@ void main() {
                 message.lengthInBytes,
               ),
             );
-            final pref = path.contains('/26.json') ? '26' : '27';
+            final pref =
+                path.endsWith('nara.json')
+                    ? '29'
+                    : path.contains('/26.json')
+                    ? '26'
+                    : '27';
             reads.update(pref, (n) => n + 1, ifAbsent: () => 1);
             active++;
             if (active > peak) peak = active;
@@ -72,15 +77,23 @@ void main() {
             return ByteData.sublistView(
               Uint8List.fromList(
                 utf8.encode(
-                  jsonEncode({
-                    'towns': [
-                      {'id': '${pref}201001001', 'polygons': shape},
-                    ],
-                    'cities': [
-                      {'id': '${pref}201', 'name': '検証市', 'polygons': shape},
-                    ],
-                    'polygons': shape,
-                  }),
+                  jsonEncode(
+                    pref == '29'
+                        ? original
+                        : {
+                          'towns': [
+                            {'id': '${pref}201001001', 'polygons': shape},
+                          ],
+                          'cities': [
+                            {
+                              'id': '${pref}201',
+                              'name': '検証市',
+                              'polygons': shape,
+                            },
+                          ],
+                          'polygons': shape,
+                        },
+                  ),
                 ),
               ),
             );
@@ -89,6 +102,10 @@ void main() {
         () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMessageHandler('flutter/assets', null),
       );
+      expect(atlas.towns['29205043001']!.polygons, isEmpty);
+      await data.ensureGeometry('29');
+      expect(atlas.towns['29205043001']!.polygons, isNotEmpty);
+      expect(data.residentGeometry, '29');
       for (final pref in ['26', '27', '26']) {
         await data.ensureGeometry(pref);
         expect(data.residentGeometry, pref);
@@ -97,6 +114,8 @@ void main() {
         expect(atlas.towns['${old}201001001']!.polygons, isEmpty);
         expect(atlas.cityPolygons.keys, ['${pref}201']);
         expect(game.toJson(), saved);
+        expect(atlas.towns['29205043001']!.polygons, isEmpty);
+        expect(atlas.sourceTowns['29205043001']!.polygons, isEmpty);
       }
       expect(reads['26'], 2);
       // A -> B -> A before B starts must await the final A, not reuse stale A.
@@ -113,6 +132,25 @@ void main() {
           }),
       ]);
       expect(converted, ['27', '26', '27']);
+      expect(data.residentGeometry, isNull);
+      await data.withGeometry('29', () {
+        expect(atlas.towns['29205043001']!.polygons, isNotEmpty);
+      });
+      expect(data.residentGeometry, isNull);
+      expect(atlas.towns['29205043001']!.polygons, isEmpty);
+      // A failed conversion must also free the temporary geometry.
+      await expectLater(
+        data.withGeometry('29', () => throw StateError('test')),
+        throwsStateError,
+      );
+      expect(data.residentGeometry, isNull);
+      await data.ensureGeometry('29');
+      expect(atlas.towns['29205043001']!.polygons, isNotEmpty);
+      await data.releaseGeometry();
+      expect(atlas.towns['29205043001']!.polygons, isEmpty);
+      // Releasing must invalidate a completed ensureGeometry future.
+      await data.ensureGeometry('29');
+      expect(atlas.towns['29205043001']!.polygons, isNotEmpty);
       expect(peak, 1);
       fail = true;
       await expectLater(
@@ -121,7 +159,7 @@ void main() {
       );
       await data.ensureGeometry('26');
       expect(atlas.towns['26201001001']!.polygons, hasLength(1));
-      expect(atlas.towns['29205043001']!.polygons.length, naraShape);
+      expect(atlas.towns['29205043001']!.polygons, isEmpty);
       expect(game.toJson(), saved);
     },
   );

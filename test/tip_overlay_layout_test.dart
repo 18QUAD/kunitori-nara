@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kunitori/main.dart';
 import 'package:kunitori/tip_appearance.dart';
+import 'package:kunitori/territory_map.dart';
 
 void main() {
   for (final legacy in [false, true]) {
@@ -31,7 +32,7 @@ void main() {
             () async => Future<void>.delayed(const Duration(milliseconds: 200)),
           );
           await tester.pump();
-          if (find.byKey(const Key('play-layout')).evaluate().isNotEmpty) break;
+          if (find.byType(TerritoryMap).evaluate().isNotEmpty) break;
         }
         await tester.pumpAndSettle();
         final height =
