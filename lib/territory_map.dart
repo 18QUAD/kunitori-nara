@@ -808,13 +808,17 @@ class _MapPainter extends CustomPainter {
         if (occupiedLabels.any((r) => r.overlaps(labelRect))) {
           labelCenter += Offset(0, 18 / zoom);
         }
-        occupiedLabels.add(
-          Rect.fromCenter(
-            center: labelCenter,
-            width: label.width + 4 / zoom,
-            height: label.height + 4 / zoom,
-          ),
+        final placedLabel = Rect.fromCenter(
+          center: labelCenter,
+          width: label.width + 4 / zoom,
+          height: label.height + 4 / zoom,
         );
+        if (!e.key.startsWith('29') &&
+            e.key != selected &&
+            occupiedLabels.any((r) => r.overlaps(placedLabel))) {
+          continue;
+        }
+        occupiedLabels.add(placedLabel);
         paintMapLabel(
           canvas,
           label,
