@@ -57,7 +57,7 @@ class UrbanLayer {
                   .where((row) => ids.contains(row['id']))
                   .toList();
         }
-        for (final row in rows) {
+        Future<void> decode(Map<String, dynamic> row) async {
           final file = national ? 'national' : row['id'];
           final bytes = await rootBundle.load('assets/data/urban/$file.png');
           final codec = await ui.instantiateImageCodec(
@@ -87,6 +87,10 @@ class UrbanLayer {
           } finally {
             codec.dispose();
           }
+        }
+
+        for (var start = 0; start < rows.length; start += 16) {
+          await Future.wait(rows.skip(start).take(16).map(decode));
         }
         if (rasters.isEmpty) throw const FormatException('市街地データがありません。');
         return UrbanLayer(Path(), rasters: rasters);

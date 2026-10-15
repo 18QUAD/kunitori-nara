@@ -27,14 +27,17 @@ class Relief {
     final ids = (index['prefectures'][id] as List).cast<String>().toSet();
     final patches = <Relief>[];
     try {
-      for (final row in index['tiles'] as List) {
-        final key = "${row['x']}_${row['y']}";
-        if (!ids.contains(key)) continue;
-        patches.add(
-          await _decode(
-            row as Map<String, dynamic>,
-            'assets/data/relief/$key.png',
-          ),
+      final rows =
+          (index['tiles'] as List)
+              .cast<Map<String, dynamic>>()
+              .where((row) => ids.contains("${row['x']}_${row['y']}"))
+              .toList();
+      for (var start = 0; start < rows.length; start += 16) {
+        await Future.wait(
+          rows.skip(start).take(16).map((row) async {
+            final key = "${row['x']}_${row['y']}";
+            patches.add(await _decode(row, 'assets/data/relief/$key.png'));
+          }),
         );
       }
       if (patches.isEmpty) throw const FormatException('起伏データがありません。');

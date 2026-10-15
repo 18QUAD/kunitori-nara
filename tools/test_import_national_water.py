@@ -39,10 +39,11 @@ class NationalWaterTest(unittest.TestCase):
         for file in ['25.json','national.json']:
             data=json.loads((root/file).read_text())
             # Independent real-world positions: open Lake Biwa and Chikubu island.
-            lake=[Polygon(p[0],p[1:]) for p in data['areas']]
-            self.assertTrue(all(p.is_valid for p in lake),file)
-            self.assertTrue(any(p.contains(Point(136.05,35.25)) for p in lake),file)
-            self.assertFalse(any(p.contains(Point(136.143,35.4219)) for p in lake),file)
+            for areas in [data['areas'], data.get('overviewAreas', data['areas'])]:
+                lake=[Polygon(p[0],p[1:]) for p in areas]
+                self.assertTrue(all(p.is_valid for p in lake),file)
+                self.assertTrue(any(p.contains(Point(136.05,35.25)) for p in lake),file)
+                self.assertFalse(any(p.contains(Point(136.143,35.4219)) for p in lake),file)
             self.assertIn('琵琶湖',{l['name'] for l in data['labels']})
 
 

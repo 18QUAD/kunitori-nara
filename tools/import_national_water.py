@@ -144,7 +144,7 @@ def county_overview(data):
     for coords in data['areas']:
         polygon = Polygon(coords[0], coords[1:])
         if polygon.area >= .000001:
-            simplified = set_precision(polygon.simplify(.00005, preserve_topology=True), 1e-6)
+            simplified = set_precision(polygon.simplify(.0005, preserve_topology=True), 1e-6)
             for part in components(simplified, 'Polygon'):
                 areas.append(rounded(mapping(part)['coordinates']))
     data['overviewAreas'] = areas
