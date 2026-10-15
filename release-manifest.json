@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "sourceCommit": "a7936a26983d6faa1b10d1235df2c7e37a46e75f",
+  "sourceCommit": "26e0dabe402355bd51533f8147bca6efcf1ed85c",
   "baseHref": "/kunitori-nara/",
-  "createdAt": "2026-10-15T04:01:32.192475+00:00",
+  "createdAt": "2026-10-15T04:33:05.620210+00:00",
   "files": {
     ".last_build_id": {
       "sha256": "1e6750d7a8eddeea7e8c1a05d6a70770b204433a8c2c81e9469f679ce114ba26",
@@ -16413,11 +16413,11 @@
       "bytes": 7735
     },
     "flutter_bootstrap.js": {
-      "sha256": "fc037dd413a16c3e755b91d9999e73cea2a28a17d067e1f000e9feab796f97e6",
-      "bytes": 12215
+      "sha256": "4bba8be1730300429b881a28d80df39b586a144a28dba2214f16f85b6fdc9125",
+      "bytes": 12244
     },
     "flutter_service_worker.js": {
-      "sha256": "868e236c43fc175a98e52239440263d4d3482f7aa39e2ed3ccc1c28ea271b7f0",
+      "sha256": "ec3fa2be918bd1e3c90d4f4032ef301bb17ddbc3eca2644ccf069afff18535ef",
       "bytes": 349829
     },
     "icons/Icon-192.png": {
@@ -16437,12 +16437,12 @@
       "bytes": 20998
     },
     "index.html": {
-      "sha256": "26709c9ed9d4162b72ec0bab32f065c43aa80a7400deadb4dc6b20568064cd28",
-      "bytes": 2425
+      "sha256": "acf778c76c9710fcafdb9e33d2f609309f9772072b4d9b2887e70ca833d9c823",
+      "bytes": 2420
     },
     "main.dart.js": {
-      "sha256": "6a341ec93c789ec7d16c1b42e17524182e8fb2b5c5411a5913408e8309f2308d",
-      "bytes": 3079857
+      "sha256": "f19de9ae69dbeb8121d622301eb51bb82f843fa65a88fc5ef89e677c084c33ad",
+      "bytes": 3084032
     },
     "manifest.json": {
       "sha256": "81c753a36648806b90382d3a1623d6314b441b26fdbe5c637b5aa3c4693f8bc8",
