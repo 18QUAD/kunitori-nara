@@ -5,7 +5,6 @@ import 'game.dart';
 import 'national_atlas.dart';
 import 'territory_map.dart';
 import 'map_view.dart';
-import 'water.dart';
 import 'geography_tiles.dart';
 
 class NationalMap extends StatefulWidget {
@@ -40,19 +39,6 @@ class _NationalMapState extends State<NationalMap> {
   final labelBounds = <String, Rect>{};
   bool initialized = false;
   bool showGeography = true;
-  WaterLayer? water;
-  bool waterFailed = false;
-
-  Future<void> _loadWater() async {
-    setState(() => waterFailed = false);
-    try {
-      final loaded = await WaterLayer.loadLabels(project, national: true);
-      if (mounted) setState(() => water = loaded);
-    } catch (_) {
-      if (mounted) setState(() => waterFailed = true);
-    }
-  }
-
   late final Path land;
 
   final territoryPaths = <String, Path>{};
@@ -77,7 +63,6 @@ class _NationalMapState extends State<NationalMap> {
       land.addPath(path, Offset.zero);
     }
     showGeography = widget.initialView?.showGeography ?? true;
-    _loadWater();
     _loadTerritory();
   }
 
@@ -251,10 +236,6 @@ class _NationalMapState extends State<NationalMap> {
                               adjacent,
                               transform,
                               widget.onPrefectureSelected,
-                              showGeography ? water : null,
-                              size,
-                              land,
-                              project,
                               foreground: false,
                             ),
                           ),
@@ -279,10 +260,6 @@ class _NationalMapState extends State<NationalMap> {
                               adjacent,
                               transform,
                               widget.onPrefectureSelected,
-                              showGeography ? water : null,
-                              size,
-                              land,
-                              project,
                               foreground: true,
                             ),
                           ),
@@ -347,7 +324,6 @@ class _NationalMapState extends State<NationalMap> {
                             onPressed: () {
                               setState(() => showGeography = !showGeography);
                               _publishView();
-                              if (showGeography && waterFailed) _loadWater();
                             },
                             icon: const Icon(Icons.terrain_outlined),
                             selectedIcon: const Icon(Icons.terrain),
@@ -359,21 +335,6 @@ class _NationalMapState extends State<NationalMap> {
                 ),
               ),
             ),
-            if (showGeography && (water == null || waterFailed))
-              Positioned(
-                left: 8,
-                top: 125,
-                child:
-                    waterFailed
-                        ? TextButton(
-                          onPressed: _loadWater,
-                          child: const Text('川・湖を読み込めませんでした · 再試行'),
-                        )
-                        : const Text(
-                          '川・湖を読み込み中…',
-                          style: TextStyle(fontSize: 10),
-                        ),
-              ),
             if (error != null)
               Positioned(
                 left: 8,
@@ -399,11 +360,7 @@ class _NationalPainter extends CustomPainter {
     this.game,
     this.adjacent,
     this.transform,
-    this.onPrefectureSelected,
-    this.water,
-    this.viewportSize,
-    this.land,
-    this.project, {
+    this.onPrefectureSelected, {
     this.foreground = false,
   }) : super(repaint: foreground ? transform : null);
   final bool foreground;
@@ -414,11 +371,6 @@ class _NationalPainter extends CustomPainter {
   final Set<String> adjacent;
   final TransformationController transform;
   final ValueChanged<String> onPrefectureSelected;
-
-  final WaterLayer? water;
-  final Size viewportSize;
-  final Path land;
-  final Offset Function(math.Point<double>) project;
 
   @override
   SemanticsBuilderCallback get semanticsBuilder => (size) {
@@ -463,7 +415,6 @@ class _NationalPainter extends CustomPainter {
       }
       return;
     }
-    final occupiedLabels = <Rect>[];
     // Keep prefecture borders and labels above the geography layers.
     for (final e in paths.entries) {
       canvas.drawPath(
@@ -486,13 +437,6 @@ class _NationalPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
       if (label.width < bounds.width || zoom > 1) {
-        occupiedLabels.add(
-          Rect.fromCenter(
-            center: bounds.center,
-            width: label.width + 8 / zoom,
-            height: label.height + 4 / zoom,
-          ),
-        );
         label.paint(
           canvas,
           bounds.center - Offset(label.width / 2, label.height / 2),
@@ -500,16 +444,6 @@ class _NationalPainter extends CustomPainter {
       }
       label.dispose();
     }
-    water?.paintLabels(
-      canvas,
-      land,
-      zoom,
-      occupiedLabels,
-      viewport: Rect.fromPoints(
-        transform.toScene(Offset.zero),
-        transform.toScene(viewportSize.bottomRight(Offset.zero)),
-      ),
-    );
   }
 
   @override
