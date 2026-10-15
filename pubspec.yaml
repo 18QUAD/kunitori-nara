@@ -76,6 +76,8 @@ flutter:
     - assets/data/affiliate_config.json
     - assets/data/japan_relief.png
     - assets/data/japan_relief.json
+    - assets/data/map_tiles/
+    - assets/data/map_labels/
     - assets/data/water/
     - assets/data/urban/
     - assets/data/relief/

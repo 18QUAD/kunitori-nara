@@ -293,7 +293,12 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final dynamic painter =
-            (((viewer.child as GestureDetector).child as SizedBox).child
+            ((((((viewer.child as GestureDetector).child as SizedBox).child
+                                    as Stack)
+                                .children
+                                .last
+                            as RepaintBoundary)
+                        .child)
                     as CustomPaint)
                 .painter;
         final Offset point = painter.officePoints['29205'];
@@ -441,7 +446,12 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final dynamic painter =
-            (((viewer.child as GestureDetector).child as SizedBox).child
+            ((((((viewer.child as GestureDetector).child as SizedBox).child
+                                    as Stack)
+                                .children
+                                .last
+                            as RepaintBoundary)
+                        .child)
                     as CustomPaint)
                 .painter;
         final Offset point = painter.officePoints['29205'];

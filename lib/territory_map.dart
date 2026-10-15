@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'game.dart';
 import 'map_view.dart';
-import 'relief.dart';
+import 'geography_tiles.dart';
 import 'water.dart';
-import 'urban.dart';
 import 'mountains.dart';
 import 'map_outline.dart';
 import 'map_label.dart';
@@ -76,7 +75,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
 
   Future<void> _loadWater() async {
     try {
-      final loaded = await WaterLayer.load(
+      final loaded = await WaterLayer.loadLabels(
         project,
         prefectureId: widget.prefectureId,
       );
@@ -86,51 +85,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
     }
   }
 
-  UrbanLayer? urban;
-  bool urbanFailed = false;
-
-  Future<void> _loadUrban() async {
-    try {
-      final loaded = await UrbanLayer.load(
-        project,
-        prefectureId: widget.prefectureId,
-      );
-      if (!mounted) {
-        loaded.dispose();
-        return;
-      }
-      setState(() => urban = loaded);
-    } catch (_) {
-      if (mounted) setState(() => urbanFailed = true);
-    }
-  }
-
-  Relief? relief;
-  bool reliefFailed = false;
   late Offset Function(math.Point<double>) project;
   late Path prefecturePath;
-
-  Future<void> _loadRelief() async {
-    try {
-      final loaded = await Relief.loadPrefecture(widget.prefectureId);
-      if (!mounted) {
-        loaded.dispose();
-        return;
-      }
-      setState(() => relief = loaded);
-    } catch (_) {
-      if (mounted) setState(() => reliefFailed = true);
-    }
-  }
-
-  Rect? get reliefBounds {
-    final data = relief;
-    if (data == null) return null;
-    return Rect.fromPoints(
-      project(math.Point(data.west, data.north)),
-      project(math.Point(data.east, data.south)),
-    );
-  }
 
   static const mapSize = Size(1100, 1500);
   @override
@@ -147,8 +103,6 @@ class _TerritoryMapState extends State<TerritoryMap> {
       ))
         o.cityId: project(o.point),
     };
-    _loadRelief();
-    _loadUrban();
     _loadWater();
     if (widget.prefectureId == '29') {
       _loadMountains();
@@ -159,8 +113,6 @@ class _TerritoryMapState extends State<TerritoryMap> {
   void dispose() {
     controller.removeListener(_publishView);
     controller.dispose();
-    relief?.dispose();
-    urban?.dispose();
     super.dispose();
   }
 
@@ -470,29 +422,68 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 child: SizedBox(
                   width: mapSize.width,
                   height: mapSize.height,
-                  child: CustomPaint(
-                    painter: _MapPainter(
-                      widget.cityId == null ? cityPaths : paths,
-                      widget.cityId == null ? cityOutlines : townOutlines,
-                      widget.cityId == null ? cityBounds : bounds,
-                      widget.atlas,
-                      widget.game,
-                      widget.selected,
-                      controller,
-                      widget.cityId,
-                      officePoints,
-                      _selectOffice,
-                      showGeography ? relief : null,
-                      showGeography ? water : null,
-                      showGeography ? urban : null,
-                      showGeography ? mountains : null,
-                      reliefBounds,
-                      widget.cityId == null
-                          ? prefecturePath
-                          : cityPaths[widget.cityId]!,
-                      size,
-                      paths,
-                    ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      RepaintBoundary(
+                        child: CustomPaint(
+                          painter: _MapPainter(
+                            widget.cityId == null ? cityPaths : paths,
+                            widget.cityId == null ? cityOutlines : townOutlines,
+                            widget.cityId == null ? cityBounds : bounds,
+                            widget.atlas,
+                            widget.game,
+                            widget.selected,
+                            controller,
+                            widget.cityId,
+                            officePoints,
+                            _selectOffice,
+                            showGeography ? water : null,
+                            showGeography ? mountains : null,
+                            widget.cityId == null
+                                ? prefecturePath
+                                : cityPaths[widget.cityId]!,
+                            size,
+                            paths,
+                            foreground: false,
+                          ),
+                        ),
+                      ),
+                      GeographyTiles(
+                        transform: controller,
+                        project: project,
+                        viewport: size,
+                        clip:
+                            widget.cityId == null
+                                ? prefecturePath
+                                : cityPaths[widget.cityId]!,
+                        enabled: showGeography,
+                      ),
+                      RepaintBoundary(
+                        child: CustomPaint(
+                          painter: _MapPainter(
+                            widget.cityId == null ? cityPaths : paths,
+                            widget.cityId == null ? cityOutlines : townOutlines,
+                            widget.cityId == null ? cityBounds : bounds,
+                            widget.atlas,
+                            widget.game,
+                            widget.selected,
+                            controller,
+                            widget.cityId,
+                            officePoints,
+                            _selectOffice,
+                            showGeography ? water : null,
+                            showGeography ? mountains : null,
+                            widget.cityId == null
+                                ? prefecturePath
+                                : cityPaths[widget.cityId]!,
+                            size,
+                            paths,
+                            foreground: true,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -507,27 +498,10 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (reliefFailed || relief == null)
-                      Text(
-                        reliefFailed ? '起伏を読み込めませんでした' : '起伏を読み込み中…',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.white70,
-                          shadows: [Shadow(color: Colors.black, blurRadius: 3)],
-                        ),
-                      ),
                     if (widget.prefectureId == '29' &&
                         (mountainsFailed || mountains == null))
                       Text(
                         mountainsFailed ? '山名を読み込めませんでした' : '山名を読み込み中…',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    if (urbanFailed || urban == null)
-                      Text(
-                        urbanFailed ? '市街地を読み込めませんでした' : '市街地を読み込み中…',
                         style: const TextStyle(
                           fontSize: 10,
                           color: Colors.white70,
@@ -629,19 +603,11 @@ class _TerritoryMapState extends State<TerritoryMap> {
                               setState(() => showGeography = !showGeography);
                               // Retry failed layers when the shared overlay is enabled.
                               _publishView();
-                              if (showGeography && reliefFailed) {
-                                setState(() => reliefFailed = false);
-                                _loadRelief();
-                              }
                               if (widget.prefectureId == '29' &&
                                   showGeography &&
                                   mountainsFailed) {
                                 setState(() => mountainsFailed = false);
                                 _loadMountains();
-                              }
-                              if (showGeography && urbanFailed) {
-                                setState(() => urbanFailed = false);
-                                _loadUrban();
                               }
                               if (showGeography && waterFailed) {
                                 setState(() => waterFailed = false);
@@ -699,15 +665,14 @@ class _MapPainter extends CustomPainter {
     this.cityId,
     this.officePoints,
     this.onOfficeSelected,
-    this.relief,
     this.water,
-    this.urban,
     this.mountains,
-    this.reliefBounds,
     this.reliefClip,
     this.viewportSize,
-    this.townPaths,
-  ) : super(repaint: transform);
+    this.townPaths, {
+    this.foreground = false,
+  }) : super(repaint: foreground ? transform : null);
+  final bool foreground;
   final TransformationController transform;
   final Map<String, Path> paths;
   final Map<String, Path> townPaths;
@@ -718,11 +683,8 @@ class _MapPainter extends CustomPainter {
   final String? selected, cityId;
   final Map<String, Offset> officePoints;
   final ValueChanged<String> onOfficeSelected;
-  final Relief? relief;
   final WaterLayer? water;
-  final UrbanLayer? urban;
   final MountainLayer? mountains;
-  final Rect? reliefBounds;
   final Path reliefClip;
   final Size viewportSize;
   @override
@@ -734,75 +696,39 @@ class _MapPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..color = Colors.white
           ..strokeWidth = 0.5 / zoom;
-    for (final e in paths.entries) {
-      if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
-      canvas.drawPath(
-        e.value,
-        Paint()
-          ..color =
-              overview
-                  ? const Color(0xFF43616A)
-                  : townFillColor(
-                    atlas.towns[e.key]!,
-                    game,
-                    reachable: game.isReachable(e.key),
-                  ),
-      );
-    }
-    if (overview) {
-      for (final entry in townPaths.entries) {
-        final town = atlas.towns[entry.key]!;
+    if (!foreground) {
+      for (final e in paths.entries) {
+        if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
         canvas.drawPath(
-          entry.value,
+          e.value,
           Paint()
-            ..color = townFillColor(
-              town,
-              game,
-              reachable: game.isReachable(entry.key),
-            ),
+            ..color =
+                overview
+                    ? const Color(0xFF43616A)
+                    : townFillColor(
+                      atlas.towns[e.key]!,
+                      game,
+                      reachable: game.isReachable(e.key),
+                    ),
         );
       }
-    }
-    final terrain = relief;
-    final terrainRect = reliefBounds;
-    if (terrain != null && terrainRect != null) {
-      canvas.save();
-      canvas.clipPath(reliefClip);
-      final sx = terrainRect.width / (terrain.east - terrain.west);
-      final sy = terrainRect.height / (terrain.north - terrain.south);
-      for (final patch in terrain.patches) {
-        final destination = Rect.fromLTRB(
-          terrainRect.left + (patch.west - terrain.west) * sx,
-          terrainRect.top + (terrain.north - patch.north) * sy,
-          terrainRect.left + (patch.east - terrain.west) * sx,
-          terrainRect.top + (terrain.north - patch.south) * sy,
-        );
-        canvas.drawImageRect(
-          patch.image,
-          Rect.fromLTWH(
-            0,
-            0,
-            patch.image.width.toDouble(),
-            patch.image.height.toDouble(),
-          ),
-          destination,
-          Paint()
-            ..blendMode = BlendMode.modulate
-            ..filterQuality = FilterQuality.medium,
-        );
+      if (overview) {
+        for (final entry in townPaths.entries) {
+          final town = atlas.towns[entry.key]!;
+          final reachable = game.isReachable(entry.key);
+          if (!game.owned.contains(entry.key) &&
+              !game.progress.containsKey(entry.key) &&
+              !reachable) {
+            continue;
+          }
+          canvas.drawPath(
+            entry.value,
+            Paint()..color = townFillColor(town, game, reachable: reachable),
+          );
+        }
       }
-      canvas.restore();
+      return;
     }
-    urban?.paint(canvas, reliefClip);
-    water?.paint(
-      canvas,
-      reliefClip,
-      municipal: !overview,
-      viewport: Rect.fromPoints(
-        transform.toScene(Offset.zero),
-        transform.toScene(viewportSize.bottomRight(Offset.zero)),
-      ),
-    );
     final occupiedLabels = <Rect>[
       for (final e in officePoints.entries)
         if (overview || e.key == cityId)
@@ -925,6 +851,7 @@ class _MapPainter extends CustomPainter {
 
   @override
   SemanticsBuilderCallback get semanticsBuilder => (size) {
+    if (!foreground) return [];
     final zoom = transform.value.getMaxScaleOnAxis();
     final visible = Rect.fromPoints(
       transform.toScene(Offset.zero),

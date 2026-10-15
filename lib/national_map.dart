@@ -5,9 +5,8 @@ import 'game.dart';
 import 'national_atlas.dart';
 import 'territory_map.dart';
 import 'map_view.dart';
-import 'relief.dart';
-import 'urban.dart';
 import 'water.dart';
+import 'geography_tiles.dart';
 
 class NationalMap extends StatefulWidget {
   const NationalMap({
@@ -47,47 +46,14 @@ class _NationalMapState extends State<NationalMap> {
   Future<void> _loadWater() async {
     setState(() => waterFailed = false);
     try {
-      final loaded = await WaterLayer.load(project, national: true);
+      final loaded = await WaterLayer.loadLabels(project, national: true);
       if (mounted) setState(() => water = loaded);
     } catch (_) {
       if (mounted) setState(() => waterFailed = true);
     }
   }
 
-  UrbanLayer? urban;
-  bool urbanFailed = false;
-
-  Future<void> _loadUrban() async {
-    setState(() => urbanFailed = false);
-    try {
-      final loaded = await UrbanLayer.load(project, national: true);
-      if (!mounted) {
-        loaded.dispose();
-        return;
-      }
-      setState(() => urban = loaded);
-    } catch (_) {
-      if (mounted) setState(() => urbanFailed = true);
-    }
-  }
-
-  Relief? relief;
-  bool reliefFailed = false;
   late final Path land;
-
-  Future<void> _loadRelief() async {
-    setState(() => reliefFailed = false);
-    try {
-      final loaded = await Relief.loadNational();
-      if (!mounted) {
-        loaded.dispose();
-        return;
-      }
-      setState(() => relief = loaded);
-    } catch (_) {
-      if (mounted) setState(() => reliefFailed = true);
-    }
-  }
 
   String? error;
   Size? viewport;
@@ -110,8 +76,6 @@ class _NationalMapState extends State<NationalMap> {
       land.addPath(path, Offset.zero);
     }
     showGeography = widget.initialView?.showGeography ?? true;
-    _loadRelief();
-    _loadUrban();
     _loadWater();
     _loadTerritory();
   }
@@ -186,8 +150,6 @@ class _NationalMapState extends State<NationalMap> {
   @override
   void dispose() {
     transform.dispose();
-    relief?.dispose();
-    urban?.dispose();
     super.dispose();
   }
 
@@ -268,23 +230,55 @@ class _NationalMapState extends State<NationalMap> {
                   child: SizedBox(
                     width: sceneSize.width,
                     height: sceneSize.height,
-                    child: CustomPaint(
-                      painter: _NationalPainter(
-                        paths,
-                        labelBounds,
-                        territory,
-                        widget.data,
-                        widget.game,
-                        adjacent,
-                        transform,
-                        widget.onPrefectureSelected,
-                        showGeography ? relief : null,
-                        showGeography ? urban : null,
-                        showGeography ? water : null,
-                        size,
-                        land,
-                        project,
-                      ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        RepaintBoundary(
+                          child: CustomPaint(
+                            painter: _NationalPainter(
+                              paths,
+                              labelBounds,
+                              territory,
+                              widget.data,
+                              widget.game,
+                              adjacent,
+                              transform,
+                              widget.onPrefectureSelected,
+                              showGeography ? water : null,
+                              size,
+                              land,
+                              project,
+                              foreground: false,
+                            ),
+                          ),
+                        ),
+                        GeographyTiles(
+                          transform: transform,
+                          project: project,
+                          viewport: size,
+                          clip: land,
+                          enabled: showGeography,
+                        ),
+                        RepaintBoundary(
+                          child: CustomPaint(
+                            painter: _NationalPainter(
+                              paths,
+                              labelBounds,
+                              territory,
+                              widget.data,
+                              widget.game,
+                              adjacent,
+                              transform,
+                              widget.onPrefectureSelected,
+                              showGeography ? water : null,
+                              size,
+                              land,
+                              project,
+                              foreground: true,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -344,8 +338,6 @@ class _NationalMapState extends State<NationalMap> {
                             onPressed: () {
                               setState(() => showGeography = !showGeography);
                               _publishView();
-                              if (showGeography && reliefFailed) _loadRelief();
-                              if (showGeography && urbanFailed) _loadUrban();
                               if (showGeography && waterFailed) _loadWater();
                             },
                             icon: const Icon(Icons.terrain_outlined),
@@ -358,36 +350,6 @@ class _NationalMapState extends State<NationalMap> {
                 ),
               ),
             ),
-            if (showGeography && (relief == null || reliefFailed))
-              Positioned(
-                left: 8,
-                top: 65,
-                child:
-                    reliefFailed
-                        ? TextButton(
-                          onPressed: _loadRelief,
-                          child: const Text('起伏を読み込めませんでした · 再試行'),
-                        )
-                        : const Text(
-                          '起伏を読み込み中…',
-                          style: TextStyle(fontSize: 10),
-                        ),
-              ),
-            if (showGeography && (urban == null || urbanFailed))
-              Positioned(
-                left: 8,
-                top: 95,
-                child:
-                    urbanFailed
-                        ? TextButton(
-                          onPressed: _loadUrban,
-                          child: const Text('市街地を読み込めませんでした · 再試行'),
-                        )
-                        : const Text(
-                          '市街地を読み込み中…',
-                          style: TextStyle(fontSize: 10),
-                        ),
-              ),
             if (showGeography && (water == null || waterFailed))
               Positioned(
                 left: 8,
@@ -429,13 +391,13 @@ class _NationalPainter extends CustomPainter {
     this.adjacent,
     this.transform,
     this.onPrefectureSelected,
-    this.relief,
-    this.urban,
     this.water,
     this.viewportSize,
     this.land,
-    this.project,
-  ) : super(repaint: transform);
+    this.project, {
+    this.foreground = false,
+  }) : super(repaint: foreground ? transform : null);
+  final bool foreground;
   final Map<String, Path> paths, territory;
   final Map<String, Rect> labelBounds;
   final NationalAtlas data;
@@ -444,8 +406,6 @@ class _NationalPainter extends CustomPainter {
   final TransformationController transform;
   final ValueChanged<String> onPrefectureSelected;
 
-  final Relief? relief;
-  final UrbanLayer? urban;
   final WaterLayer? water;
   final Size viewportSize;
   final Path land;
@@ -453,6 +413,7 @@ class _NationalPainter extends CustomPainter {
 
   @override
   SemanticsBuilderCallback get semanticsBuilder => (size) {
+    if (!foreground) return [];
     final zoom = transform.value.getMaxScaleOnAxis();
     return [
       for (final entry in labelBounds.entries)
@@ -475,45 +436,24 @@ class _NationalPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final zoom = transform.value.getMaxScaleOnAxis();
-    for (final path in paths.values) {
-      canvas.drawPath(path, Paint()..color = const Color(0xFF43616A));
+    if (!foreground) {
+      for (final path in paths.values) {
+        canvas.drawPath(path, Paint()..color = const Color(0xFF43616A));
+      }
+      // Only town shapes receive ownership and progress colors; prefectures stay neutral.
+      for (final e in territory.entries) {
+        canvas.drawPath(
+          e.value,
+          Paint()
+            ..color = townFillColor(
+              data.atlas.towns[e.key]!,
+              game,
+              reachable: adjacent.contains(e.key),
+            ),
+        );
+      }
+      return;
     }
-    // Only town shapes receive ownership and progress colors; prefectures stay neutral.
-    for (final e in territory.entries) {
-      canvas.drawPath(
-        e.value,
-        Paint()
-          ..color = townFillColor(
-            data.atlas.towns[e.key]!,
-            game,
-            reachable: adjacent.contains(e.key),
-          ),
-      );
-    }
-    final terrain = relief;
-    if (terrain != null) {
-      canvas.save();
-      canvas.clipPath(land);
-      canvas.drawImageRect(
-        terrain.image,
-        Rect.fromLTWH(
-          0,
-          0,
-          terrain.image.width.toDouble(),
-          terrain.image.height.toDouble(),
-        ),
-        Rect.fromPoints(
-          project(math.Point(terrain.west, terrain.north)),
-          project(math.Point(terrain.east, terrain.south)),
-        ),
-        Paint()
-          ..blendMode = BlendMode.multiply
-          ..filterQuality = FilterQuality.medium,
-      );
-      canvas.restore();
-    }
-    urban?.paint(canvas, land);
-    water?.paint(canvas, land);
     final occupiedLabels = <Rect>[];
     // Keep prefecture borders and labels above the geography layers.
     for (final e in paths.entries) {

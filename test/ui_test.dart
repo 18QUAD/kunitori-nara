@@ -47,7 +47,10 @@ void expectCenteredOn(WidgetTester tester, String id) {
   );
   final detector = viewer.child as GestureDetector;
   final canvas = detector.child as SizedBox;
-  final dynamic painter = (canvas.child as CustomPaint).painter;
+  final dynamic painter =
+      (((canvas.child as Stack).children.first as RepaintBoundary).child
+              as CustomPaint)
+          .painter;
   final Rect bounds = painter.bounds[id] as Rect;
   final center = viewer.transformationController!.toScene(
     tester.getSize(map).center(Offset.zero),

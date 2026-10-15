@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kunitori/game.dart';
+import 'package:kunitori/geography_tiles.dart';
 import 'package:kunitori/main.dart';
 import 'package:kunitori/national_map.dart';
 import 'package:kunitori/save_store.dart';
@@ -80,19 +81,48 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final box = (current.child as GestureDetector).child as SizedBox;
-        return (box.child as CustomPaint).painter;
+        return (((box.child as Stack).children.first as RepaintBoundary).child
+                as CustomPaint)
+            .painter;
       }
 
-      expect(nationalPainter().relief, isNotNull);
-      expect(nationalPainter().urban.rasters, hasLength(1));
-      expect(nationalPainter().water, isNotNull);
+      Future<void> waitForTiles() async {
+        for (var i = 0; i < 150; i++) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)),
+          );
+          await tester.pump(const Duration(milliseconds: 100));
+          final semantics = tester.widget<Semantics>(
+            find
+                .descendant(
+                  of: find.byType(GeographyTiles),
+                  matching: find.byType(Semantics),
+                )
+                .first,
+          );
+          if (semantics.properties.label == '背景地図の読込完了') return;
+        }
+        fail('Background tile load did not complete');
+      }
+
+      await waitForTiles();
       Future<List<int>> hokkaidoPixel() async {
         final painter = nationalPainter();
         // The central Hokkaido mountains are far from borders and labels.
         const point = Offset(909, 195);
         expect((painter.paths['01'] as Path).contains(point), isTrue);
         final recorder = ui.PictureRecorder();
-        painter.paint(Canvas(recorder), const Size(1440, 1360));
+        final canvas = Canvas(recorder);
+        painter.paint(canvas, const Size(1440, 1360));
+        final tilePaint = tester.widget<CustomPaint>(
+          find
+              .descendant(
+                of: find.byType(GeographyTiles),
+                matching: find.byType(CustomPaint),
+              )
+              .first,
+        );
+        tilePaint.painter!.paint(canvas, const Size(1440, 1360));
         final picture = recorder.endRecording();
         final result = await tester.runAsync(() async {
           final image = await picture.toImage(1440, 1360);
@@ -172,13 +202,17 @@ void main() {
         find.byType(InteractiveViewer),
       );
       final camera = prefectureViewer.transformationController!.value.clone();
-      final canvas =
-          (prefectureViewer.child as GestureDetector).child as SizedBox;
-      final dynamic painter = (canvas.child as CustomPaint).painter;
-      expect(painter.relief, isNotNull);
-      expect(painter.urban.rasters, isNotEmpty);
-      expect(painter.water, isNotNull);
-      expect(painter.relief.patches.length, greaterThan(1));
+      await waitForTiles();
+      final tilePaint = tester.widget<CustomPaint>(
+        find
+            .descendant(
+              of: find.byType(GeographyTiles),
+              matching: find.byType(CustomPaint),
+            )
+            .first,
+      );
+      final dynamic tilePainter = tilePaint.painter;
+      expect(tilePainter.tiles, isNotEmpty);
       await tester.tap(find.byTooltip('起伏・市街地・川・池・湖を非表示'));
       await tester.pumpAndSettle();
       expect(find.byTooltip('起伏・市街地・川・池・湖を表示'), findsOneWidget);

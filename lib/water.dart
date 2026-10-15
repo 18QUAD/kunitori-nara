@@ -18,6 +18,7 @@ class WaterLayer {
     this.areas,
     this.labels, {
     this.overview = false,
+    this.preclippedLabels = false,
     this.outlineAreas = true,
     this.countyAreas,
     this.buckets = const {},
@@ -26,8 +27,24 @@ class WaterLayer {
   final Path? countyAreas;
   final Map<math.Point<int>, WaterBucket> buckets;
   final bool overview;
+  final bool preclippedLabels;
   final Path rivers, areas;
   final List<WaterLabel> labels;
+
+  /// Small name-only asset; fixed water geometry is pre-rendered offline.
+  static Future<WaterLayer> loadLabels(
+    Offset Function(math.Point<double>) project, {
+    String prefectureId = '29',
+    bool national = false,
+  }) async => WaterLayer.fromJson(
+    jsonDecode(
+      await rootBundle.loadString(
+        'assets/data/map_labels/${national ? 'national' : prefectureId}.json',
+      ),
+    ),
+    project,
+    preclippedLabels: national || prefectureId != '29',
+  );
 
   static Future<WaterLayer> load(
     Offset Function(math.Point<double>) project, {
@@ -58,6 +75,7 @@ class WaterLayer {
     Map<String, dynamic> json,
     Offset Function(math.Point<double>) project, {
     bool overview = false,
+    bool preclippedLabels = false,
     bool spatial = false,
     bool outlineAreas = true,
   }) {
@@ -135,6 +153,7 @@ class WaterLayer {
           ),
       ],
       overview: overview,
+      preclippedLabels: preclippedLabels,
       outlineAreas: outlineAreas,
       countyAreas: countyAreas,
       buckets: buckets,
@@ -210,17 +229,28 @@ class WaterLayer {
   }) {
     if (!municipal && zoom < 0.65) return;
     final placed = <String, List<Offset>>{};
+    final clipBounds = clip.getBounds();
+    final visible = viewport?.inflate(64 / zoom);
+    var displayed = 0;
+    var geometryChecks = 0;
+    // Nationwide names were already clipped by the importer. Municipal views
+    // still check the selected city's outline, with a bounded placement budget.
+    final needsClip = municipal || !preclippedLabels;
     for (final label in labels) {
-      if (viewport != null &&
-          !viewport.inflate(180 / zoom).contains(label.point)) {
+      if (displayed >= 48) break;
+      if (visible != null && !visible.contains(label.point)) {
         continue;
       }
       if (label.detail && !municipal) continue;
-      if (!clip.contains(label.point)) continue;
       if ((placed[label.name] ?? []).any(
         (p) => (p - label.point).distance * zoom < 140,
       )) {
         continue;
+      }
+      if (!clipBounds.contains(label.point)) continue;
+      if (needsClip) {
+        if (++geometryChecks > 96) break;
+        if (!clip.contains(label.point)) continue;
       }
       final text = TextPainter(
         text: TextSpan(
@@ -252,9 +282,12 @@ class WaterLayer {
           width: text.width + 8 / zoom,
           height: text.height + 4 / zoom,
         );
-        if (!clip.contains(center) || occupied.any((r) => r.overlaps(rect))) {
+        if (!clipBounds.contains(center) ||
+            occupied.any((r) => r.overlaps(rect)) ||
+            (needsClip && !clip.contains(center))) {
           continue;
         }
+        displayed++;
         occupied.add(rect);
         placed.putIfAbsent(label.name, () => []).add(center);
         paintMapLabel(
@@ -265,6 +298,7 @@ class WaterLayer {
         );
         break;
       }
+      text.dispose();
     }
   }
 }
