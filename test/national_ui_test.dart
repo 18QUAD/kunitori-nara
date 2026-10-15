@@ -64,7 +64,8 @@ void main() {
       );
       for (var attempt = 0; attempt < 100; attempt++) {
         if (find.text('起伏を読み込み中…').evaluate().isEmpty &&
-            find.text('市街地を読み込み中…').evaluate().isEmpty) {
+            find.text('市街地を読み込み中…').evaluate().isEmpty &&
+            find.text('川・湖を読み込み中…').evaluate().isEmpty) {
           break;
         }
         await tester.runAsync(
@@ -84,6 +85,7 @@ void main() {
 
       expect(nationalPainter().relief, isNotNull);
       expect(nationalPainter().urban.rasters, hasLength(1));
+      expect(nationalPainter().water, isNotNull);
       Future<List<int>> hokkaidoPixel() async {
         final painter = nationalPainter();
         // The central Hokkaido mountains are far from borders and labels.
@@ -109,7 +111,7 @@ void main() {
 
       final shaded = await hokkaidoPixel();
       final initialCamera = viewer.transformationController!.value.clone();
-      await tester.tap(find.byTooltip('起伏・市街地を非表示'));
+      await tester.tap(find.byTooltip('起伏・市街地・川・池・湖を非表示'));
       await tester.pumpAndSettle();
       final flat = await hokkaidoPixel();
       expect(flat, [0x43, 0x61, 0x6a, 255]);
@@ -123,7 +125,7 @@ void main() {
         ).loadMapView(national.data.atlas)!.showGeography,
         isFalse,
       );
-      await tester.tap(find.byTooltip('起伏・市街地を表示'));
+      await tester.tap(find.byTooltip('起伏・市街地・川・池・湖を表示'));
       await tester.pumpAndSettle();
       expect(
         SaveStore(
@@ -155,7 +157,8 @@ void main() {
       expect(find.byIcon(Icons.terrain_outlined), findsNothing);
       for (var attempt = 0; attempt < 100; attempt++) {
         if (find.text('起伏を読み込み中…').evaluate().isEmpty &&
-            find.text('市街地を読み込み中…').evaluate().isEmpty) {
+            find.text('市街地を読み込み中…').evaluate().isEmpty &&
+            find.text('川・湖を読み込み中…').evaluate().isEmpty) {
           break;
         }
         await tester.runAsync(
@@ -174,12 +177,13 @@ void main() {
       final dynamic painter = (canvas.child as CustomPaint).painter;
       expect(painter.relief, isNotNull);
       expect(painter.urban.rasters, isNotEmpty);
+      expect(painter.water, isNotNull);
       expect(painter.relief.patches.length, greaterThan(1));
-      await tester.tap(find.byTooltip('起伏・市街地を非表示'));
+      await tester.tap(find.byTooltip('起伏・市街地・川・池・湖を非表示'));
       await tester.pumpAndSettle();
-      expect(find.byTooltip('起伏・市街地を表示'), findsOneWidget);
+      expect(find.byTooltip('起伏・市街地・川・池・湖を表示'), findsOneWidget);
       expect(prefectureViewer.transformationController!.value, camera);
-      await tester.tap(find.byTooltip('起伏・市街地を表示'));
+      await tester.tap(find.byTooltip('起伏・市街地・川・池・湖を表示'));
       await tester.pumpAndSettle();
       final prefecture = tester.widget<TerritoryMap>(find.byType(TerritoryMap));
       final city = prefecture.atlas.cities.keys.firstWhere(

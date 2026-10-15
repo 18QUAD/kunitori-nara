@@ -13,23 +13,35 @@ class WaterLabel {
 
 /// Surface water from GSI vector tiles, projected once into map coordinates.
 class WaterLayer {
-  WaterLayer(this.rivers, this.areas, this.labels);
+  WaterLayer(this.rivers, this.areas, this.labels, {this.overview = false});
+  final bool overview;
   final Path rivers, areas;
   final List<WaterLabel> labels;
 
   static Future<WaterLayer> load(
-    Offset Function(math.Point<double>) project,
-  ) async {
+    Offset Function(math.Point<double>) project, {
+    String prefectureId = '29',
+    bool national = false,
+  }) async {
     final json =
-        jsonDecode(await rootBundle.loadString('assets/data/nara_water.json'))
+        jsonDecode(
+              await rootBundle.loadString(
+                national
+                    ? 'assets/data/water/national.json'
+                    : prefectureId == '29'
+                    ? 'assets/data/nara_water.json'
+                    : 'assets/data/water/$prefectureId.json',
+              ),
+            )
             as Map<String, dynamic>;
-    return WaterLayer.fromJson(json, project);
+    return WaterLayer.fromJson(json, project, overview: national);
   }
 
   factory WaterLayer.fromJson(
     Map<String, dynamic> json,
-    Offset Function(math.Point<double>) project,
-  ) {
+    Offset Function(math.Point<double>) project, {
+    bool overview = false,
+  }) {
     Offset point(dynamic p) =>
         project(math.Point((p[0] as num).toDouble(), (p[1] as num).toDouble()));
     void addLine(Path path, List<dynamic> points, {bool close = false}) {
@@ -61,7 +73,7 @@ class WaterLayer {
           point(label['point']),
           detail: label['detail'] == true,
         ),
-    ]);
+    ], overview: overview);
   }
 
   void paint(Canvas canvas, Path clip) {
@@ -69,32 +81,35 @@ class WaterLayer {
     canvas.clipPath(clip);
     // Widths are in map coordinates, so the canvas transform scales the water
     // and its outline together. At 4x these appear as 1.5px and 2.5px strokes.
-    for (final path in [areas, rivers]) {
+    final widthFactor = overview ? 0.24 : 1.0;
+    for (final path in overview ? [rivers] : [areas, rivers]) {
       canvas.drawPath(
         path,
         Paint()
           ..color = const Color(0xFF123D59)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 0.625
+          ..strokeWidth = 0.625 * widthFactor
           ..strokeJoin = StrokeJoin.round
           ..strokeCap = StrokeCap.round,
       );
     }
-    canvas.drawPath(
-      areas,
-      Paint()
-        ..color = const Color(0xFF79D9FF)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.375
-        ..strokeJoin = StrokeJoin.round,
-    );
+    if (!overview) {
+      canvas.drawPath(
+        areas,
+        Paint()
+          ..color = const Color(0xFF79D9FF)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.375 * widthFactor
+          ..strokeJoin = StrokeJoin.round,
+      );
+    }
     canvas.drawPath(areas, Paint()..color = const Color(0xFF79D9FF));
     canvas.drawPath(
       rivers,
       Paint()
         ..color = const Color(0xFF79D9FF)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.375
+        ..strokeWidth = 0.375 * widthFactor
         ..strokeJoin = StrokeJoin.round
         ..strokeCap = StrokeCap.round,
     );
@@ -107,10 +122,15 @@ class WaterLayer {
     double zoom,
     List<Rect> occupied, {
     bool municipal = false,
+    Rect? viewport,
   }) {
     if (!municipal && zoom < 0.65) return;
     final placed = <String, List<Offset>>{};
     for (final label in labels) {
+      if (viewport != null &&
+          !viewport.inflate(180 / zoom).contains(label.point)) {
+        continue;
+      }
       if (label.detail && !municipal) continue;
       if (!clip.contains(label.point)) continue;
       if ((placed[label.name] ?? []).any(

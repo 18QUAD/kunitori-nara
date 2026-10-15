@@ -76,7 +76,10 @@ class _TerritoryMapState extends State<TerritoryMap> {
 
   Future<void> _loadWater() async {
     try {
-      final loaded = await WaterLayer.load(project);
+      final loaded = await WaterLayer.load(
+        project,
+        prefectureId: widget.prefectureId,
+      );
       if (mounted) setState(() => water = loaded);
     } catch (_) {
       if (mounted) setState(() => waterFailed = true);
@@ -146,8 +149,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
     };
     _loadRelief();
     _loadUrban();
+    _loadWater();
     if (widget.prefectureId == '29') {
-      _loadWater();
       _loadMountains();
     }
   }
@@ -530,8 +533,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           color: Colors.white70,
                         ),
                       ),
-                    if (widget.prefectureId == '29' &&
-                        (waterFailed || water == null))
+                    if (waterFailed || water == null)
                       Text(
                         waterFailed ? '川・湖を読み込めませんでした' : '川・湖を読み込み中…',
                         style: const TextStyle(
@@ -617,8 +619,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
                             tooltip:
                                 widget.prefectureId != '29'
                                     ? (showGeography
-                                        ? '起伏・市街地を非表示'
-                                        : '起伏・市街地を表示')
+                                        ? '起伏・市街地・川・池・湖を非表示'
+                                        : '起伏・市街地・川・池・湖を表示')
                                     : showGeography
                                     ? '起伏・市街地・山名・川・池・湖を非表示'
                                     : '起伏・市街地・山名・川・池・湖を表示',
@@ -641,9 +643,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                                 setState(() => urbanFailed = false);
                                 _loadUrban();
                               }
-                              if (widget.prefectureId == '29' &&
-                                  showGeography &&
-                                  waterFailed) {
+                              if (showGeography && waterFailed) {
                                 setState(() => waterFailed = false);
                                 _loadWater();
                               }
@@ -860,6 +860,10 @@ class _MapPainter extends CustomPainter {
       zoom,
       occupiedLabels,
       municipal: !overview,
+      viewport: Rect.fromPoints(
+        transform.toScene(Offset.zero),
+        transform.toScene(viewportSize.bottomRight(Offset.zero)),
+      ),
     );
     mountains?.paintLabels(canvas, reliefClip, zoom, occupiedLabels);
     if (game.home != null) {
