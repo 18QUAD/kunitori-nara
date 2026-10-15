@@ -121,11 +121,7 @@ void main() {
         of: find.byType(TerritoryMap),
         matching: find.byType(IconButton),
       );
-      final loadedMap = tester.widget<TerritoryMap>(find.byType(TerritoryMap));
-      expect(
-        mapButtons,
-        findsNWidgets(loadedMap.atlas.cities.length > 39 ? 6 : 5),
-      );
+      expect(mapButtons, findsNWidgets(5));
       for (final button in mapButtons.evaluate()) {
         final surface = tester.widget<Material>(
           find
@@ -148,7 +144,7 @@ void main() {
       expectCamera(saved.center, saved.scale);
       expect(find.byTooltip('起伏・市街地・山名・川・池・湖を表示'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('県全域を表示'));
+      await tester.tap(find.byTooltip('1段上の地図を表示'));
       await tester.pumpAndSettle();
       final viewer = tester.widget<InteractiveViewer>(
         find.byType(InteractiveViewer),

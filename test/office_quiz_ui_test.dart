@@ -307,7 +307,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      await tester.tap(find.byTooltip('県全域を表示'));
+      await tester.tap(find.byTooltip('1段上の地図を表示'));
       await tester.pumpAndSettle();
       await tapOffice();
       expect(find.text('クイズを開始'), findsNothing);
@@ -455,7 +455,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      await tester.tap(find.byTooltip('県全域を表示'));
+      await tester.tap(find.byTooltip('1段上の地図を表示'));
       await tester.pumpAndSettle();
       await tapOffice();
       expect(

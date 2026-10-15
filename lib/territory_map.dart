@@ -102,9 +102,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
 
   Future<void> _loadRelief() async {
     try {
-      final loaded = await Relief.load();
+      final loaded = await Relief.loadPrefecture(widget.prefectureId);
       if (!mounted) {
-        loaded.image.dispose();
+        loaded.dispose();
         return;
       }
       setState(() => relief = loaded);
@@ -137,8 +137,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
       ))
         o.cityId: project(o.point),
     };
+    _loadRelief();
     if (widget.prefectureId == '29') {
-      _loadRelief();
       _loadWater();
       _loadUrban();
       _loadMountains();
@@ -149,7 +149,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
   void dispose() {
     controller.removeListener(_publishView);
     controller.dispose();
-    relief?.image.dispose();
+    relief?.dispose();
     super.dispose();
   }
 
@@ -487,7 +487,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
               ),
             ),
           ),
-          if (showGeography && widget.prefectureId == '29')
+          if (showGeography)
             Positioned(
               left: 8,
               right: 68,
@@ -505,7 +505,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           shadows: [Shadow(color: Colors.black, blurRadius: 3)],
                         ),
                       ),
-                    if (mountainsFailed || mountains == null)
+                    if (widget.prefectureId == '29' &&
+                        (mountainsFailed || mountains == null))
                       Text(
                         mountainsFailed ? '山名を読み込めませんでした' : '山名を読み込み中…',
                         style: const TextStyle(
@@ -513,7 +514,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           color: Colors.white70,
                         ),
                       ),
-                    if (urbanFailed || urban == null)
+                    if (widget.prefectureId == '29' &&
+                        (urbanFailed || urban == null))
                       Text(
                         urbanFailed ? '市街地を読み込めませんでした' : '市街地を読み込み中…',
                         style: const TextStyle(
@@ -521,7 +523,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           color: Colors.white70,
                         ),
                       ),
-                    if (waterFailed || water == null)
+                    if (widget.prefectureId == '29' &&
+                        (waterFailed || water == null))
                       Text(
                         waterFailed ? '川・湖を読み込めませんでした' : '川・湖を読み込み中…',
                         style: const TextStyle(
@@ -603,37 +606,44 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           ...widget.secondaryControls.expand(
                             (control) => [control, const SizedBox(height: 2)],
                           ),
-                          if (widget.prefectureId == '29')
-                            IconButton.filledTonal(
-                              tooltip:
-                                  showGeography
-                                      ? '起伏・市街地・山名・川・池・湖を非表示'
-                                      : '起伏・市街地・山名・川・池・湖を表示',
-                              isSelected: showGeography,
-                              onPressed: () {
-                                setState(() => showGeography = !showGeography);
-                                // Retry failed layers when the shared overlay is enabled.
-                                _publishView();
-                                if (showGeography && reliefFailed) {
-                                  setState(() => reliefFailed = false);
-                                  _loadRelief();
-                                }
-                                if (showGeography && mountainsFailed) {
-                                  setState(() => mountainsFailed = false);
-                                  _loadMountains();
-                                }
-                                if (showGeography && urbanFailed) {
-                                  setState(() => urbanFailed = false);
-                                  _loadUrban();
-                                }
-                                if (showGeography && waterFailed) {
-                                  setState(() => waterFailed = false);
-                                  _loadWater();
-                                }
-                              },
-                              icon: const Icon(Icons.terrain_outlined),
-                              selectedIcon: const Icon(Icons.terrain),
-                            ),
+                          IconButton.filledTonal(
+                            tooltip:
+                                widget.prefectureId != '29'
+                                    ? (showGeography ? '起伏を非表示' : '起伏を表示')
+                                    : showGeography
+                                    ? '起伏・市街地・山名・川・池・湖を非表示'
+                                    : '起伏・市街地・山名・川・池・湖を表示',
+                            isSelected: showGeography,
+                            onPressed: () {
+                              setState(() => showGeography = !showGeography);
+                              // Retry failed layers when the shared overlay is enabled.
+                              _publishView();
+                              if (showGeography && reliefFailed) {
+                                setState(() => reliefFailed = false);
+                                _loadRelief();
+                              }
+                              if (widget.prefectureId == '29' &&
+                                  showGeography &&
+                                  mountainsFailed) {
+                                setState(() => mountainsFailed = false);
+                                _loadMountains();
+                              }
+                              if (widget.prefectureId == '29' &&
+                                  showGeography &&
+                                  urbanFailed) {
+                                setState(() => urbanFailed = false);
+                                _loadUrban();
+                              }
+                              if (widget.prefectureId == '29' &&
+                                  showGeography &&
+                                  waterFailed) {
+                                setState(() => waterFailed = false);
+                                _loadWater();
+                              }
+                            },
+                            icon: const Icon(Icons.terrain_outlined),
+                            selectedIcon: const Icon(Icons.terrain),
+                          ),
                         ],
                       ),
                     ),
@@ -751,19 +761,29 @@ class _MapPainter extends CustomPainter {
     if (terrain != null && terrainRect != null) {
       canvas.save();
       canvas.clipPath(reliefClip);
-      canvas.drawImageRect(
-        terrain.image,
-        Rect.fromLTWH(
-          0,
-          0,
-          terrain.image.width.toDouble(),
-          terrain.image.height.toDouble(),
-        ),
-        terrainRect,
-        Paint()
-          ..blendMode = BlendMode.modulate
-          ..filterQuality = FilterQuality.medium,
-      );
+      final sx = terrainRect.width / (terrain.east - terrain.west);
+      final sy = terrainRect.height / (terrain.north - terrain.south);
+      for (final patch in terrain.patches) {
+        final destination = Rect.fromLTRB(
+          terrainRect.left + (patch.west - terrain.west) * sx,
+          terrainRect.top + (terrain.north - patch.north) * sy,
+          terrainRect.left + (patch.east - terrain.west) * sx,
+          terrainRect.top + (terrain.north - patch.south) * sy,
+        );
+        canvas.drawImageRect(
+          patch.image,
+          Rect.fromLTWH(
+            0,
+            0,
+            patch.image.width.toDouble(),
+            patch.image.height.toDouble(),
+          ),
+          destination,
+          Paint()
+            ..blendMode = BlendMode.modulate
+            ..filterQuality = FilterQuality.medium,
+        );
+      }
       canvas.restore();
     }
     urban?.paint(canvas, reliefClip);

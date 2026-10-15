@@ -10,7 +10,7 @@ import 'package:kunitori/territory_map.dart';
 
 void expectMapControlsInside(WidgetTester tester) {
   final map = tester.getRect(find.byType(TerritoryMap));
-  for (final label in ['県全域を表示', '起伏・市街地・山名・川・池・湖を非表示', '拡大', '縮小']) {
+  for (final label in ['1段上の地図を表示', '起伏・市街地・山名・川・池・湖を非表示', '拡大', '縮小']) {
     final control = tester.getRect(find.byTooltip(label));
     expect(map.contains(control.topLeft), isTrue, reason: label);
     expect(map.contains(control.bottomRight), isTrue, reason: label);
@@ -19,7 +19,7 @@ void expectMapControlsInside(WidgetTester tester) {
     find.byKey(const Key('map-home')),
     find.byTooltip('拡大'),
     find.byTooltip('縮小'),
-    find.byTooltip('県全域を表示'),
+    find.byTooltip('1段上の地図を表示'),
     find.byTooltip('起伏・市街地・山名・川・池・湖を非表示'),
   ];
   for (var i = 1; i < ordered.length; i++) {
@@ -232,8 +232,8 @@ void main() {
     Navigator.of(tester.element(find.text('大和国の歩き方'))).pop();
     await tester.pumpAndSettle();
     expect(tester.getRect(find.byKey(const Key('fixed-region'))), fixed);
-    await tester.ensureVisible(find.byTooltip('県全域を表示'));
-    await tester.tap(find.byTooltip('県全域を表示'));
+    await tester.ensureVisible(find.byTooltip('1段上の地図を表示'));
+    await tester.tap(find.byTooltip('1段上の地図を表示'));
     await tester.pumpAndSettle();
     expect(find.text('奈良県'), findsOneWidget);
     expect(find.text('ここを本拠地にする'), findsNothing);

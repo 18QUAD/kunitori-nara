@@ -33,6 +33,16 @@ let browser;
   }, {key, fixture});
   // External optional map/advertising services do not affect these offline checks.
   await page.route('https://**', route => new URL(route.request().url()).origin === new URL(base).origin ? route.continue() : route.abort());
+  async function toNational() {
+    const before = await view();
+    await page.getByRole('button', {name: '1段上の地図を表示', exact: true}).click();
+    if (before.cityId != null) {
+      await page.waitForFunction(key => JSON.parse(JSON.parse(localStorage.getItem(key))).cityId == null, mapKey);
+      assert.equal((await view()).nationalView, false, 'A municipality must first return to its prefecture');
+      await page.getByRole('button', {name: '1段上の地図を表示', exact: true}).click();
+    }
+    await page.waitForFunction(key => JSON.parse(JSON.parse(localStorage.getItem(key))).nationalView, mapKey);
+  }
   const game = () => page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key))), key);
   const view = () => page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key))), mapKey);
   async function semantics() {
@@ -48,7 +58,7 @@ let browser;
   await attack.tap();
   await page.waitForFunction(key => JSON.parse(JSON.parse(localStorage.getItem(key))).totalTaps === 8, key);
   await page.screenshot({path: path.join(output, 'nara-saved-campaign.png')});
-  await page.getByRole('button', {name: '全国を表示', exact: true}).click();
+  await toNational();
   const map = page.getByLabel('全国地図', {exact: true});
   await map.waitFor();
   await page.waitForFunction(key => JSON.parse(JSON.parse(localStorage.getItem(key))).nationalView, mapKey);
@@ -59,12 +69,20 @@ let browser;
   await page.screenshot({path: path.join(output, 'national-prefecture-borders.png')});
   const prefectureStart = Date.now();
   await page.getByRole('button', {name: '北海道', exact: true}).click();
-  await page.getByRole('button', {name: '全国を表示', exact: true}).waitFor({timeout: 120000});
+  await page.getByRole('button', {name: '1段上の地図を表示', exact: true}).waitFor({timeout: 120000});
   await page.waitForFunction(key => {const v = JSON.parse(JSON.parse(localStorage.getItem(key))); return v.prefectureId === '01' && !v.nationalView;}, mapKey);
   console.log('Hokkaido map ready in', Date.now() - prefectureStart, 'ms');
   const pending = 'この地域の歴史・文化tipsは準備中です。';
   await page.getByText(pending, {exact: true}).or(page.getByLabel(pending, {exact: true})).first().waitFor();
-  assert.equal(await page.getByRole('button', {name: /起伏・市街地・山名・川・池・湖/}).count(), 0);
+  const terrain = page.getByRole('button', {name: '起伏を非表示', exact: true});
+  await terrain.waitFor();
+  await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /relief\/.*\.png/.test(e.name)));
+  await page.getByText('起伏を読み込み中…', {exact: true}).waitFor({state: 'hidden', timeout: 120000});
+  assert.equal(await page.getByText('起伏を読み込めませんでした', {exact: true}).count(), 0);
+  await terrain.click();
+  await page.waitForFunction(key => !JSON.parse(JSON.parse(localStorage.getItem(key))).showGeography, mapKey);
+  await page.getByRole('button', {name: '起伏を表示', exact: true}).click();
+  await page.waitForFunction(key => JSON.parse(JSON.parse(localStorage.getItem(key))).showGeography, mapKey);
   await page.screenshot({path: path.join(output, 'hokkaido-placeholder-tips.png')});
   await page.getByRole('button', {name: '設定', exact: true}).click();
   await page.getByText('地名から探す', {exact: true}).click();
@@ -74,7 +92,7 @@ let browser;
   await search.fill('首里');
   await page.screenshot({path: path.join(output, 'national-search.png')});
   await page.getByRole('button', {name: '閉じる', exact: true}).click();
-  await page.getByRole('button', {name: '全国を表示', exact: true}).click();
+  await toNational();
   await page.getByRole('button', {name: '攻略中の町へ', exact: true}).click();
   await attack.waitFor({timeout: 120000});
   await page.waitForFunction(key => !JSON.parse(JSON.parse(localStorage.getItem(key))).nationalView, mapKey);
@@ -86,7 +104,7 @@ let browser;
   assert.equal(restored.progress['29205041001'], 8);
   for (const field of ['home', 'owned', 'everOwned', 'titles', 'wins', 'losses']) assert.deepEqual(restored[field], fixture[field]);
   assert(restored.seen.includes('29205:count'));
-  await page.getByRole('button', {name: '全国を表示', exact: true}).click();
+  await toNational();
   await map.waitFor();
   await page.setViewportSize({width: 844, height: 390});
   await page.getByText('端末を縦向きにしてご利用ください', {exact: true}).waitFor();

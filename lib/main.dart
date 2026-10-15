@@ -1352,11 +1352,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                         : _focusCampaign,
                                 icon: const Icon(Icons.home_outlined),
                               ),
-                              IconButton.filledTonal(
-                                tooltip: '県全域を表示',
-                                onPressed: () => _selectCity(null),
-                                icon: const Icon(Icons.map_outlined),
-                              ),
                             ],
                           )
                           : _prefectureMap(
@@ -1407,17 +1402,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 ),
                               ],
                               secondaryControls: [
-                                if (national != null)
-                                  IconButton.filledTonal(
-                                    key: const Key('map-national'),
-                                    tooltip: '全国を表示',
-                                    onPressed: _showNational,
-                                    icon: const Icon(Icons.public),
-                                  ),
                                 IconButton.filledTonal(
-                                  tooltip: '県全域を表示',
-                                  onPressed: () => _selectCity(null),
-                                  icon: const Icon(Icons.map_outlined),
+                                  key: const Key('map-up'),
+                                  tooltip: '1段上の地図を表示',
+                                  onPressed:
+                                      cityFilter != null
+                                          ? () => _selectCity(null)
+                                          : national != null
+                                          ? _showNational
+                                          : null,
+                                  icon: const Icon(Icons.arrow_upward),
                                 ),
                               ],
                             ),
@@ -1786,7 +1780,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '起伏：国土地理院の標高タイルを加工して作成。約63m間隔の標高から陰影を生成しています。色は領土の状態、明暗は地形の起伏です。山のボタンで起伏・市街地・山名・川・池・湖をまとめて切り替えられます。\nhttps://maps.gsi.go.jp/development/ichiran.html#dem',
+                    '起伏：国土地理院の標高タイルを加工して作成。奈良県は約63m、他県は約125m間隔の標高から陰影を生成しています。標高データがない部分は透明です。色は領土の状態、明暗は地形の起伏です。山のボタンで起伏・市街地・山名・川・池・湖をまとめて切り替えられます。\nhttps://maps.gsi.go.jp/development/ichiran.html#dem',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
