@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#101C2B",
     "theme_color": "#101C2B",
-    "description": "A new Flutter project.",
+    "description": "全国の町をめぐる、人口1人＝1タップの陣取りゲーム。",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

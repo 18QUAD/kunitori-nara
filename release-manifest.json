@@ -1,0 +1,408 @@
+{
+  "schema": 1,
+  "sourceCommit": "b3bc4c1aa424fdce3bff3e64d957f8d99a685361",
+  "baseHref": "/kunitori-nara/",
+  "createdAt": "2026-10-15T00:26:24.462917+00:00",
+  "files": {
+    ".last_build_id": {
+      "sha256": "1e6750d7a8eddeea7e8c1a05d6a70770b204433a8c2c81e9469f679ce114ba26",
+      "bytes": 32
+    },
+    ".nojekyll": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "assets/AssetManifest.bin": {
+      "sha256": "d386c57f3be132b44380d2249b34363244c322444a7100be28979648886abc08",
+      "bytes": 5213
+    },
+    "assets/AssetManifest.bin.json": {
+      "sha256": "3750bc412ea2efc02d36ead618a4f2d500fee92a597be80ecf1dfa0a0c14db8e",
+      "bytes": 6954
+    },
+    "assets/AssetManifest.json": {
+      "sha256": "605eb2e5c6c25460f969d82ebdb53eeff4691dd5c377dd4f2cbcdc27c105392b",
+      "bytes": 4743
+    },
+    "assets/FontManifest.json": {
+      "sha256": "6bd584e629122f9897757417ff3b3f80e46fdf7ee305743cca4f33fc0058a260",
+      "bytes": 282
+    },
+    "assets/NOTICES": {
+      "sha256": "70829861a64827e9cbada789dfaca5633e6ea3841a138747a37c6186801cc2d6",
+      "bytes": 1770387
+    },
+    "assets/assets/characters/nara_guide.png": {
+      "sha256": "f532101e4bd3b91af5dc30c4e4e097a0691a4dcec8fd368455704efb106a5c36",
+      "bytes": 1928104
+    },
+    "assets/assets/characters/nara_guide_face_parts.png": {
+      "sha256": "c3e3cf24b1db147c6ebb803c4c16a14aab21e2cc804094613eae119c9c7324f1",
+      "bytes": 1909637
+    },
+    "assets/assets/characters/nara_guide_joy.png": {
+      "sha256": "c6c3fc53c0e35f7c532ac4c1a2c61af532ce8fa316bda19a23c4bfe8cc3e931e",
+      "bytes": 1932767
+    },
+    "assets/assets/characters/nara_guide_joy_face_parts.png": {
+      "sha256": "1a72215b24e8ab563a23d540fbed71519a2a1089e741c6ca23aefa306eb344ff",
+      "bytes": 1920590
+    },
+    "assets/assets/characters/nara_guide_sad.png": {
+      "sha256": "d6a97a2f5c2e39b234887899a1a6821d4e7884c243f80ea2191bd5ba7c457551",
+      "bytes": 1930738
+    },
+    "assets/assets/characters/nara_guide_sad_face_parts.png": {
+      "sha256": "6a48bb61711a4439aa91e56047623977f697a6bb4784a703d05c4e85c0bf5b3d",
+      "bytes": 1912550
+    },
+    "assets/assets/data/affiliate_config.json": {
+      "sha256": "5ab4511cd532f911849b2c977b59c1fe36c480ed5b4201845f99b43688dcf0d0",
+      "bytes": 89
+    },
+    "assets/assets/data/japan.json": {
+      "sha256": "392ce13bbd1b6eeb9a03101edfb19f3c0a53b0ff852aa6316aefba5218371b3d",
+      "bytes": 44605454
+    },
+    "assets/assets/data/japan_import_report.json": {
+      "sha256": "f1646fcc3fc7120529eb433cd4e0625d1059d93c0543faa8e6fdb7af0604ecf8",
+      "bytes": 148563
+    },
+    "assets/assets/data/nara.json": {
+      "sha256": "c25a9d7fe82517f0560b54dcd13aa8c2d6a1efddc454db144d3de31e5392ca9e",
+      "bytes": 5609951
+    },
+    "assets/assets/data/nara_mountains.json": {
+      "sha256": "d7b4fca7e1506ecddf9bbc622f18b0b983448e5c3fb9fb1c20f3c83fe705f951",
+      "bytes": 15901
+    },
+    "assets/assets/data/nara_offices.json": {
+      "sha256": "e6346780f9bfada84dcf8761b58efe6ce5245e6cbf7b44cccac157c69162fce7",
+      "bytes": 22603
+    },
+    "assets/assets/data/nara_relief.json": {
+      "sha256": "4dd2a6cdf738e0f01c76922e453138f732f1e3ba7b773b40e9edbfd672cf66f4",
+      "bytes": 604
+    },
+    "assets/assets/data/nara_relief.png": {
+      "sha256": "d489e829b3c16e0553ffb7b89145ae0134f9bfdad6bd7c5ecde75c6dcf54c71b",
+      "bytes": 2687665
+    },
+    "assets/assets/data/nara_urban.json": {
+      "sha256": "282b0dec8e493a53abb47739f36b8c569a22252cee9ffc03e014544d29cadde9",
+      "bytes": 1062546
+    },
+    "assets/assets/data/nara_water.json": {
+      "sha256": "e44ccf05769a42e60bdb025d5d7bc8decc2ca44200e507fbdda1b2d5f61cad21",
+      "bytes": 1705449
+    },
+    "assets/assets/data/prefectures/01.json": {
+      "sha256": "d69065ad1a1c2a4c9785d0faadb2d5f6425bb71277b8cf4fc30f1e6d2446a981",
+      "bytes": 23780254
+    },
+    "assets/assets/data/prefectures/02.json": {
+      "sha256": "072633feae21c37131b94f48ef5b6bfb62b1a569b5ce313582a8f5222e6157ae",
+      "bytes": 7141109
+    },
+    "assets/assets/data/prefectures/03.json": {
+      "sha256": "a642a6d14bbf88b5bc58a81ba3f2a6a4ba165520bbf82014c9090bfa8fda6534",
+      "bytes": 8496033
+    },
+    "assets/assets/data/prefectures/04.json": {
+      "sha256": "4095e859ad799bd35dc3e9086bc39aa685fb6239ff3434d22146e6db7d1f5cb9",
+      "bytes": 7816741
+    },
+    "assets/assets/data/prefectures/05.json": {
+      "sha256": "a310286ea8db02771d49530594f169652de707e60f36e60e5b1acd46cd7daf6e",
+      "bytes": 7448642
+    },
+    "assets/assets/data/prefectures/06.json": {
+      "sha256": "da46959b62fb1953adc14391069733c15149af5ba2df4f228f01f1b815046446",
+      "bytes": 7768914
+    },
+    "assets/assets/data/prefectures/07.json": {
+      "sha256": "ed827724571c389097b49d40bbf587261ab89a15a6103a6e303191ad42431e75",
+      "bytes": 12023300
+    },
+    "assets/assets/data/prefectures/08.json": {
+      "sha256": "f0c0eccc612116f28cc85d7f880e16cd28aea8d0d779db6280c8b8abb21d0b9f",
+      "bytes": 7369718
+    },
+    "assets/assets/data/prefectures/09.json": {
+      "sha256": "8eed06b141d2a66eec406c086a3eefdf9f34585e7b6851b0b0744e74e1862c3c",
+      "bytes": 4775998
+    },
+    "assets/assets/data/prefectures/10.json": {
+      "sha256": "5855147d07c3c9c328b67f9ee8d3a8172100a4fa7d4b4da698690ef80c683aa9",
+      "bytes": 5250547
+    },
+    "assets/assets/data/prefectures/11.json": {
+      "sha256": "0f8c7d187e8664c984bb2ed56fe6025d9520cbc23537a457dfa715c4a8de064c",
+      "bytes": 6050509
+    },
+    "assets/assets/data/prefectures/12.json": {
+      "sha256": "c073fa6188928616b471accb423475ed28cf19f5098c5909b033dbba8b6351f4",
+      "bytes": 9600400
+    },
+    "assets/assets/data/prefectures/13.json": {
+      "sha256": "31abd215d9088f3f838ce55a1f9d432efa8c0952810cb92b1d1db4dde371f89b",
+      "bytes": 5116148
+    },
+    "assets/assets/data/prefectures/14.json": {
+      "sha256": "e62da3077b20d3710cc5c23eaa2d9fadfe7c098ef228650bed3c5a1fc038de5d",
+      "bytes": 5502683
+    },
+    "assets/assets/data/prefectures/15.json": {
+      "sha256": "49fa74c12d867a2e762dd33af83cfbe625acc67edd493410e937b830b7d00b61",
+      "bytes": 11148084
+    },
+    "assets/assets/data/prefectures/16.json": {
+      "sha256": "b06124d497dac54c1141dd4882ac68ef2235518876baf30e9a35d8beab3826a5",
+      "bytes": 4362216
+    },
+    "assets/assets/data/prefectures/17.json": {
+      "sha256": "7de3d274ff0d0c58d23213f761f5c592cc2e1332e55cdb8f2e0a61af906e170a",
+      "bytes": 4877104
+    },
+    "assets/assets/data/prefectures/18.json": {
+      "sha256": "50efc10a10eca9c9f22293881ca172cb8ddf658e8940f6d5faf905052db1df1a",
+      "bytes": 4378848
+    },
+    "assets/assets/data/prefectures/19.json": {
+      "sha256": "238fe14f7ade3b076c1d4d5c891afc1bc2369b495864aabe74c48a95864a4fbc",
+      "bytes": 3207712
+    },
+    "assets/assets/data/prefectures/20.json": {
+      "sha256": "b90acbef8df0ee8543a2d8239c7b9393b69a47ffebabca7802b30cf56eafa21b",
+      "bytes": 8846488
+    },
+    "assets/assets/data/prefectures/21.json": {
+      "sha256": "a1ec7ee139b85b232649f7bfe779c049542623811b95fdd230c22b68ce2e9326",
+      "bytes": 8877659
+    },
+    "assets/assets/data/prefectures/22.json": {
+      "sha256": "b230dbbab7703e57e955394af7667f61f8d9c5d5ad8018f738c429264285cddb",
+      "bytes": 8100170
+    },
+    "assets/assets/data/prefectures/23.json": {
+      "sha256": "530bc522777e1f09ecaf8d945d448b86b25bdfe4ff4ce975a981cc517bc29bb0",
+      "bytes": 9792952
+    },
+    "assets/assets/data/prefectures/24.json": {
+      "sha256": "c2681fb0f89d8bb178932d01eaed382306219fcb54e1e7c4e077e203c169a6bd",
+      "bytes": 7276731
+    },
+    "assets/assets/data/prefectures/25.json": {
+      "sha256": "960d3170b8a209b996a676fcf6f8b996eb8fcb0ab112e8b8eff4cdbf20f83bad",
+      "bytes": 3932633
+    },
+    "assets/assets/data/prefectures/26.json": {
+      "sha256": "4e833d63bfd5183962cc769473faf890f3dbab936a9c3930f3768e3a0d4f746b",
+      "bytes": 8635094
+    },
+    "assets/assets/data/prefectures/27.json": {
+      "sha256": "ca151ed457691c6ed0d8030ab69745cffbfc103b0640e0350119b7a83c86413c",
+      "bytes": 5903421
+    },
+    "assets/assets/data/prefectures/28.json": {
+      "sha256": "3b2d4ac7386719bf567e8ec937e0e0cf96ae0fb5f785c4871b0d29b7467c8965",
+      "bytes": 12421613
+    },
+    "assets/assets/data/prefectures/30.json": {
+      "sha256": "740c48692e7c4266deb3436e9863df926325f3a310cdfbfbf5f5ee29a5949d0c",
+      "bytes": 5238591
+    },
+    "assets/assets/data/prefectures/31.json": {
+      "sha256": "90464f98921b4fdfc518b722c921327b2a65753dc3b4e35154cfda593ea32a69",
+      "bytes": 3293353
+    },
+    "assets/assets/data/prefectures/32.json": {
+      "sha256": "f339df5786bdbe5d4b5794464722f831821ff35bb4fe6ad93da606da136059d0",
+      "bytes": 5125263
+    },
+    "assets/assets/data/prefectures/33.json": {
+      "sha256": "c15055912504e40e315a7687ed04e95c80eb8c0bd8d36be662fa967babb42a84",
+      "bytes": 8501931
+    },
+    "assets/assets/data/prefectures/34.json": {
+      "sha256": "3d62dc32e41d4fd4bdd77131e0a1c16cb7f5c1412d469f33f1d06e838e9e797b",
+      "bytes": 9464334
+    },
+    "assets/assets/data/prefectures/35.json": {
+      "sha256": "684dd130d89d3e9bf4b9bf622b82c97f761e306b9004869ca8c91a195e98f456",
+      "bytes": 7869931
+    },
+    "assets/assets/data/prefectures/36.json": {
+      "sha256": "74da99e288ccb8cc06f8b4c51bf991df60cf157cd8d25a15cea204e49e62d43c",
+      "bytes": 2896721
+    },
+    "assets/assets/data/prefectures/37.json": {
+      "sha256": "a6d18f8323761788c2472a2630eca985a77d597aabf8ab13186bd6c79b11943c",
+      "bytes": 2676210
+    },
+    "assets/assets/data/prefectures/38.json": {
+      "sha256": "54402bd432a6b03ff05bf11b4de5e3902d381e1d79b09577c3e87653bf09c06b",
+      "bytes": 6064571
+    },
+    "assets/assets/data/prefectures/39.json": {
+      "sha256": "19870c21c22926a75331f30eca2952199ac12ef4d10fc242fd887abbdf286e64",
+      "bytes": 5268735
+    },
+    "assets/assets/data/prefectures/40.json": {
+      "sha256": "9c4917b2bfabceae6cc2a0de89964bf43d0379794bc52076bc6b4c8b349ac6a2",
+      "bytes": 9509999
+    },
+    "assets/assets/data/prefectures/41.json": {
+      "sha256": "72742aecf0bbbba7a77947457b4793a5f802c52e2bad3a873223141f905a7b3c",
+      "bytes": 3589614
+    },
+    "assets/assets/data/prefectures/42.json": {
+      "sha256": "3994671df379abd64841196d0b402185a91f39321dd6cc2c9745c8ff5e8e9170",
+      "bytes": 10620127
+    },
+    "assets/assets/data/prefectures/43.json": {
+      "sha256": "6bbe4053bcb8206be482c588ee19723061a9bc74f430bcbdd5953a9383d9d8fd",
+      "bytes": 7903817
+    },
+    "assets/assets/data/prefectures/44.json": {
+      "sha256": "24fbf37662c9e1f40f510da64b44cef1fad8ce02cefdf92c7309c126504d23b7",
+      "bytes": 5742378
+    },
+    "assets/assets/data/prefectures/45.json": {
+      "sha256": "e72b8539094bbd4cca703a89b76ada4c9198e79d047cc76b0cb547aa4c911a62",
+      "bytes": 5500416
+    },
+    "assets/assets/data/prefectures/46.json": {
+      "sha256": "2ae268e93579e04d634d887d7c578c4ff54961df2cdc2c6e76411de0a39642d9",
+      "bytes": 8219465
+    },
+    "assets/assets/data/prefectures/47.json": {
+      "sha256": "c233126039d3aadc4d032704b40c664a7b480ecf3f3994508f8386faae7d7e31",
+      "bytes": 3573610
+    },
+    "assets/assets/fonts/NotoSansJP.ttf": {
+      "sha256": "c2f3b4d463500a2ddcd3849cded1fceeb9fd6d1c32e6cbecd568453ba50fc68f",
+      "bytes": 9589900
+    },
+    "assets/assets/fonts/OFL.txt": {
+      "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9",
+      "bytes": 4388
+    },
+    "assets/assets/icons/MaterialIcons_LICENSE.txt": {
+      "sha256": "be698262aecd042c0de6f886cc0af622f8def446462026992cc530275d8a9e74",
+      "bytes": 18531
+    },
+    "assets/assets/icons/tap.png": {
+      "sha256": "33f9c43e720390d4121680d6c0e9a49256fea064febfc2c572e6701327c131ec",
+      "bytes": 3921
+    },
+    "assets/fonts/MaterialIcons-Regular.otf": {
+      "sha256": "c2eb1d9a750bd2527663ff5ef5258de5fd1e6161201dd176ae76547599ca6401",
+      "bytes": 10984
+    },
+    "assets/packages/cupertino_icons/assets/CupertinoIcons.ttf": {
+      "sha256": "3d90c370aa4cf00dc57ee2b902f6652147c0f81e03e483df584a9c08b1687c9d",
+      "bytes": 1472
+    },
+    "assets/shaders/ink_sparkle.frag": {
+      "sha256": "e01b61b394cf66a641bea87e3b4fe3787d372f636c8bc8a2a67438cdc29da6f6",
+      "bytes": 8867
+    },
+    "canvaskit/canvaskit.js": {
+      "sha256": "e77cddc61bf65c75dd24d502eaf2f8b300987428b2a348bb33996e0d378673d9",
+      "bytes": 86608
+    },
+    "canvaskit/canvaskit.js.symbols": {
+      "sha256": "a92132501999f059f435f9750d21b0d2a8ac97847b1b41cdcc6d3c5d0dbc2dfe",
+      "bytes": 1330405
+    },
+    "canvaskit/canvaskit.wasm": {
+      "sha256": "d2a530cf04824a3f87ea062fae308637fe273ff566e012f7ff68079c3658da41",
+      "bytes": 6944939
+    },
+    "canvaskit/chromium/canvaskit.js": {
+      "sha256": "3fec99215ffea8c0e9ac6110ce627b94ebf7fa3c1e086aa597dcc7e4f613afa7",
+      "bytes": 86245
+    },
+    "canvaskit/chromium/canvaskit.js.symbols": {
+      "sha256": "4ad65e52ad216bce4257a8f7006fe8d0734c05130ec6425e6d98731bfbd8ce9b",
+      "bytes": 1251508
+    },
+    "canvaskit/chromium/canvaskit.wasm": {
+      "sha256": "b2dc8cdad4d35fa4f2c3f93d92c36508f760bd5a64e7e3f23dd62fec0fdb9653",
+      "bytes": 5567526
+    },
+    "canvaskit/skwasm.js": {
+      "sha256": "951fc5711cedb797886e7b62f42972e6c93f839dd7754f635cbe6c07ef37c8f1",
+      "bytes": 66046
+    },
+    "canvaskit/skwasm.js.symbols": {
+      "sha256": "37000255e1e408f7f109dce4ab53f1a127748031f6d5c882dfb9c14aa54a384b",
+      "bytes": 1431821
+    },
+    "canvaskit/skwasm.wasm": {
+      "sha256": "0478697308b7bc647ad7c808cba5e8fae785e09804f9723f7c54ebb1dae9090c",
+      "bytes": 3396701
+    },
+    "canvaskit/skwasm_st.js": {
+      "sha256": "f095e895497eecc55105ccfd72172fd63884fd7a228a3c60fbf4c6a173e47615",
+      "bytes": 57923
+    },
+    "canvaskit/skwasm_st.js.symbols": {
+      "sha256": "7ac33edb382462dbeb36a009038fde527a9a2764294f6f50f331528861f3435d",
+      "bytes": 1428112
+    },
+    "canvaskit/skwasm_st.wasm": {
+      "sha256": "c8445426b145fcf57b8870b7d8a66b296b30336c812e32ed735f90ae3e9c3a78",
+      "bytes": 3383742
+    },
+    "favicon.png": {
+      "sha256": "7ab2525f4b86b65d3e4c70358a17e5a1aaf6f437f99cbcc046dad73d59bb9015",
+      "bytes": 917
+    },
+    "flutter.js": {
+      "sha256": "2c28acc9a628bac50e391125fbc3c0ca83666b9d097fa440847c7fc6492cc516",
+      "bytes": 7735
+    },
+    "flutter_bootstrap.js": {
+      "sha256": "baeee5c66fdb1257b76127a27de167d709e181986ff3a483644c4126797d10c8",
+      "bytes": 12216
+    },
+    "flutter_service_worker.js": {
+      "sha256": "a640567ced0796a1e55e808127a0693e1d97867cba712eb0bd6fb297ebdb608a",
+      "bytes": 13430
+    },
+    "icons/Icon-192.png": {
+      "sha256": "3dce99077602f70421c1c6b2a240bc9b83d64d86681d45f2154143310c980be3",
+      "bytes": 5292
+    },
+    "icons/Icon-512.png": {
+      "sha256": "baccb205ae45f0b421be1657259b4943ac40c95094ab877f3bcbe12cd544dcbe",
+      "bytes": 8252
+    },
+    "icons/Icon-maskable-192.png": {
+      "sha256": "d2c842e22a9f4ec9d996b23373a905c88d9a203b220c5c151885ad621f974b5c",
+      "bytes": 5594
+    },
+    "icons/Icon-maskable-512.png": {
+      "sha256": "6aee06cdcab6b2aef74b1734c4778f4421d2da100b0ff9e52b21b55240202929",
+      "bytes": 20998
+    },
+    "index.html": {
+      "sha256": "bffeabc42bc69a9df78da04b291675a5043e6a4b7228c0be9a62b37b7df80c33",
+      "bytes": 2420
+    },
+    "main.dart.js": {
+      "sha256": "05e0b735c5d57daa7f0bbde7ff96552f2e6663f1ef0c5c416332e505909c93b7",
+      "bytes": 3068607
+    },
+    "manifest.json": {
+      "sha256": "81c753a36648806b90382d3a1623d6314b441b26fdbe5c637b5aa3c4693f8bc8",
+      "bytes": 964
+    },
+    "version.json": {
+      "sha256": "20cbbe31f3d3dc13290fead198a4cc9479ed8152917799b483f4c9e5bdd58f26",
+      "bytes": 86
+    }
+  }
+}
