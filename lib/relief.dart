@@ -47,6 +47,13 @@ class Relief {
     }
   }
 
+  static Future<Relief> loadNational() async {
+    final metadata =
+        jsonDecode(await rootBundle.loadString('assets/data/japan_relief.json'))
+            as Map<String, dynamic>;
+    return _decode(metadata, 'assets/data/japan_relief.png');
+  }
+
   static Future<Relief> load() async {
     final metadata =
         jsonDecode(await rootBundle.loadString('assets/data/nara_relief.json'))

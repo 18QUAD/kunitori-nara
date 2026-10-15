@@ -5,6 +5,7 @@ import 'game.dart';
 import 'national_atlas.dart';
 import 'territory_map.dart';
 import 'map_view.dart';
+import 'relief.dart';
 
 class NationalMap extends StatefulWidget {
   const NationalMap({
@@ -37,6 +38,25 @@ class _NationalMapState extends State<NationalMap> {
   final paths = <String, Path>{};
   final labelBounds = <String, Rect>{};
   bool initialized = false;
+  bool showGeography = true;
+  Relief? relief;
+  bool reliefFailed = false;
+  late final Path land;
+
+  Future<void> _loadRelief() async {
+    setState(() => reliefFailed = false);
+    try {
+      final loaded = await Relief.loadNational();
+      if (!mounted) {
+        loaded.dispose();
+        return;
+      }
+      setState(() => relief = loaded);
+    } catch (_) {
+      if (mounted) setState(() => reliefFailed = true);
+    }
+  }
+
   String? error;
   Size? viewport;
   late final Offset Function(math.Point<double>) project;
@@ -53,6 +73,12 @@ class _NationalMapState extends State<NationalMap> {
           .map((part) => _path([part]).getBounds())
           .reduce((a, b) => a.width * a.height >= b.width * b.height ? a : b);
     }
+    land = Path()..fillType = PathFillType.evenOdd;
+    for (final path in paths.values) {
+      land.addPath(path, Offset.zero);
+    }
+    showGeography = widget.initialView?.showGeography ?? true;
+    _loadRelief();
     _loadTerritory();
   }
 
@@ -102,6 +128,7 @@ class _NationalMapState extends State<NationalMap> {
         cityId: null,
         prefectureId: widget.prefectureId,
         nationalView: true,
+        showGeography: showGeography,
       ),
     );
   }
@@ -125,6 +152,7 @@ class _NationalMapState extends State<NationalMap> {
   @override
   void dispose() {
     transform.dispose();
+    relief?.dispose();
     super.dispose();
   }
 
@@ -215,6 +243,9 @@ class _NationalMapState extends State<NationalMap> {
                         adjacent,
                         transform,
                         widget.onPrefectureSelected,
+                        showGeography ? relief : null,
+                        land,
+                        project,
                       ),
                     ),
                   ),
@@ -265,6 +296,18 @@ class _NationalMapState extends State<NationalMap> {
                             onPressed: () => _zoom(1 / 1.7),
                             icon: const Icon(Icons.remove),
                           ),
+                          const SizedBox(height: 2),
+                          IconButton.filledTonal(
+                            tooltip: showGeography ? '起伏を非表示' : '起伏を表示',
+                            isSelected: showGeography,
+                            onPressed: () {
+                              setState(() => showGeography = !showGeography);
+                              _publishView();
+                              if (showGeography && reliefFailed) _loadRelief();
+                            },
+                            icon: const Icon(Icons.terrain_outlined),
+                            selectedIcon: const Icon(Icons.terrain),
+                          ),
                         ],
                       ),
                     ),
@@ -272,6 +315,21 @@ class _NationalMapState extends State<NationalMap> {
                 ),
               ),
             ),
+            if (showGeography && (relief == null || reliefFailed))
+              Positioned(
+                left: 8,
+                top: 65,
+                child:
+                    reliefFailed
+                        ? TextButton(
+                          onPressed: _loadRelief,
+                          child: const Text('起伏を読み込めませんでした · 再試行'),
+                        )
+                        : const Text(
+                          '起伏を読み込み中…',
+                          style: TextStyle(fontSize: 10),
+                        ),
+              ),
             if (error != null)
               Positioned(
                 left: 8,
@@ -298,6 +356,9 @@ class _NationalPainter extends CustomPainter {
     this.adjacent,
     this.transform,
     this.onPrefectureSelected,
+    this.relief,
+    this.land,
+    this.project,
   ) : super(repaint: transform);
   final Map<String, Path> paths, territory;
   final Map<String, Rect> labelBounds;
@@ -306,6 +367,10 @@ class _NationalPainter extends CustomPainter {
   final Set<String> adjacent;
   final TransformationController transform;
   final ValueChanged<String> onPrefectureSelected;
+
+  final Relief? relief;
+  final Path land;
+  final Offset Function(math.Point<double>) project;
 
   @override
   SemanticsBuilderCallback get semanticsBuilder => (size) {
@@ -346,6 +411,29 @@ class _NationalPainter extends CustomPainter {
           ),
       );
     }
+    final terrain = relief;
+    if (terrain != null) {
+      canvas.save();
+      canvas.clipPath(land);
+      canvas.drawImageRect(
+        terrain.image,
+        Rect.fromLTWH(
+          0,
+          0,
+          terrain.image.width.toDouble(),
+          terrain.image.height.toDouble(),
+        ),
+        Rect.fromPoints(
+          project(math.Point(terrain.west, terrain.north)),
+          project(math.Point(terrain.east, terrain.south)),
+        ),
+        Paint()
+          ..blendMode = BlendMode.multiply
+          ..filterQuality = FilterQuality.medium,
+      );
+      canvas.restore();
+    }
+    // Keep prefecture borders and labels above the hillshade.
     for (final e in paths.entries) {
       canvas.drawPath(
         e.value,

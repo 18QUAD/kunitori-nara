@@ -336,3 +336,6 @@ dart format lib/municipal_offices.dart
 他の46都道府県は国土地理院の標高タイル（ズーム10、約125m間隔）から生成した陰影です。
 他県の山名・市街地・水域レイヤーは未収録です。元の標高が欠損する箇所は透明にします。
 `tools/import_national_relief.py`（numpy・Pillow・shapely）でオフライン画像と出典・欠損記録を再生成できます。
+
+全国表示でも起伏を表示し、山ボタンで切り替えられます。全国表示用の縮小画像は
+`tools/build_national_relief.py` で県別の起伏画像からオフライン生成します。

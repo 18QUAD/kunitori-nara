@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -60,6 +61,71 @@ void main() {
       expect(national.data.prefectures.length, 47);
       final viewer = tester.widget<InteractiveViewer>(
         find.byType(InteractiveViewer),
+      );
+      for (var attempt = 0; attempt < 100; attempt++) {
+        if (find.text('起伏を読み込み中…').evaluate().isEmpty) break;
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('起伏を読み込み中…'), findsNothing);
+      expect(find.text('起伏を読み込めませんでした · 再試行'), findsNothing);
+      dynamic nationalPainter() {
+        final current = tester.widget<InteractiveViewer>(
+          find.byType(InteractiveViewer),
+        );
+        final box = (current.child as GestureDetector).child as SizedBox;
+        return (box.child as CustomPaint).painter;
+      }
+
+      expect(nationalPainter().relief, isNotNull);
+      Future<List<int>> hokkaidoPixel() async {
+        final painter = nationalPainter();
+        // The central Hokkaido mountains are far from borders and labels.
+        const point = Offset(909, 195);
+        expect((painter.paths['01'] as Path).contains(point), isTrue);
+        final recorder = ui.PictureRecorder();
+        painter.paint(Canvas(recorder), const Size(1440, 1360));
+        final picture = recorder.endRecording();
+        final result = await tester.runAsync(() async {
+          final image = await picture.toImage(1440, 1360);
+          final data =
+              (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+          final offset = (195 * 1440 + 909) * 4;
+          final result = [
+            for (var c = 0; c < 4; c++) data.getUint8(offset + c),
+          ];
+          image.dispose();
+          return result;
+        });
+        picture.dispose();
+        return result!;
+      }
+
+      final shaded = await hokkaidoPixel();
+      final initialCamera = viewer.transformationController!.value.clone();
+      await tester.tap(find.byTooltip('起伏を非表示'));
+      await tester.pumpAndSettle();
+      final flat = await hokkaidoPixel();
+      expect(flat, [0x43, 0x61, 0x6a, 255]);
+      expect(shaded, isNot(flat));
+      expect(shaded[3], 255);
+      expect(viewer.transformationController!.value, initialCamera);
+      final nationalPrefs = await SharedPreferences.getInstance();
+      expect(
+        SaveStore(
+          nationalPrefs,
+        ).loadMapView(national.data.atlas)!.showGeography,
+        isFalse,
+      );
+      await tester.tap(find.byTooltip('起伏を表示'));
+      await tester.pumpAndSettle();
+      expect(
+        SaveStore(
+          nationalPrefs,
+        ).loadMapView(national.data.atlas)!.showGeography,
+        isTrue,
       );
       final scale = viewer.transformationController!.value.getMaxScaleOnAxis();
       await tester.tap(find.byTooltip('拡大'));
