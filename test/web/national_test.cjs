@@ -14,7 +14,7 @@ let browser;
     proxy: process.env.HTTPS_PROXY ? {server: process.env.HTTPS_PROXY, bypass: '127.0.0.1,localhost'} : undefined,
     args: ['--no-sandbox'],
   });
-  const page = await browser.newPage({viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true});
+  const page = await browser.newPage({viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true, deviceScaleFactor: Number(process.env.DEVICE_SCALE_FACTOR || 1)});
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   const key = 'flutter.kunitori.nara.v1';

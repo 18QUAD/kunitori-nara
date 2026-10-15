@@ -40,6 +40,7 @@ class WaterLayer {
     jsonDecode(
       await rootBundle.loadString(
         'assets/data/map_labels/${national ? 'national' : prefectureId}.json',
+        cache: false,
       ),
     ),
     project,

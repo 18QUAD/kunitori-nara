@@ -41,6 +41,26 @@ void main() {
   });
 
   test(
+    'consuming import rows retains populations, IDs, graph and legacy saves',
+    () {
+      final raw =
+          jsonDecode(File('assets/data/nara.json').readAsStringSync())
+              as Map<String, dynamic>;
+      final consumed = Atlas.fromJson(raw, consumeTownRows: true);
+      expect(raw['towns'], isEmpty);
+      expect(consumed.sourceToTown, nara.sourceToTown);
+      for (final town in nara.towns.values) {
+        expect(consumed.towns[town.id]!.neighbors, town.neighbors);
+        expect(consumed.towns[town.id]!.population, town.population);
+      }
+      final game = Game(nara)..setHome('29205043001');
+      game.selectAttackTarget('29205041001');
+      game.tap('29205041001', DateTime.utc(2026));
+      expect(Game.restore(consumed, game.toJson()).toJson(), game.toJson());
+    },
+  );
+
+  test(
     'Nara IDs, facts and unfinished campaign survive adding national towns',
     () {
       expect(combined.byCity.keys, containsAll(nara.byCity.keys));

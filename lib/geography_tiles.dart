@@ -38,12 +38,33 @@ class GeographyTileIndex {
 
 /// Shared bounded LRU. Active map tiles are pinned; in-flight decodes deduplicate.
 class GeographyImageCache {
-  GeographyImageCache({this.capacity = 192});
+  GeographyImageCache({this.capacity = 48});
   static final shared = GeographyImageCache();
   final int capacity;
   final _images = <String, ui.Image>{};
   final _pending = <String, Future<ui.Image>>{};
   final _pins = <Object, Set<String>>{};
+  final _waiting = <Completer<void>>[];
+  int _decoding = 0;
+  Future<void> _acquire() async {
+    if (_decoding < 2) {
+      _decoding++;
+      return;
+    }
+    final waiter = Completer<void>();
+    _waiting.add(waiter);
+    await waiter.future;
+  }
+
+  void _release() {
+    if (_waiting.isNotEmpty) {
+      _waiting.removeAt(0).complete();
+    } else {
+      _decoding--;
+    }
+    _trim();
+  }
+
   int get length => _images.length;
   ui.Image? peek(String key) {
     final image = _images.remove(key);
@@ -76,6 +97,7 @@ class GeographyImageCache {
       return Future.value(cached);
     }
     return _pending.putIfAbsent(key, () async {
+      await _acquire();
       try {
         final bytes = await rootBundle.load('assets/data/map_tiles/$key.png');
         final codec = await ui.instantiateImageCodec(
@@ -90,6 +112,7 @@ class GeographyImageCache {
         }
       } finally {
         _pending.remove(key);
+        _release();
       }
     });
   }
@@ -187,7 +210,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     var level = manifest.levelFor(
       math.max(unit.dx.abs(), unit.dy.abs()) *
           zoom *
-          MediaQuery.devicePixelRatioOf(context),
+          math.min(1.5, MediaQuery.devicePixelRatioOf(context)),
     );
     final scene = Rect.fromPoints(
       widget.transform.toScene(Offset.zero),
@@ -213,7 +236,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
 
     var cells = visible(level);
     // Keep requests/memory bounded even on a very large or high-DPI viewport.
-    while (cells.length > 64 && level > 0) {
+    while (cells.length > 12 && level > 0) {
       cells = visible(--level);
     }
     final wanted = <String>{};
@@ -262,10 +285,10 @@ class _GeographyTilesState extends State<GeographyTiles> {
         wanted.where((key) => cache.peek(key) == null).toList()
           ..sort((a, b) => a.compareTo(b)); // low-resolution coverage first
     if (missing.isNotEmpty && !loading) setState(() => loading = true);
-    for (var start = 0; start < missing.length; start += 6) {
+    for (var start = 0; start < missing.length; start += 2) {
       if (!mounted || token != revision) return;
       final results = await Future.wait(
-        missing.skip(start).take(6).map((key) async {
+        missing.skip(start).take(2).map((key) async {
           try {
             await cache.load(key);
             return true;
@@ -301,30 +324,54 @@ class _GeographyTilesState extends State<GeographyTiles> {
             : loading
             ? '背景地図を読み込み中'
             : '背景地図の読込完了',
-    child: RepaintBoundary(
-      child: CustomPaint(
-        painter: _GeographyPainter(tiles, widget.clip),
-        child:
-            failed
-                ? Align(
-                  alignment: Alignment.topLeft,
-                  child: Transform.translate(
-                    offset: widget.transform.toScene(const Offset(8, 8)),
-                    child: Transform.scale(
-                      alignment: Alignment.topLeft,
-                      scale: 1 / widget.transform.value.getMaxScaleOnAxis(),
-                      child: TextButton(
-                        onPressed: () {
-                          failed = false;
-                          index == null ? _loadIndex() : _refresh();
-                        },
-                        child: const Text('背景地図の読込を再試行'),
+    child: AnimatedBuilder(
+      animation: widget.transform,
+      builder:
+          (context, _) => LayoutBuilder(
+            builder: (context, constraints) {
+              final visible = Rect.fromPoints(
+                widget.transform.toScene(Offset.zero),
+                widget.transform.toScene(
+                  widget.viewport.bottomRight(Offset.zero),
+                ),
+              ).intersect(Offset.zero & constraints.biggest);
+              if (visible.isEmpty) return const SizedBox();
+              return Stack(
+                children: [
+                  Positioned.fromRect(
+                    rect: visible,
+                    child: RepaintBoundary(
+                      child: CustomPaint(
+                        painter: _GeographyPainter(
+                          widget.enabled ? tiles : [],
+                          widget.clip,
+                          visible.topLeft,
+                        ),
                       ),
                     ),
                   ),
-                )
-                : null,
-      ),
+                  if (failed)
+                    Positioned.fromRect(
+                      rect: visible,
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: Transform.scale(
+                          alignment: Alignment.topLeft,
+                          scale: 1 / widget.transform.value.getMaxScaleOnAxis(),
+                          child: TextButton(
+                            onPressed: () {
+                              failed = false;
+                              index == null ? _loadIndex() : _refresh();
+                            },
+                            child: const Text('背景地図の読込を再試行'),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
     ),
   );
 }
@@ -342,12 +389,15 @@ class _Tile {
 }
 
 class _GeographyPainter extends CustomPainter {
-  _GeographyPainter(this.tiles, this.clip);
+  _GeographyPainter(this.tiles, this.clip, this.origin);
+  final Offset origin;
   final List<_Tile> tiles;
   final Path clip;
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    canvas.translate(-origin.dx, -origin.dy);
     canvas.clipPath(clip);
     for (final layer in ['shade', 'detail']) {
       for (final tile in tiles.where((t) => t.layer == layer)) {
@@ -374,5 +424,5 @@ class _GeographyPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GeographyPainter old) =>
-      old.tiles != tiles || old.clip != clip;
+      old.tiles != tiles || old.clip != clip || old.origin != origin;
 }

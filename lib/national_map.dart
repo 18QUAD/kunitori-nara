@@ -55,6 +55,7 @@ class _NationalMapState extends State<NationalMap> {
 
   late final Path land;
 
+  final territoryPaths = <String, Path>{};
   String? error;
   Size? viewport;
   late final Offset Function(math.Point<double>) project;
@@ -103,12 +104,20 @@ class _NationalMapState extends State<NationalMap> {
       for (final id in widget.game.owned) {
         ids.addAll(widget.data.atlas.towns[id]!.neighbors);
       }
-      await Future.wait(
-        ids
-            .map((id) => id.substring(0, 2))
-            .toSet()
-            .map(widget.data.ensureGeometry),
-      );
+      final converted = <String, Path>{};
+      for (final pref in ids.map((id) => id.substring(0, 2)).toSet()) {
+        if (!mounted) return;
+        await widget.data.withGeometry(pref, () {
+          if (!mounted) return;
+          for (final id in ids.where((id) => id.startsWith(pref))) {
+            converted[id] = _path(widget.data.atlas.towns[id]!.polygons);
+          }
+        });
+      }
+      if (!mounted) return;
+      territoryPaths
+        ..clear()
+        ..addAll(converted);
       if (mounted) setState(() => error = null);
     } catch (_) {
       if (mounted) setState(() => error = '領土の形状を読み込めませんでした');
@@ -150,6 +159,10 @@ class _NationalMapState extends State<NationalMap> {
   @override
   void dispose() {
     transform.dispose();
+    for (final path in {...paths.values, ...territoryPaths.values, land}) {
+      path.reset();
+    }
+    territoryPaths.clear();
     super.dispose();
   }
 
@@ -201,14 +214,7 @@ class _NationalMapState extends State<NationalMap> {
         for (final id in widget.game.owned) {
           adjacent.addAll(widget.data.atlas.towns[id]!.neighbors);
         }
-        final territory = <String, Path>{};
-        for (final id in {
-          ...adjacent,
-          ...widget.game.owned,
-          ...widget.game.progress.keys,
-        }) {
-          territory[id] = _path(widget.data.atlas.towns[id]!.polygons);
-        }
+        final territory = territoryPaths;
         return Stack(
           children: [
             Positioned.fill(
@@ -235,6 +241,7 @@ class _NationalMapState extends State<NationalMap> {
                       children: [
                         RepaintBoundary(
                           child: CustomPaint(
+                            willChange: true,
                             painter: _NationalPainter(
                               paths,
                               labelBounds,
@@ -261,6 +268,7 @@ class _NationalMapState extends State<NationalMap> {
                         ),
                         RepaintBoundary(
                           child: CustomPaint(
+                            willChange: true,
                             painter: _NationalPainter(
                               paths,
                               labelBounds,
@@ -489,6 +497,7 @@ class _NationalPainter extends CustomPainter {
           bounds.center - Offset(label.width / 2, label.height / 2),
         );
       }
+      label.dispose();
     }
     water?.paintLabels(
       canvas,

@@ -109,6 +109,7 @@ class MountainLayer {
         );
         break;
       }
+      text.dispose();
     }
   }
 }

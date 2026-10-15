@@ -91,7 +91,7 @@ async function startCurrentBuild() {
     }
   }
   return _flutter.loader.load({
-    config: {canvasKitBaseUrl: 'canvaskit/'},
+    config: {canvasKitBaseUrl: 'canvaskit/', canvasKitMaximumSurfaces: 2},
     onEntrypointLoaded: async (engineInitializer) => {
       const appRunner = await engineInitializer.initializeEngine({hostElement: appHost});
       await appRunner.runApp();

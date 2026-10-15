@@ -111,4 +111,45 @@ void main() {
       expect(cache.length, lessThanOrEqualTo(2));
     },
   );
+  testWidgets('background raster surface stays viewport-sized at deep zoom', (
+    tester,
+  ) async {
+    final transform =
+        TransformationController()..value = (Matrix4.identity()..scale(50.0));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OverflowBox(
+          maxWidth: 1440,
+          maxHeight: 1360,
+          child: SizedBox(
+            width: 1440,
+            height: 1360,
+            child: GeographyTiles(
+              transform: transform,
+              project: (p) => Offset((p.x - 120) * 64, (48 - p.y) * 64),
+              viewport: const Size(390, 400),
+              clip: Path()..addRect(const Rect.fromLTWH(0, 0, 1440, 1360)),
+              enabled: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    Size rasterSize() => tester.getSize(
+      find
+          .descendant(
+            of: find.byType(GeographyTiles),
+            matching: find.byType(CustomPaint),
+          )
+          .first,
+    );
+    for (final zoom in [50.0, 150.0]) {
+      transform.value = Matrix4.identity()..scale(zoom);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(rasterSize().width * zoom, closeTo(390, 0.01));
+      expect(rasterSize().height * zoom, closeTo(400, 0.01));
+    }
+    await tester.pumpWidget(const SizedBox());
+    transform.dispose();
+  });
 }

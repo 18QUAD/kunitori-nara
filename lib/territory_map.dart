@@ -113,6 +113,16 @@ class _TerritoryMapState extends State<TerritoryMap> {
   void dispose() {
     controller.removeListener(_publishView);
     controller.dispose();
+    // Release native path storage eagerly when leaving a detailed map.
+    for (final path in {
+      ...paths.values,
+      ...townOutlines.values,
+      ...cityPaths.values,
+      ...cityOutlines.values,
+      prefecturePath,
+    }) {
+      path.reset();
+    }
     super.dispose();
   }
 
@@ -427,6 +437,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                     children: [
                       RepaintBoundary(
                         child: CustomPaint(
+                          willChange: true,
                           painter: _MapPainter(
                             widget.cityId == null ? cityPaths : paths,
                             widget.cityId == null ? cityOutlines : townOutlines,
@@ -461,6 +472,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       ),
                       RepaintBoundary(
                         child: CustomPaint(
+                          willChange: true,
                           painter: _MapPainter(
                             widget.cityId == null ? cityPaths : paths,
                             widget.cityId == null ? cityOutlines : townOutlines,
@@ -777,6 +789,7 @@ class _MapPainter extends CustomPainter {
         if (!e.key.startsWith('29') &&
             e.key != selected &&
             occupiedLabels.any((r) => r.overlaps(placedLabel))) {
+          label.dispose();
           continue;
         }
         occupiedLabels.add(placedLabel);
@@ -787,6 +800,7 @@ class _MapPainter extends CustomPainter {
           zoom,
         );
       }
+      label.dispose();
     }
     water?.paintLabels(
       canvas,

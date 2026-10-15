@@ -138,9 +138,10 @@ void main() {
   );
 
   test(
-    'large and offshore prefecture geometry loads once and retains source coverage',
+    'large and offshore geometry retains coverage while inactive prefectures are released',
     () async {
       final atlas = national.atlas;
+      String? previous;
       for (final pref in ['01', '13', '27', '47']) {
         await national.ensureGeometry(pref);
         final towns =
@@ -152,15 +153,28 @@ void main() {
         )) {
           expect(atlas.cityPolygons[city], isNotEmpty);
         }
+        if (previous != null) {
+          expect(
+            atlas.towns.values
+                .where((t) => t.id.startsWith(previous!))
+                .every((t) => t.polygons.isEmpty),
+            isTrue,
+          );
+          expect(atlas.prefecturePolygons.containsKey(previous), isFalse);
+        }
+        if (pref == '13') {
+          final points = atlas.prefecturePolygons[pref]!
+              .expand((p) => p)
+              .expand((r) => r);
+          expect(points.any((p) => p.x > 153), isTrue);
+          expect(points.any((p) => p.y < 21), isTrue);
+        }
+        previous = pref;
         final count = towns.fold<int>(0, (sum, t) => sum + t.polygons.length);
         await national.ensureGeometry(pref);
         expect(towns.fold<int>(0, (sum, t) => sum + t.polygons.length), count);
       }
-      final tokyoPoints = atlas.prefecturePolygons['13']!
-          .expand((p) => p)
-          .expand((r) => r);
-      expect(tokyoPoints.any((p) => p.x > 153), isTrue);
-      expect(tokyoPoints.any((p) => p.y < 21), isTrue);
+      expect(national.residentGeometry, '47');
     },
   );
 }

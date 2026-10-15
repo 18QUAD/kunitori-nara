@@ -122,7 +122,11 @@ void main() {
               )
               .first,
         );
-        tilePaint.painter!.paint(canvas, const Size(1440, 1360));
+        final dynamic tilePainter = tilePaint.painter;
+        canvas.save();
+        canvas.translate(tilePainter.origin.dx, tilePainter.origin.dy);
+        tilePainter.paint(canvas, const Size(1440, 1360));
+        canvas.restore();
         final picture = recorder.endRecording();
         final result = await tester.runAsync(() async {
           final image = await picture.toImage(1440, 1360);

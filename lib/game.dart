@@ -65,16 +65,21 @@ class LocalFact {
 }
 
 class Atlas {
-  Atlas.fromJson(Map<String, dynamic> j) {
+  // National import owns these temporary rows and can release each decoded row.
+  // Other callers keep their input intact by default.
+  Atlas.fromJson(Map<String, dynamic> j, {bool consumeTownRows = false}) {
     for (final c in j['cities'] as List) {
       cities[c['id'] as String] = c['name'] as String;
     }
     final codeGroups = <String, List<Town>>{};
-    for (final t in j['towns'] as List) {
-      final town = Town.fromJson(t as Map<String, dynamic>);
+    final townRows = j['towns'] as List;
+    for (var i = 0; i < townRows.length; i++) {
+      final town = Town.fromJson(townRows[i] as Map<String, dynamic>);
+      if (consumeTownRows) townRows[i] = null;
       sourceTowns[town.id] = town;
       codeGroups.putIfAbsent(town.id.substring(0, 9), () => []).add(town);
     }
+    if (consumeTownRows) townRows.clear();
     final groups = <String, List<Town>>{};
     for (final entry in codeGroups.entries) {
       final parts = <String, List<Town>>{};
