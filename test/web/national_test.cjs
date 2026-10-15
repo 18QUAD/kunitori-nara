@@ -101,7 +101,7 @@ let browser;
   await page.getByText('地名から探す', {exact: true}).click();
   const search = page.getByRole('textbox');
   await search.fill('沖縄県');
-  await page.getByText('那覇市', {exact: true}).or(page.getByRole('button', {name: /那覇市/})).first().click();
+  await page.getByText(/^那覇市\s+沖縄県/).first().click();
   await search.fill('首里');
   await page.screenshot({path: path.join(output, 'national-search.png')});
   await page.getByRole('button', {name: '閉じる', exact: true}).click();
