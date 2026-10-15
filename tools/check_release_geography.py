@@ -3,7 +3,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]/'build/web'
 compiled = (root/'main.dart.js').read_text()
-for folder in ['water','urban','relief','map_tiles']:
+for folder in ['water','urban','relief','map_tiles','map_tiles_v2']:
     path = f'assets/data/{folder}/'
     assert path not in compiled, f'Unexpected live reference to source GIS: {path}'
     assert not (root/'assets'/path).exists(), f'Unused source GIS was bundled: {path}'

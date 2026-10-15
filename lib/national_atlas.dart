@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:collection';
+import 'dart:typed_data';
+import 'coastal_assets.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/services.dart';
@@ -62,12 +65,7 @@ class NationalAtlas {
             )
             as Map<String, dynamic>;
     final national =
-        jsonDecode(
-              await rootBundle.loadString(
-                'assets/data/japan.json',
-                cache: false,
-              ),
-            )
+        jsonDecode(await loadCoastalAsset('assets/data/japan.json'))
             as Map<String, dynamic>;
     if (national['censusYear'] != 2020 ||
         (national['prefectures'] as List).length != 47) {
@@ -135,9 +133,8 @@ class NationalAtlas {
     try {
       final data =
           jsonDecode(
-                await rootBundle.loadString(
+                await loadCoastalAsset(
                   'assets/data/prefectures/$prefecture.json',
-                  cache: false,
                 ),
               )
               as Map<String, dynamic>;
@@ -188,20 +185,39 @@ class NationalAtlas {
   }
 }
 
+// Coastlines contain many points. Store doubles in one buffer per ring instead
+// of retaining a Dart Point object and list slot for every coastline vertex.
+class _CoordinateRing extends ListBase<Point<double>> {
+  _CoordinateRing(List<dynamic> json) : _xy = Float64List(json.length * 2) {
+    for (var i = 0; i < json.length; i++) {
+      _xy[i * 2] = (json[i][0] as num).toDouble();
+      _xy[i * 2 + 1] = (json[i][1] as num).toDouble();
+    }
+  }
+  final Float64List _xy;
+  @override
+  int get length => _xy.length ~/ 2;
+  @override
+  set length(int value) => throw UnsupportedError('Read-only geometry');
+  @override
+  Point<double> operator [](int index) {
+    RangeError.checkValidIndex(index, this);
+    return Point(_xy[index * 2], _xy[index * 2 + 1]);
+  }
+
+  @override
+  void operator []=(int index, Point<double> value) =>
+      throw UnsupportedError('Read-only geometry');
+}
+
 class Prefecture {
   Prefecture.fromJson(Map<String, dynamic> j)
     : id = j['id'] as String,
       name = j['name'] as String,
-      polygons =
-          Town.fromJson({
-            'id': j['id'],
-            'name': j['name'],
-            'cityId': '',
-            'population': 0,
-            'area': 0,
-            'neighbors': <String>[],
-            'polygons': j['polygons'],
-          }).polygons;
+      polygons = [
+        for (final polygon in j['polygons'] as List)
+          [for (final ring in polygon as List) _CoordinateRing(ring as List)],
+      ];
   final String id, name;
   final List<List<List<Point<double>>>> polygons;
 }

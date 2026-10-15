@@ -72,11 +72,11 @@ flutter:
     - assets/data/nara.json
     - assets/data/japan.json
     - assets/data/japan_import_report.json
+    - assets/data/coastline_import_report.json
     - assets/data/prefectures/
     - assets/data/affiliate_config.json
     - assets/data/japan_relief.png
     - assets/data/japan_relief.json
-    - assets/data/map_tiles_v2/
     - assets/data/map_tiles_uniform/
     - assets/data/map_labels/
     - assets/data/nara_relief.png

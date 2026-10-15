@@ -1771,7 +1771,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 12),
                   const SelectableText(
-                    '国勢調査町丁・字等別境界データセット（CODH作成）\n令和2年国勢調査町丁・字等別境界データ（e-Stat）を加工\ndoi:10.20676/00000450\nhttps://geoshape.ex.nii.ac.jp/ka/\nCC BY 4.0 · https://creativecommons.org/licenses/by/4.0/',
+                    '海岸線：国土交通省 国土数値情報「行政区域データ」（2020年）を加工。海は県・市町村・町の描画と選択範囲から除外し、川・湖・離島は維持しています。人口・面積・隣接などの統計と保存済みの進捗は変更していません。\nhttps://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-v3_1.html\n\n国勢調査町丁・字等別境界データセット（CODH作成）\n令和2年国勢調査町丁・字等別境界データ（e-Stat）を加工\ndoi:10.20676/00000450\nhttps://geoshape.ex.nii.ac.jp/ka/\nCC BY 4.0 · https://creativecommons.org/licenses/by/4.0/',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
@@ -1780,7 +1780,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '起伏：国土地理院の標高タイルを加工して作成。奈良県は約63m、他県は約125m間隔の標高から陰影を生成しています。標高データがない部分は透明です。色は領土の状態、明暗は地形の起伏です。山のボタンで起伏・市街地・山名・川・池・湖をまとめて切り替えられます。\nhttps://maps.gsi.go.jp/development/ichiran.html#dem',
+                    '起伏：国土地理院の標高タイルを加工して作成。全国共通で約63m間隔の標高から陰影を生成しています。標高データがない部分は透明です。色は領土の状態、明暗は地形の起伏です。山のボタンで起伏・市街地・山名・川・池・湖をまとめて切り替えられます。\nhttps://maps.gsi.go.jp/development/ichiran.html#dem',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
@@ -1789,7 +1789,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '川・湖・山名：国土地理院ベクトルタイル提供実験を加工して作成（提供元の更新情報：2026年7月1日時点）。全国・都道府県・市町村で、地表の河川・水路、湖・池・貯水池を青色で表示し、拡大すると川名・湖名を表示します。全国表示では小さな水域や短い河川区間を省略しています。起伏と共通の山のボタンで切り替えられます。奈良県の山名も同じデータの注記から取得し、淡い黄色で表示します。山頂マークは表示しません。地下水路・枯れ川は含みません。\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment',
+                    '川・湖・山名：国土地理院ベクトルタイル提供実験を加工して作成（提供元の更新情報：2026年7月1日時点）。全国・都道府県・市町村で、地表の河川・水路、湖・池・貯水池を青色で表示し、県・市町村表示で拡大すると川名・湖名を表示します。全国表示では名称を出さず、小さな水域や短い河川区間を省略しています。海は水域表示に含みません。起伏と共通の山のボタンで切り替えられます。奈良県の山名も同じデータの注記から取得し、淡い黄色で表示します。山頂マークは表示しません。地下水路・枯れ川は含みません。\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,

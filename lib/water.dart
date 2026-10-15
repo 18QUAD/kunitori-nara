@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'map_label.dart';
+import 'coastal_assets.dart';
 
 class WaterLabel {
   WaterLabel(this.name, this.point, {this.detail = false});
@@ -38,9 +39,8 @@ class WaterLayer {
     bool national = false,
   }) async => WaterLayer.fromJson(
     jsonDecode(
-      await rootBundle.loadString(
+      await loadCoastalAsset(
         'assets/data/map_labels/${national ? 'national' : prefectureId}.json',
-        cache: false,
       ),
     ),
     project,
