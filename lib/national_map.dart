@@ -6,6 +6,7 @@ import 'national_atlas.dart';
 import 'territory_map.dart';
 import 'map_view.dart';
 import 'relief.dart';
+import 'urban.dart';
 
 class NationalMap extends StatefulWidget {
   const NationalMap({
@@ -39,6 +40,23 @@ class _NationalMapState extends State<NationalMap> {
   final labelBounds = <String, Rect>{};
   bool initialized = false;
   bool showGeography = true;
+  UrbanLayer? urban;
+  bool urbanFailed = false;
+
+  Future<void> _loadUrban() async {
+    setState(() => urbanFailed = false);
+    try {
+      final loaded = await UrbanLayer.load(project, national: true);
+      if (!mounted) {
+        loaded.dispose();
+        return;
+      }
+      setState(() => urban = loaded);
+    } catch (_) {
+      if (mounted) setState(() => urbanFailed = true);
+    }
+  }
+
   Relief? relief;
   bool reliefFailed = false;
   late final Path land;
@@ -79,6 +97,7 @@ class _NationalMapState extends State<NationalMap> {
     }
     showGeography = widget.initialView?.showGeography ?? true;
     _loadRelief();
+    _loadUrban();
     _loadTerritory();
   }
 
@@ -153,6 +172,7 @@ class _NationalMapState extends State<NationalMap> {
   void dispose() {
     transform.dispose();
     relief?.dispose();
+    urban?.dispose();
     super.dispose();
   }
 
@@ -244,6 +264,7 @@ class _NationalMapState extends State<NationalMap> {
                         transform,
                         widget.onPrefectureSelected,
                         showGeography ? relief : null,
+                        showGeography ? urban : null,
                         land,
                         project,
                       ),
@@ -298,12 +319,13 @@ class _NationalMapState extends State<NationalMap> {
                           ),
                           const SizedBox(height: 2),
                           IconButton.filledTonal(
-                            tooltip: showGeography ? '起伏を非表示' : '起伏を表示',
+                            tooltip: showGeography ? '起伏・市街地を非表示' : '起伏・市街地を表示',
                             isSelected: showGeography,
                             onPressed: () {
                               setState(() => showGeography = !showGeography);
                               _publishView();
                               if (showGeography && reliefFailed) _loadRelief();
+                              if (showGeography && urbanFailed) _loadUrban();
                             },
                             icon: const Icon(Icons.terrain_outlined),
                             selectedIcon: const Icon(Icons.terrain),
@@ -327,6 +349,21 @@ class _NationalMapState extends State<NationalMap> {
                         )
                         : const Text(
                           '起伏を読み込み中…',
+                          style: TextStyle(fontSize: 10),
+                        ),
+              ),
+            if (showGeography && (urban == null || urbanFailed))
+              Positioned(
+                left: 8,
+                top: 95,
+                child:
+                    urbanFailed
+                        ? TextButton(
+                          onPressed: _loadUrban,
+                          child: const Text('市街地を読み込めませんでした · 再試行'),
+                        )
+                        : const Text(
+                          '市街地を読み込み中…',
                           style: TextStyle(fontSize: 10),
                         ),
               ),
@@ -357,6 +394,7 @@ class _NationalPainter extends CustomPainter {
     this.transform,
     this.onPrefectureSelected,
     this.relief,
+    this.urban,
     this.land,
     this.project,
   ) : super(repaint: transform);
@@ -369,6 +407,7 @@ class _NationalPainter extends CustomPainter {
   final ValueChanged<String> onPrefectureSelected;
 
   final Relief? relief;
+  final UrbanLayer? urban;
   final Path land;
   final Offset Function(math.Point<double>) project;
 
@@ -433,7 +472,8 @@ class _NationalPainter extends CustomPainter {
       );
       canvas.restore();
     }
-    // Keep prefecture borders and labels above the hillshade.
+    urban?.paint(canvas, land);
+    // Keep prefecture borders and labels above the geography layers.
     for (final e in paths.entries) {
       canvas.drawPath(
         e.value,

@@ -88,8 +88,15 @@ class _TerritoryMapState extends State<TerritoryMap> {
 
   Future<void> _loadUrban() async {
     try {
-      final loaded = await UrbanLayer.load(project);
-      if (mounted) setState(() => urban = loaded);
+      final loaded = await UrbanLayer.load(
+        project,
+        prefectureId: widget.prefectureId,
+      );
+      if (!mounted) {
+        loaded.dispose();
+        return;
+      }
+      setState(() => urban = loaded);
     } catch (_) {
       if (mounted) setState(() => urbanFailed = true);
     }
@@ -138,9 +145,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
         o.cityId: project(o.point),
     };
     _loadRelief();
+    _loadUrban();
     if (widget.prefectureId == '29') {
       _loadWater();
-      _loadUrban();
       _loadMountains();
     }
   }
@@ -150,6 +157,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
     controller.removeListener(_publishView);
     controller.dispose();
     relief?.dispose();
+    urban?.dispose();
     super.dispose();
   }
 
@@ -514,8 +522,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           color: Colors.white70,
                         ),
                       ),
-                    if (widget.prefectureId == '29' &&
-                        (urbanFailed || urban == null))
+                    if (urbanFailed || urban == null)
                       Text(
                         urbanFailed ? '市街地を読み込めませんでした' : '市街地を読み込み中…',
                         style: const TextStyle(
@@ -609,7 +616,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           IconButton.filledTonal(
                             tooltip:
                                 widget.prefectureId != '29'
-                                    ? (showGeography ? '起伏を非表示' : '起伏を表示')
+                                    ? (showGeography
+                                        ? '起伏・市街地を非表示'
+                                        : '起伏・市街地を表示')
                                     : showGeography
                                     ? '起伏・市街地・山名・川・池・湖を非表示'
                                     : '起伏・市街地・山名・川・池・湖を表示',
@@ -628,9 +637,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                                 setState(() => mountainsFailed = false);
                                 _loadMountains();
                               }
-                              if (widget.prefectureId == '29' &&
-                                  showGeography &&
-                                  urbanFailed) {
+                              if (showGeography && urbanFailed) {
                                 setState(() => urbanFailed = false);
                                 _loadUrban();
                               }
