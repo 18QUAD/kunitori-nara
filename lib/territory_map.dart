@@ -794,7 +794,15 @@ class _MapPainter extends CustomPainter {
       canvas.restore();
     }
     urban?.paint(canvas, reliefClip);
-    water?.paint(canvas, reliefClip);
+    water?.paint(
+      canvas,
+      reliefClip,
+      municipal: !overview,
+      viewport: Rect.fromPoints(
+        transform.toScene(Offset.zero),
+        transform.toScene(viewportSize.bottomRight(Offset.zero)),
+      ),
+    );
     final occupiedLabels = <Rect>[
       for (final e in officePoints.entries)
         if (overview || e.key == cityId)

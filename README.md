@@ -359,3 +359,5 @@ dart format lib/municipal_offices.dart
 奈良県の従来の水域データと、ズーム14を使った詳細な注記は維持します。
 再生成は `tools/import_national_water.py`。出典・元タイルのSHA-256・取得状況と県別の件数を
 `assets/data/water/index.json` に記録します。
+
+広い県では微小な水域を県全体の表示から省略し、市町村表示では画面に入る区画の詳細形状を描画します。湖の島と表示範囲での切り抜きは各表示で維持します。

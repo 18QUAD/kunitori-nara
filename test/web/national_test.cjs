@@ -105,6 +105,7 @@ let browser;
   await page.getByText('川・湖を読み込み中…', {exact: true}).waitFor({state: 'hidden', timeout: 120000});
   assert.equal(await page.getByText('川・湖を読み込めませんでした', {exact: true}).count(), 0);
   assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('water/01.json'))));
+  console.log('Hokkaido terrain, urban and water ready in', Date.now() - prefectureStart, 'ms');
   await terrain.click();
   await page.waitForFunction(key => !JSON.parse(JSON.parse(localStorage.getItem(key))).showGeography, mapKey);
   await page.getByRole('button', {name: '起伏・市街地・川・池・湖を表示', exact: true}).click();

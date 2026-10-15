@@ -139,6 +139,17 @@ def normalize_areas(data):
     return repaired
 
 
+def county_overview(data):
+    areas = []
+    for coords in data['areas']:
+        polygon = Polygon(coords[0], coords[1:])
+        if polygon.area >= .000001:
+            simplified = set_precision(polygon.simplify(.00005, preserve_topology=True), 1e-6)
+            for part in components(simplified, 'Polygon'):
+                areas.append(rounded(mapping(part)['coordinates']))
+    data['overviewAreas'] = areas
+
+
 def national_overview(prefectures):
     lines, areas, labels = [], [], []
     seen = set()
@@ -208,6 +219,7 @@ def main():
             continue
         repairs[p]=normalize_areas(data)
         counts[p]['waterPolygons']=len(data['areas'])
+        county_overview(data)
         (OUT/f'{p}.json').write_text(json.dumps(data,ensure_ascii=False,separators=(',',':'))+'\n')
     repairs['national']=normalize_areas(overview)
     metadata['repairedRoundedPolygons']=repairs

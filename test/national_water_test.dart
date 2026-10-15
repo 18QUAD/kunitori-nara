@@ -10,7 +10,8 @@ void main() {
     (tester) async {
       Offset project(math.Point<double> p) =>
           Offset((p.x - 135.8) * 1000, (35.6 - p.y) * 1000);
-      for (final national in [false, true]) {
+      for (final mode in ['county', 'municipal', 'national']) {
+        final national = mode == 'national';
         final water = await tester.runAsync(
           () =>
               WaterLayer.load(project, prefectureId: '25', national: national),
@@ -36,6 +37,8 @@ void main() {
           water.paint(
             canvas,
             Path()..addRect(Rect.fromLTWH(0, 0, clipped ? 200 : 400, 600)),
+            municipal: mode == 'municipal',
+            viewport: const Rect.fromLTWH(0, 0, 400, 600),
           );
           final picture = recorder.endRecording();
           final result = await tester.runAsync(() async {

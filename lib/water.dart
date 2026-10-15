@@ -13,7 +13,18 @@ class WaterLabel {
 
 /// Surface water from GSI vector tiles, projected once into map coordinates.
 class WaterLayer {
-  WaterLayer(this.rivers, this.areas, this.labels, {this.overview = false});
+  WaterLayer(
+    this.rivers,
+    this.areas,
+    this.labels, {
+    this.overview = false,
+    this.outlineAreas = true,
+    this.countyAreas,
+    this.buckets = const {},
+  });
+  final bool outlineAreas;
+  final Path? countyAreas;
+  final Map<math.Point<int>, WaterBucket> buckets;
   final bool overview;
   final Path rivers, areas;
   final List<WaterLabel> labels;
@@ -34,13 +45,21 @@ class WaterLayer {
               ),
             )
             as Map<String, dynamic>;
-    return WaterLayer.fromJson(json, project, overview: national);
+    return WaterLayer.fromJson(
+      json,
+      project,
+      overview: national,
+      spatial: !national && prefectureId != '29',
+      outlineAreas: !national && prefectureId == '29',
+    );
   }
 
   factory WaterLayer.fromJson(
     Map<String, dynamic> json,
     Offset Function(math.Point<double>) project, {
     bool overview = false,
+    bool spatial = false,
+    bool outlineAreas = true,
   }) {
     Offset point(dynamic p) =>
         project(math.Point((p[0] as num).toDouble(), (p[1] as num).toDouble()));
@@ -55,34 +74,100 @@ class WaterLayer {
       if (close) path.close();
     }
 
-    final rivers = Path();
-    for (final line in json['lines'] as List) {
-      addLine(rivers, line as List);
-    }
-    // Even-odd rings preserve islands in lakes/reservoirs.
-    final areas = Path()..fillType = PathFillType.evenOdd;
-    for (final polygon in json['areas'] as List) {
-      for (final ring in polygon as List) {
-        addLine(areas, ring as List, close: true);
+    final buckets = <math.Point<int>, WaterBucket>{};
+    void distribute(Path part, bool waterArea) {
+      if (!spatial) return;
+      final bounds = part.getBounds();
+      for (
+        var x = (bounds.left / 100).floor();
+        x <= (bounds.right / 100).floor();
+        x++
+      ) {
+        for (
+          var y = (bounds.top / 100).floor();
+          y <= (bounds.bottom / 100).floor();
+          y++
+        ) {
+          final key = math.Point(x, y);
+          final bucket = buckets.putIfAbsent(
+            key,
+            () => WaterBucket(Rect.fromLTWH(x * 100.0, y * 100.0, 100, 100)),
+          );
+          (waterArea ? bucket.areas : bucket.rivers).addPath(part, Offset.zero);
+        }
       }
     }
-    return WaterLayer(rivers, areas, [
-      for (final label in json['labels'] as List)
-        WaterLabel(
-          label['name'] as String,
-          point(label['point']),
-          detail: label['detail'] == true,
-        ),
-    ], overview: overview);
+
+    final rivers = Path();
+    for (final line in json['lines'] as List) {
+      final part = Path();
+      addLine(part, line as List);
+      rivers.addPath(part, Offset.zero);
+      distribute(part, false);
+    }
+    Path polygons(List<dynamic> polygons, {bool distributeParts = false}) {
+      final path = Path()..fillType = PathFillType.evenOdd;
+      for (final polygon in polygons) {
+        final part = Path()..fillType = PathFillType.evenOdd;
+        for (final ring in polygon as List) {
+          addLine(part, ring as List, close: true);
+        }
+        path.addPath(part, Offset.zero);
+        if (distributeParts) distribute(part, true);
+      }
+      return path;
+    }
+
+    final areas = polygons(json['areas'] as List, distributeParts: true);
+    final countyAreas =
+        json['overviewAreas'] == null
+            ? null
+            : polygons(json['overviewAreas'] as List);
+    return WaterLayer(
+      rivers,
+      areas,
+      [
+        for (final label in json['labels'] as List)
+          WaterLabel(
+            label['name'] as String,
+            point(label['point']),
+            detail: label['detail'] == true,
+          ),
+      ],
+      overview: overview,
+      outlineAreas: outlineAreas,
+      countyAreas: countyAreas,
+      buckets: buckets,
+    );
   }
 
-  void paint(Canvas canvas, Path clip) {
+  void paint(
+    Canvas canvas,
+    Path clip, {
+    bool municipal = true,
+    Rect? viewport,
+  }) {
     canvas.save();
     canvas.clipPath(clip);
+    if (municipal && viewport != null && buckets.isNotEmpty) {
+      for (final bucket in buckets.values) {
+        if (!bucket.bounds.overlaps(viewport.inflate(2))) continue;
+        canvas.save();
+        canvas.clipRect(bucket.bounds);
+        _paintPaths(canvas, bucket.rivers, bucket.areas);
+        canvas.restore();
+      }
+    } else {
+      _paintPaths(canvas, rivers, !municipal ? countyAreas ?? areas : areas);
+    }
+    canvas.restore();
+  }
+
+  void _paintPaths(Canvas canvas, Path rivers, Path areas) {
     // Widths are in map coordinates, so the canvas transform scales the water
     // and its outline together. At 4x these appear as 1.5px and 2.5px strokes.
     final widthFactor = overview ? 0.24 : 1.0;
-    for (final path in overview ? [rivers] : [areas, rivers]) {
+    for (final path in overview || !outlineAreas ? [rivers] : [areas, rivers]) {
       canvas.drawPath(
         path,
         Paint()
@@ -93,7 +178,7 @@ class WaterLayer {
           ..strokeCap = StrokeCap.round,
       );
     }
-    if (!overview) {
+    if (!overview && outlineAreas) {
       canvas.drawPath(
         areas,
         Paint()
@@ -113,7 +198,6 @@ class WaterLayer {
         ..strokeJoin = StrokeJoin.round
         ..strokeCap = StrokeCap.round,
     );
-    canvas.restore();
   }
 
   void paintLabels(
@@ -183,4 +267,11 @@ class WaterLayer {
       }
     }
   }
+}
+
+class WaterBucket {
+  WaterBucket(this.bounds);
+  final Rect bounds;
+  final Path areas = Path()..fillType = PathFillType.evenOdd;
+  final Path rivers = Path();
 }
