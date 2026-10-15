@@ -559,7 +559,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _select(String id, {bool startQuiz = true}) {
     if (_completedCity != null) return false;
     final g = game!;
-    final isOffice = atlas!.officeTownIds.values.contains(id);
+    final isOffice = atlas!.mapOffices.values.any(
+      (office) => office.townId == id,
+    );
     if (g.isReachable(id) && !g.selectAttackTarget(id) && !isOffice) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('攻略先は1か所です。攻略中の町を獲得してから選んでください。')),
@@ -1809,7 +1811,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '役所・役場：国土交通省「市町村役場等及び公的集会施設」（2022年）の本庁舎を基に、国土地理院ベクトルタイルの役所記号の座標と自治体公式所在地を照合・加工。明日香村は橘の新庁舎に対応。分庁舎・支所は含みません。\nhttps://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P05-v3_0.html\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment',
+                    '役所・役場：全国の県・市区町村マップに市役所・区役所・町村役場を表示します。国土交通省「市町村役場等及び公的集会施設」（2022年）の本庁舎を基に、未収録・旧所在地は国土地理院ベクトルタイルの役所記号で補完。照合用の代表点にはCode for Fukui localgovjp（CC0）を使用しています。離島の町村などで役場が区域外にある場合も実位置に表示します。奈良は従来の公式所在地との照合済みデータを維持し、明日香村は橘の新庁舎に対応。奈良以外の制圧クイズは準備中です。\nhttps://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P05-v3_0.html\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment\nhttps://github.com/codeforfukui/localgovjp',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
@@ -1823,7 +1825,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    '市役所は二重丸、町村役場は丸の地図記号で表示します。県全域・市町村への移動と町の選択に対応。全国・地方の地図、主要道路ルート、対戦、ランキング、広告は今後の拡張です。保存は端末内のみで、アンインストールやブラウザのデータ削除では失われます。クイズ中にアプリを閉じても締切時刻は変わりません。',
+                    '市役所・区役所は二重丸、町村役場は丸の地図記号で表示します。県全域・市区町村への移動と町の選択に対応。主要道路ルート、対戦、ランキングは今後の拡張です。保存は端末内のみで、アンインストールやブラウザのデータ削除では失われます。クイズ中にアプリを閉じても締切時刻は変わりません。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 24),

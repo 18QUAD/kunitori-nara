@@ -2,6 +2,7 @@ import 'dart:math';
 import 'regional_tips.dart';
 import 'municipal_offices.dart';
 import 'municipal_office.dart';
+import 'office_marker.dart';
 
 enum Difficulty {
   casual('旅人', 25),
@@ -154,6 +155,15 @@ class Atlas {
       }
       offices[office.cityId] = office;
       officeTownIds[office.cityId] = townId;
+      mapOffices[office.cityId] = OfficeMarker(
+        id: office.cityId,
+        cityId: office.cityId,
+        name: office.name,
+        address: office.address,
+        point: office.point,
+        isCity: office.isCity,
+        townId: townId,
+      );
     }
     for (final city in cities.entries) {
       final ts = byCity[city.key]!;
@@ -259,6 +269,7 @@ class Atlas {
   }
 
   final Map<String, MunicipalOffice> offices = {};
+  final Map<String, OfficeMarker> mapOffices = {};
   final Map<String, String> officeTownIds = {};
   MunicipalOffice? officeForTown(String id) {
     final city = towns[id]?.cityId;

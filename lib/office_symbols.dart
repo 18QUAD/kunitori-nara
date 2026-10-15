@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// GSI map notation: double circle for city halls, single circle for town/village halls.
+/// Double circle for city/ward halls, single circle for town/village halls.
 void paintOfficeSymbol(
   Canvas canvas,
   Offset center,

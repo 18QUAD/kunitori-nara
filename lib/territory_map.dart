@@ -98,10 +98,10 @@ class _TerritoryMapState extends State<TerritoryMap> {
     _buildPaths();
     _buildCities();
     officePoints = {
-      for (final o in widget.atlas.offices.values.where(
+      for (final o in widget.atlas.mapOffices.values.where(
         (o) => o.cityId.startsWith(widget.prefectureId),
       ))
-        o.cityId: project(o.point),
+        o.id: project(o.point),
     };
     _loadWater();
     if (widget.prefectureId == '29') {
@@ -330,6 +330,17 @@ class _TerritoryMapState extends State<TerritoryMap> {
         .map((t) => bounds[t.id]!)
         .reduce((a, b) => a.expandToInclude(b))
         .inflate(15);
+    // Some island municipalities have their headquarters on another island.
+    // Keep the actual office point visible instead of moving it onto territory.
+    for (final office in widget.atlas.mapOffices.values) {
+      if (!officePoints.containsKey(office.id) ||
+          (widget.cityId != null && office.cityId != widget.cityId)) {
+        continue;
+      }
+      box = box.expandToInclude(
+        Rect.fromCircle(center: officePoints[office.id]!, radius: 15),
+      );
+    }
     if (widget.selected != null &&
         widget.cityId != null &&
         widget.focusVersion > 0) {
@@ -349,9 +360,22 @@ class _TerritoryMapState extends State<TerritoryMap> {
           ..scale(scale);
   }
 
-  void _selectOffice(String city) {
+  void _selectOffice(String officeId) {
+    final office = widget.atlas.mapOffices[officeId]!;
+    final city = office.cityId;
     if (widget.cityId == null) widget.onCitySelected(city);
-    widget.onSelected(widget.atlas.officeTownIds[city]!);
+    final town = office.townId;
+    if (town != null) {
+      widget.onSelected(town);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${office.name}${office.address.isEmpty ? '' : '：${office.address}'}',
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -390,7 +414,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           .where(
                             (e) =>
                                 (widget.cityId == null ||
-                                    e.key == widget.cityId) &&
+                                    widget.atlas.mapOffices[e.key]!.cityId ==
+                                        widget.cityId) &&
                                 (e.value - point).distance * zoom <= 14,
                           )
                           .toList()
@@ -850,15 +875,15 @@ class _MapPainter extends CustomPainter {
           ..color = const Color(0xFFFF3B30),
       );
     }
-    for (final office in atlas.offices.values) {
-      if (!officePoints.containsKey(office.cityId)) continue;
+    for (final office in atlas.mapOffices.values) {
+      if (!officePoints.containsKey(office.id)) continue;
       if (!overview && office.cityId != cityId) continue;
       paintOfficeSymbol(
         canvas,
-        officePoints[office.cityId]!,
+        officePoints[office.id]!,
         zoom,
         isCity: office.isCity,
-        ready: game.canStartQuizAt(atlas.officeTownIds[office.cityId]!),
+        ready: office.townId != null && game.canStartQuizAt(office.townId!),
         mastered: game.mastered.contains(office.cityId),
       );
     }
@@ -873,23 +898,23 @@ class _MapPainter extends CustomPainter {
       transform.toScene(Offset(viewportSize.width, viewportSize.height)),
     );
     final nodes = <CustomPainterSemantics>[];
-    for (final office in atlas.offices.values) {
-      if (!officePoints.containsKey(office.cityId)) continue;
+    for (final office in atlas.mapOffices.values) {
+      if (!officePoints.containsKey(office.id)) continue;
       if (cityId != null && office.cityId != cityId) continue;
       final rect = Rect.fromCircle(
-        center: officePoints[office.cityId]!,
+        center: officePoints[office.id]!,
         radius: 14 / zoom,
       ).intersect(visible);
       if (rect.isEmpty) continue;
       nodes.add(
         CustomPainterSemantics(
-          key: ValueKey('office-${office.cityId}'),
+          key: ValueKey('office-${office.id}'),
           rect: rect,
           properties: SemanticsProperties(
             label:
-                '${office.name}（${atlas.towns[atlas.officeTownIds[office.cityId]]!.name}）',
+                '${office.name}${office.townId == null ? '' : '（${atlas.towns[office.townId]!.name}）'}',
             button: true,
-            onTap: () => onOfficeSelected(office.cityId),
+            onTap: () => onOfficeSelected(office.id),
             textDirection: TextDirection.ltr,
           ),
         ),

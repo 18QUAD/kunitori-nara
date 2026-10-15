@@ -7,6 +7,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/services.dart';
 import 'game.dart';
+import 'office_marker.dart';
 
 /// Population and adjacency are resident; detailed polygons are loaded by prefecture.
 class NationalAtlas {
@@ -104,6 +105,42 @@ class NationalAtlas {
       'cities': [...nara['cities'] as List, ...national['cities'] as List],
       'towns': rows,
     }, consumeTownRows: true);
+    final officeData =
+        jsonDecode(
+              await rootBundle.loadString(
+                'assets/data/japan_offices.json',
+                cache: false,
+              ),
+            )
+            as Map<String, dynamic>;
+    for (final row in officeData['offices'] as List) {
+      final id = row['id'] as String;
+      final city = row['cityId'] as String;
+      final source = row['sourceTownId'] as String?;
+      final town = source == null ? null : atlas.sourceToTown[source];
+      if (!atlas.cities.containsKey(city) ||
+          city.startsWith('29') ||
+          atlas.mapOffices.containsKey(id) ||
+          (source != null &&
+              (town == null || atlas.towns[town]!.cityId != city))) {
+        throw const FormatException('役所マークの自治体・町が全国データと一致しません。');
+      }
+      atlas.mapOffices[id] = OfficeMarker(
+        id: id,
+        cityId: city,
+        name: row['name'] as String,
+        address: row['address'] as String,
+        point: Point(
+          (row['point'][0] as num).toDouble(),
+          (row['point'][1] as num).toDouble(),
+        ),
+        isCity: row['isCity'] as bool,
+        townId: town,
+      );
+    }
+    if (atlas.cities.keys.any((city) => !atlas.mapOffices.containsKey(city))) {
+      throw const FormatException('役所マークのない自治体があります。');
+    }
     for (final pair in [
       ...national['crossPrefectureNeighbors'] as List,
       ...national['crossMunicipalityNeighbors'] as List? ?? [],
