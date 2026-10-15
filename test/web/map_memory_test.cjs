@@ -31,10 +31,19 @@ let browser;
     await page.getByRole('button',{name,exact:true}).evaluate(e=>e.click());
     await page.getByRole('button',{name:'1段上の地図を表示',exact:true}).waitFor({timeout:60000});
     await page.getByLabel('背景地図の読込完了',{exact:true}).waitFor({timeout:60000});
-    for(let i=0;i<3;i++) await page.getByRole('button',{name:'拡大',exact:true}).click();
+    // Deep zoom exercises fine tiles despite the viewport's 12-cell cap.
+    const zoomSteps = name === '大阪府' ? 7 : 3;
+    for(let i=0;i<zoomSteps;i++) await page.getByRole('button',{name:'拡大',exact:true}).click();
     await page.waitForTimeout(150);
     await page.getByLabel('背景地図の読込完了',{exact:true}).waitFor({timeout:60000});
-    for(let i=0;i<3;i++) await page.getByRole('button',{name:'縮小',exact:true}).click();
+    if (name === '大阪府') {
+      assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /map_tiles_uniform\/[56]_.*\.webp/.test(e.name))), name + ' must load fine images');
+      if (process.env.SCREENSHOT_DIR && samples.length < 3) {
+        require('node:fs').mkdirSync(process.env.SCREENSHOT_DIR, {recursive:true});
+        await page.screenshot({path:require('node:path').join(process.env.SCREENSHOT_DIR, name + '-fine.png')});
+      }
+    }
+    for(let i=0;i<zoomSteps;i++) await page.getByRole('button',{name:'縮小',exact:true}).click();
     await page.getByRole('button',{name:'1段上の地図を表示',exact:true}).click();
     await page.getByLabel('全国地図',{exact:true}).waitFor();
     await cdp.send('HeapProfiler.collectGarbage');

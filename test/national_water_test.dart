@@ -1,3 +1,4 @@
+import 'support/source_assets.dart';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/water.dart';
 
 void main() {
+  useSourceAssets();
   testWidgets(
     'Lake Biwa, its island and clipped blue water render in prefecture and national maps',
     (tester) async {

@@ -33,7 +33,7 @@ def image(path):
     return Image.open(path).convert('RGBA')
 
 
-def stamp(dst, src, row, west, north, ppd):
+def stamp(dst, src, row, west, north, ppd, resampling=Image.Resampling.BILINEAR):
     """Affine resample only the overlap, avoiding intermediate giant images."""
     x0 = max(0, math.floor((row['west']-west)*ppd))
     y0 = max(0, math.floor((north-row['north'])*ppd))
@@ -46,7 +46,7 @@ def stamp(dst, src, row, west, north, ppd):
     part = src.transform((x1-x0, y1-y0), Image.Transform.AFFINE,
                          (sx/ppd, 0, (west-row['west'])*sx+x0*sx/ppd,
                           0, sy/ppd, (row['north']-north)*sy+y0*sy/ppd),
-                         Image.Resampling.BILINEAR)
+                         resampling)
     dst.alpha_composite(part, (x0, y0))
 
 

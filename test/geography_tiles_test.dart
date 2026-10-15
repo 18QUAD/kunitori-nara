@@ -13,7 +13,7 @@ void main() {
     'pyramid covers 47 prefectures and matches physical display resolution',
     () {
       final json = jsonDecode(
-        File('assets/data/map_tiles_v2/index.json').readAsStringSync(),
+        File('assets/data/map_tiles_uniform/index.json').readAsStringSync(),
       );
       final index = GeographyTileIndex.fromJson(json);
       expect((json['prefectureCoverage'] as Map).length, 47);
@@ -21,13 +21,32 @@ void main() {
         (json['prefectureCoverage'] as Map).values.every((n) => n > 0),
         isTrue,
       );
+      expect(index.layerLevel(6, 'shade'), 5);
+      expect(index.layerLevel(6, 'detail'), 6);
+      expect(index.layerLevel(3, 'shade'), 3);
+      // A mountain-only fine cell still uses its terrain parent.
+      final shadeKey = index.available.firstWhere(
+        (key) => key.startsWith('5_') && key.endsWith('_shade'),
+      );
+      final pieces = shadeKey.split('_');
+      expect(
+        index.hasTile(
+          6,
+          int.parse(pieces[1]) * 2,
+          int.parse(pieces[2]) * 2,
+          'shade',
+        ),
+        isTrue,
+      );
       expect(index.levelFor(20), 0);
       expect(index.levelFor(65), 1);
       expect(index.levelFor(1000), 4);
       expect(index.levelFor(60000), 4);
-      expect(index.levelFor(2000, prefectureId: '29'), 5);
-      expect(index.levelFor(60000, prefectureId: '29'), 6);
-      expect(index.levelFor(60000, prefectureId: '01'), 4);
+      for (var i = 1; i <= 47; i++) {
+        final id = '$i'.padLeft(2, '0');
+        expect(index.levelFor(2000, prefectureId: id), 5);
+        expect(index.levelFor(60000, prefectureId: id), 6);
+      }
     },
   );
 
@@ -45,7 +64,7 @@ void main() {
         final y = ((48 - lat) / span).floor();
         final bytes =
             File(
-              'assets/data/map_tiles_v2/${level}_${x}_${y}_$layer.png',
+              'assets/data/map_tiles_uniform/${level}_${x}_${y}_$layer.webp',
             ).readAsBytesSync();
         final codec = await ui.instantiateImageCodec(bytes);
         final image = (await codec.getNextFrame()).image;

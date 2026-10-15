@@ -8,7 +8,9 @@ import 'package:flutter/services.dart';
 /// Offline-rendered GIS pyramid. No water geometry or DEM processing at runtime.
 class GeographyTileIndex {
   GeographyTileIndex.fromJson(Map<String, dynamic> json)
-    : available = (json['tiles'] as Map).keys.cast<String>().toSet(),
+    : layerMaxLevels = (json['layerMaxLevels'] as Map<String, dynamic>? ?? {})
+          .map((key, value) => MapEntry(key, value as int)),
+      available = (json['tiles'] as Map).keys.cast<String>().toSet(),
       maxLevel = json['maxLevel'] as int,
       detailLevels = (json['detailLevels'] as Map<String, dynamic>? ?? {}).map(
         (key, value) => MapEntry(key, value as int),
@@ -16,11 +18,22 @@ class GeographyTileIndex {
   final Set<String> available;
   final int maxLevel;
   final Map<String, int> detailLevels;
+  final Map<String, int> layerMaxLevels;
+
+  int layerLevel(int level, String layer) =>
+      math.min(level, layerMaxLevels[layer] ?? level);
+
+  bool hasTile(int level, int x, int y, String layer) {
+    final lod = layerLevel(level, layer);
+    final divisor = 1 << (level - lod);
+    return available.contains('${lod}_${x ~/ divisor}_${y ~/ divisor}_$layer');
+  }
+
   static Future<GeographyTileIndex>? _pending;
   static Future<GeographyTileIndex> load() async {
     try {
       return await (_pending ??= rootBundle
-          .loadString('assets/data/map_tiles_v2/index.json')
+          .loadString('assets/data/map_tiles_uniform/index.json')
           .then((s) => GeographyTileIndex.fromJson(jsonDecode(s))));
     } catch (_) {
       _pending = null;
@@ -107,7 +120,7 @@ class GeographyImageCache {
       await _acquire();
       try {
         final bytes = await rootBundle.load(
-          'assets/data/map_tiles_v2/$key.png',
+          'assets/data/map_tiles_uniform/$key.webp',
         );
         final codec = await ui.instantiateImageCodec(
           bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
@@ -245,8 +258,8 @@ class _GeographyTilesState extends State<GeographyTiles> {
       return [
         for (var x = xmin; x <= xmax; x++)
           for (var y = ymin; y <= ymax; y++)
-            if (manifest.available.contains('${lod}_${x}_${y}_shade') ||
-                manifest.available.contains('${lod}_${x}_${y}_$detailLayer'))
+            if (manifest.hasTile(lod, x, y, 'shade') ||
+                manifest.hasTile(lod, x, y, detailLayer))
               (x, y),
       ];
     }
@@ -261,10 +274,10 @@ class _GeographyTilesState extends State<GeographyTiles> {
     for (final (x, y) in cells) {
       final target = _sceneRect(level, x, y);
       for (final layer in ['shade', detailLayer]) {
-        final key = '${level}_${x}_${y}_$layer';
-        if (!manifest.available.contains(key)) continue;
+        final sourceLevel = manifest.layerLevel(level, layer);
+        if (!manifest.hasTile(level, x, y, layer)) continue;
         // Parent images fill the target until its sharper tile arrives.
-        for (final lod in [level, if (level > 0) 0]) {
+        for (final lod in [sourceLevel, if (sourceLevel > 0) 0]) {
           final divisor = 1 << (level - lod);
           final parent = '${lod}_${x ~/ divisor}_${y ~/ divisor}_$layer';
           if (!manifest.available.contains(parent)) continue;
