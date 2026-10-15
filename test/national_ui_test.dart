@@ -52,13 +52,25 @@ void main() {
       await waitForMap();
       final game = tester.widget<TerritoryMap>(find.byType(TerritoryMap)).game;
       expect(game.progress[target], 1);
+      String progressLabel() =>
+          tester
+              .widget<Text>(find.byKey(const Key('prefecture-progress')))
+              .data!;
+      final naraProgress =
+          '奈良県 ${number(game.population)} / ${number(nara.totalPopulation)}';
+      expect(progressLabel(), naraProgress);
       await tester.tap(find.byKey(const Key('map-up')));
       await tester.pumpAndSettle();
       if (find.byType(NationalMap).evaluate().isEmpty) {
+        expect(progressLabel(), naraProgress);
         await tester.tap(find.byKey(const Key('map-up')));
         await tester.pumpAndSettle();
       }
       final national = tester.widget<NationalMap>(find.byType(NationalMap));
+      expect(
+        progressLabel(),
+        '全国 ${number(game.population)} / ${number(national.data.atlas.totalPopulation)}',
+      );
       expect(national.data.prefectures.length, 47);
       final viewer = tester.widget<InteractiveViewer>(
         find.byType(InteractiveViewer),
@@ -202,6 +214,10 @@ void main() {
         '47',
       );
       expect(find.text('この地域の歴史・文化tipsは準備中です。'), findsOneWidget);
+      expect(
+        progressLabel(),
+        '沖縄県 0 / ${number(national.data.atlas.prefecturePopulations['47']!)}',
+      );
       expect(find.byIcon(Icons.terrain), findsOneWidget);
       expect(find.byIcon(Icons.terrain_outlined), findsNothing);
       for (var attempt = 0; attempt < 100; attempt++) {

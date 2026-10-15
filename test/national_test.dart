@@ -241,4 +241,29 @@ void main() {
       );
     },
   );
+
+  test(
+    'prefecture progress excludes other prefectures and clamps partial taps',
+    () {
+      final home = nara.towns.values.firstWhere((t) => t.population > 3);
+      final target = nara.towns.values.firstWhere(
+        (t) => t.id != home.id && t.population > 3,
+      );
+      final other = combined.byCity['26201']!.firstWhere((t) => t.name == '中央');
+      final game = Game(combined)..setHome(home.id);
+      game.progress[target.id] = 3;
+      game.owned.add(other.id);
+      game.progress[other.id] = 99; // Owned towns must never be counted twice.
+      final saved = game.toJson();
+      expect(combined.prefecturePopulations['29'], nara.totalPopulation);
+      expect(combined.prefecturePopulations['26'], 5);
+      expect(game.currentPrefecturePopulation('29'), home.population + 3);
+      expect(game.currentPrefecturePopulation('26'), 5);
+      expect(game.population, home.population + 8);
+      expect(game.toJson(), saved);
+      game.owned.remove(other.id);
+      expect(game.currentPrefecturePopulation('26'), 5);
+      expect(game.currentPrefecturePopulation('29'), home.population + 3);
+    },
+  );
 }

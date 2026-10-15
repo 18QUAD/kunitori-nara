@@ -787,7 +787,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
                     child: Text(
-                      '${national == null ? '奈良県' : '全国'} ${number(g.population)} / ${number(atlas!.totalPopulation)}',
+                      nationalView
+                          ? '全国 ${number(g.population)} / ${number(atlas!.totalPopulation)}'
+                          : '${national?.prefectures[prefectureFilter]?.name ?? '奈良県'} ${number(g.currentPrefecturePopulation(prefectureFilter))} / ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
                       key: const Key('prefecture-progress'),
                       style: const TextStyle(fontSize: 12),
                     ),

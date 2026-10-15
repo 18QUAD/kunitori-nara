@@ -215,7 +215,7 @@ void main() {
     );
     expect(
       tester.widget<Text>(find.byKey(const Key('prefecture-progress'))).data,
-      '${map.atlas.cities.length > 39 ? '全国' : '奈良県'} ${number(map.atlas.towns[map.game.home]!.population + 10)} / ${number(map.atlas.towns.values.fold<int>(0, (sum, t) => sum + t.population))}',
+      '奈良県 ${number(map.atlas.towns[map.game.home]!.population + 10)} / ${number(map.atlas.prefecturePopulations['29']!)}',
     );
     expect(
       tester.getRect(find.byKey(const Key('attack-progress'))).bottom,

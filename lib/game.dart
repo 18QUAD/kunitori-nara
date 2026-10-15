@@ -278,6 +278,17 @@ class Atlas {
     0,
     (sum, town) => sum + town.population,
   );
+  late final Map<String, int> prefecturePopulations = towns.values.fold(
+    <String, int>{},
+    (totals, town) {
+      totals.update(
+        town.cityId.substring(0, 2),
+        (value) => value + town.population,
+        ifAbsent: () => town.population,
+      );
+      return totals;
+    },
+  );
 
   // Real boundary adjacency stays intact. A landing permits entry into each
   // disconnected land component without inventing a shared land border.
@@ -504,6 +515,16 @@ class Game {
       progress.entries
           .where((e) => !owned.contains(e.key))
           .fold(0, (s, e) => s + min(e.value, atlas.towns[e.key]!.population));
+  int currentPrefecturePopulation(String prefecture) =>
+      owned
+          .where((id) => id.startsWith(prefecture))
+          .fold(0, (sum, id) => sum + atlas.towns[id]!.population) +
+      progress.entries
+          .where((e) => e.key.startsWith(prefecture) && !owned.contains(e.key))
+          .fold(
+            0,
+            (sum, e) => sum + min(e.value, atlas.towns[e.key]!.population),
+          );
   double get area => owned.fold(0.0, (s, id) => s + atlas.towns[id]!.area);
 
   void observe(String city) => seen.addAll(atlas.facts[city]!.map((f) => f.id));
