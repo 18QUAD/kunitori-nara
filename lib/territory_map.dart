@@ -197,10 +197,34 @@ class _TerritoryMapState extends State<TerritoryMap> {
         }
         parts.add(part);
       }
-      final path = _union(parts);
+      final detailed = widget.prefectureId == '29' || t.cityId == widget.cityId;
+      final path =
+          detailed ? _union(parts) : (Path()..fillType = PathFillType.evenOdd);
+      if (!detailed) {
+        for (final part in parts) {
+          path.addPath(part, Offset.zero);
+        }
+      }
       paths[t.id] = path;
-      townOutlines[t.id] = exteriorOutline(path);
+      townOutlines[t.id] = detailed ? exteriorOutline(path) : Path();
       bounds[t.id] = path.getBounds();
+    }
+    if (widget.cityId != null) detailedCities.add(widget.cityId!);
+  }
+
+  final Set<String> detailedCities = {};
+  void _detailCity(String? city) {
+    if (widget.prefectureId == '29' ||
+        city == null ||
+        !detailedCities.add(city))
+      return;
+    for (final town in widget.atlas.byCity[city]!) {
+      final path = _union([
+        for (final polygon in town.polygons) _polygonPath([polygon]),
+      ]);
+      paths[town.id] = path;
+      townOutlines[town.id] = exteriorOutline(path);
+      bounds[town.id] = path.getBounds();
     }
   }
 
@@ -211,15 +235,41 @@ class _TerritoryMapState extends State<TerritoryMap> {
     for (final city in widget.atlas.byCity.entries.where(
       (e) => e.key.startsWith(widget.prefectureId),
     )) {
-      final outline = _union(city.value.map((t) => paths[t.id]!).toList());
+      final prebuilt = widget.atlas.cityPolygons[city.key];
+      final outline =
+          prebuilt == null
+              ? _union(city.value.map((t) => paths[t.id]!).toList())
+              : _polygonPath(prebuilt);
       cityPaths[city.key] = outline;
       cityOutlines[city.key] = exteriorOutline(outline);
       cityBounds[city.key] = outline.getBounds();
     }
-    prefecturePath = _union(cityPaths.values.toList());
+    final prebuilt = widget.atlas.prefecturePolygons[widget.prefectureId];
+    prefecturePath =
+        prebuilt == null
+            ? _union(cityPaths.values.toList())
+            : _polygonPath(prebuilt);
+  }
+
+  Path _polygonPath(List<List<List<math.Point<double>>>> polygons) {
+    final path = Path()..fillType = PathFillType.evenOdd;
+    for (final polygon in polygons) {
+      for (final ring in polygon) {
+        if (ring.isEmpty) continue;
+        final first = project(ring.first);
+        path.moveTo(first.dx, first.dy);
+        for (final point in ring.skip(1)) {
+          final p = project(point);
+          path.lineTo(p.dx, p.dy);
+        }
+        path.close();
+      }
+    }
+    return path;
   }
 
   Path _union(List<Path> parts) {
+    if (parts.isEmpty) return Path();
     if (parts.length == 1) return parts.single;
     final mid = parts.length ~/ 2;
     return Path.combine(
@@ -232,6 +282,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
   @override
   void didUpdateWidget(TerritoryMap old) {
     super.didUpdateWidget(old);
+    _detailCity(widget.cityId);
     if (old.game != widget.game) {
       showGeography = true;
       _pendingRestore = null;
@@ -551,36 +602,37 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           ...widget.secondaryControls.expand(
                             (control) => [control, const SizedBox(height: 2)],
                           ),
-                          IconButton.filledTonal(
-                            tooltip:
-                                showGeography
-                                    ? '起伏・市街地・山名・川・池・湖を非表示'
-                                    : '起伏・市街地・山名・川・池・湖を表示',
-                            isSelected: showGeography,
-                            onPressed: () {
-                              setState(() => showGeography = !showGeography);
-                              // Retry failed layers when the shared overlay is enabled.
-                              _publishView();
-                              if (showGeography && reliefFailed) {
-                                setState(() => reliefFailed = false);
-                                _loadRelief();
-                              }
-                              if (showGeography && mountainsFailed) {
-                                setState(() => mountainsFailed = false);
-                                _loadMountains();
-                              }
-                              if (showGeography && urbanFailed) {
-                                setState(() => urbanFailed = false);
-                                _loadUrban();
-                              }
-                              if (showGeography && waterFailed) {
-                                setState(() => waterFailed = false);
-                                _loadWater();
-                              }
-                            },
-                            icon: const Icon(Icons.terrain_outlined),
-                            selectedIcon: const Icon(Icons.terrain),
-                          ),
+                          if (widget.prefectureId == '29')
+                            IconButton.filledTonal(
+                              tooltip:
+                                  showGeography
+                                      ? '起伏・市街地・山名・川・池・湖を非表示'
+                                      : '起伏・市街地・山名・川・池・湖を表示',
+                              isSelected: showGeography,
+                              onPressed: () {
+                                setState(() => showGeography = !showGeography);
+                                // Retry failed layers when the shared overlay is enabled.
+                                _publishView();
+                                if (showGeography && reliefFailed) {
+                                  setState(() => reliefFailed = false);
+                                  _loadRelief();
+                                }
+                                if (showGeography && mountainsFailed) {
+                                  setState(() => mountainsFailed = false);
+                                  _loadMountains();
+                                }
+                                if (showGeography && urbanFailed) {
+                                  setState(() => urbanFailed = false);
+                                  _loadUrban();
+                                }
+                                if (showGeography && waterFailed) {
+                                  setState(() => waterFailed = false);
+                                  _loadWater();
+                                }
+                              },
+                              icon: const Icon(Icons.terrain_outlined),
+                              selectedIcon: const Icon(Icons.terrain),
+                            ),
                         ],
                       ),
                     ),
@@ -659,11 +711,6 @@ class _MapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final zoom = transform.value.getMaxScaleOnAxis();
     final overview = cityId == null;
-    final adjacent = <String>{};
-    for (final id in game.owned) {
-      adjacent.addAll(atlas.towns[id]!.neighbors);
-    }
-    adjacent.removeAll(game.owned);
     final stroke =
         Paint()
           ..style = PaintingStyle.stroke
@@ -680,7 +727,7 @@ class _MapPainter extends CustomPainter {
                   : townFillColor(
                     atlas.towns[e.key]!,
                     game,
-                    reachable: adjacent.contains(e.key),
+                    reachable: game.isReachable(e.key),
                   ),
       );
     }
@@ -693,7 +740,7 @@ class _MapPainter extends CustomPainter {
             ..color = townFillColor(
               town,
               game,
-              reachable: adjacent.contains(entry.key),
+              reachable: game.isReachable(entry.key),
             ),
         );
       }
@@ -785,7 +832,8 @@ class _MapPainter extends CustomPainter {
     mountains?.paintLabels(canvas, reliefClip, zoom, occupiedLabels);
     if (game.home != null) {
       final town = atlas.towns[game.home]!;
-      if (overview || town.cityId == cityId) {
+      if ((overview || town.cityId == cityId) &&
+          bounds.containsKey(overview ? town.cityId : town.id)) {
         final p = bounds[overview ? town.cityId : town.id]!.center;
         canvas.drawCircle(
           p,
@@ -818,6 +866,7 @@ class _MapPainter extends CustomPainter {
       );
     }
     for (final office in atlas.offices.values) {
+      if (!officePoints.containsKey(office.cityId)) continue;
       if (!overview && office.cityId != cityId) continue;
       paintOfficeSymbol(
         canvas,
@@ -839,6 +888,7 @@ class _MapPainter extends CustomPainter {
     );
     final nodes = <CustomPainterSemantics>[];
     for (final office in atlas.offices.values) {
+      if (!officePoints.containsKey(office.cityId)) continue;
       if (cityId != null && office.cityId != cityId) continue;
       final rect = Rect.fromCircle(
         center: officePoints[office.cityId]!,

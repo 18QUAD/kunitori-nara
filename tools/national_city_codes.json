@@ -1,5 +1,6 @@
 {
-  "source": "https://github.com/niiyz/JapanCityGeoJson",
+  "source": "https://geoshape.ex.nii.ac.jp/ka/resource/",
+  "censusYear": 2020,
   "codes": [
     "01101",
     "01102",
@@ -189,12 +190,6 @@
     "01692",
     "01693",
     "01694",
-    "01695",
-    "01696",
-    "01697",
-    "01698",
-    "01699",
-    "01700",
     "02201",
     "02202",
     "02203",

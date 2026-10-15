@@ -42,6 +42,7 @@ class MapViewState {
     final city = data['cityId'];
     final prefecture = data['prefectureId'] ?? '29';
     if (prefecture is! String ||
+        prefecture.length != 2 ||
         !atlas.cities.keys.any((id) => id.startsWith(prefecture))) {
       return null;
     }

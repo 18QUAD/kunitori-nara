@@ -106,6 +106,33 @@ void main() {
     },
   );
 
+  test('standalone numeric chome names are retained as real towns', () {
+    final data =
+        jsonDecode(File('assets/data/nara.json').readAsStringSync())
+            as Map<String, dynamic>;
+    final atlas = Atlas.fromJson({
+      'cities': [
+        ...data['cities'] as List,
+        {'id': '11214', 'name': '春日部市'},
+      ],
+      'towns': [
+        ...data['towns'] as List,
+        for (final entry in {'112140140': '八丁目', '112140150': '大字二丁目'}.entries)
+          {
+            'id': entry.key,
+            'name': entry.value,
+            'cityId': '11214',
+            'population': 42,
+            'area': 1,
+            'neighbors': <String>[],
+            'polygons': <dynamic>[],
+          },
+      ],
+    });
+    expect(atlas.byCity['11214']!.map((t) => t.name), ['八丁目', '二丁目']);
+    expect(atlas.byCity['11214']!.map((t) => t.population), [42, 42]);
+  });
+
   test('legacy map view defaults to Nara, invalid prefectures are ignored', () {
     const view = MapViewState(
       center: Offset(550, 750),
@@ -133,4 +160,65 @@ void main() {
     expect(national.nationalView, isTrue);
     expect(national.prefectureId, '26');
   });
+
+  test(
+    'landings connect islands in both directions without changing borders',
+    () {
+      combined.enableSeaTravel();
+      final landing = combined.byCity['26201']!.firstWhere(
+        (t) => t.name == '中央',
+      );
+      final inland = combined.byCity['26201']!.firstWhere(
+        (t) => t.name == '西町',
+      );
+      final game = Game(combined)..setHome(nara.towns.keys.first);
+      expect(game.isReachable(landing.id), isTrue);
+      expect(game.isReachable(inland.id), isFalse);
+      expect(landing.neighbors, {inland.id});
+      for (var i = 0; i < 5; i++) {
+        game.tap(landing.id, DateTime.utc(2026));
+      }
+      expect(game.owned, contains(landing.id));
+      expect(game.isReachable(inland.id), isTrue);
+      expect(game.tap(inland.id, DateTime.utc(2026)), isTrue);
+      expect(game.totalTaps, 6);
+      expect(game.cityOwned('26201'), isTrue);
+      expect(game.quiz, isNull);
+      expect(game.message, contains('制圧クイズは準備中'));
+      final restored = Game.restore(combined, game.toJson());
+      expect(restored.toJson(), game.toJson());
+
+      final islandHome = Game(combined)..setHome(inland.id);
+      final mainlandLanding = combined.landingTowns.firstWhere(
+        (id) => id.startsWith('29'),
+      );
+      expect(islandHome.isReachable(mainlandLanding), isTrue);
+      expect(islandHome.canLand(landing.id), isFalse);
+    },
+  );
+
+  test(
+    'prefecture-only selection shows placeholder tips during a Nara campaign',
+    () {
+      final home = nara.towns.values.firstWhere((t) => t.neighbors.isNotEmpty);
+      final game = Game(combined)..setHome(home.id);
+      game.selectAttackTarget(home.neighbors.first);
+      final tips = game.tipsFor(selectedPrefecture: '26');
+      expect(tips, isNotEmpty);
+      expect(
+        tips.every((f) => f.category == '仮tips' && !f.quizEligible),
+        isTrue,
+      );
+      expect(
+        game.tipsFor(selectedCity: '26201').every((f) => f.category == '仮tips'),
+        isTrue,
+      );
+      expect(
+        game
+            .tipsFor(selectedTown: combined.byCity['26201']!.first.id)
+            .every((f) => f.category == '仮tips'),
+        isTrue,
+      );
+    },
+  );
 }

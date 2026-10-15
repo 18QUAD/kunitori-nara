@@ -9,11 +9,24 @@ const source = fs.readFileSync('web/flutter_bootstrap.js', 'utf8')
 async function run(serviceWorker) {
   let loaded = 0, reloaded = 0;
   const buildConfig = {builds: [{mainJsPath: 'main.dart.js'}]};
+  const host = {
+    addEventListener() {},
+    getBoundingClientRect() {return {top: 0, bottom: 800};},
+  };
   const context = {
     URL, console: {warn() {}},
-    document: {baseURI: 'https://18quad.github.io/kunitori-nara/'},
+    document: {
+      baseURI: 'https://18quad.github.io/kunitori-nara/',
+      getElementById() {return host;}, addEventListener() {},
+    },
     navigator: serviceWorker ? {serviceWorker} : {},
-    window: {location: {reload() { reloaded++; }}},
+    window: {
+      location: {reload() { reloaded++; }}, innerHeight: 800,
+      addEventListener() {}, dispatchEvent() {},
+    },
+    getComputedStyle() {return {paddingTop: '0px', paddingBottom: '0px'};},
+    ResizeObserver: class {observe() {}},
+    Event: class {},
     _flutter: {buildConfig, loader: {load() { loaded++; }}},
   };
   await vm.runInNewContext(source, context);

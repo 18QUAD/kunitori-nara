@@ -9,8 +9,10 @@ class NationalAtlas {
   final Atlas atlas;
   final Map<String, Prefecture> prefectures;
   final Map<String, Future<void>> _loads = {};
+  static NationalAtlas? _cached;
 
   static Future<NationalAtlas> load() async {
+    if (_cached != null) return _cached!;
     final nara =
         jsonDecode(await rootBundle.loadString('assets/data/nara.json'))
             as Map<String, dynamic>;
@@ -25,7 +27,10 @@ class NationalAtlas {
       'cities': [...nara['cities'] as List, ...national['cities'] as List],
       'towns': [...nara['towns'] as List, ...national['towns'] as List],
     });
-    for (final pair in national['crossPrefectureNeighbors'] as List) {
+    for (final pair in [
+      ...national['crossPrefectureNeighbors'] as List,
+      ...national['crossMunicipalityNeighbors'] as List? ?? [],
+    ]) {
       final a = atlas.sourceToTown[pair[0]], b = atlas.sourceToTown[pair[1]];
       if (a == null || b == null) {
         throw const FormatException('県境の隣接地域が見つかりません。');
@@ -35,7 +40,8 @@ class NationalAtlas {
         atlas.towns[b]!.neighbors.add(a);
       }
     }
-    return NationalAtlas(atlas, {
+    atlas.enableSeaTravel();
+    return _cached = NationalAtlas(atlas, {
       for (final p in national['prefectures'] as List)
         p['id'] as String: Prefecture.fromJson(p as Map<String, dynamic>),
     });
@@ -71,9 +77,24 @@ class NationalAtlas {
               }).polygons;
           decoded.putIfAbsent(id, () => []).addAll(polygons);
         }
+        final cityShapes = <String, List<List<List<Point<double>>>>>{};
+        for (final row in data['cities'] as List? ?? []) {
+          cityShapes[row['id'] as String] =
+              Prefecture.fromJson(row as Map<String, dynamic>).polygons;
+        }
+        final outline =
+            data['polygons'] == null
+                ? null
+                : Prefecture.fromJson({
+                  'id': prefecture,
+                  'name': '',
+                  'polygons': data['polygons'],
+                }).polygons;
         for (final entry in decoded.entries) {
           atlas.towns[entry.key]!.polygons.addAll(entry.value);
         }
+        atlas.cityPolygons.addAll(cityShapes);
+        if (outline != null) atlas.prefecturePolygons[prefecture] = outline;
       } catch (_) {
         _loads.remove(prefecture);
         rethrow;

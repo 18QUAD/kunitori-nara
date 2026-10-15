@@ -247,8 +247,12 @@ class Atlas {
     }
   }
   static const censusSource = 'https://geoshape.ex.nii.ac.jp/ka/';
-  static String _withoutChome(String name) =>
-      name.replaceFirst(RegExp(r'[一二三四五六七八九十百0-9０-９]+丁目$'), '');
+  static String _withoutChome(String name) {
+    final stem = name.replaceFirst(RegExp(r'[一二三四五六七八九十百0-9０-９]+丁目$'), '');
+    // 八丁目 and 大字二丁目 are actual standalone town names in the census.
+    return stem.isEmpty || stem == '大字' ? name : stem;
+  }
+
   final Map<String, MunicipalOffice> offices = {};
   final Map<String, String> officeTownIds = {};
   MunicipalOffice? officeForTown(String id) {
@@ -262,7 +266,48 @@ class Atlas {
   final Map<String, Town> towns = {};
   final Map<String, String> cities = {};
   final Map<String, List<Town>> byCity = {};
+  final Map<String, List<List<List<Point<double>>>>> cityPolygons = {};
+  final Map<String, List<List<List<Point<double>>>>> prefecturePolygons = {};
   final Map<String, List<LocalFact>> facts = {};
+  late final int totalPopulation = towns.values.fold<int>(
+    0,
+    (sum, town) => sum + town.population,
+  );
+
+  // Real boundary adjacency stays intact. A landing permits entry into each
+  // disconnected land component without inventing a shared land border.
+  final Map<String, String> landComponent = {};
+  final Set<String> landingTowns = {};
+
+  void enableSeaTravel() {
+    final unseen = towns.keys.toSet();
+    final components = <List<String>>[];
+    while (unseen.isNotEmpty) {
+      final pending = [unseen.first];
+      unseen.remove(pending.first);
+      final component = <String>[];
+      while (pending.isNotEmpty) {
+        final id = pending.removeLast();
+        component.add(id);
+        for (final next in towns[id]!.neighbors) {
+          if (unseen.remove(next)) pending.add(next);
+        }
+      }
+      components.add(component);
+    }
+    components.sort((a, b) => b.length.compareTo(a.length));
+    for (final component in components) {
+      component.sort((a, b) {
+        final population = towns[b]!.population.compareTo(towns[a]!.population);
+        return population == 0 ? a.compareTo(b) : population;
+      });
+      final landing = component.first;
+      landingTowns.add(landing);
+      for (final id in component) {
+        landComponent[id] = landing;
+      }
+    }
+  }
 
   List<LocalFact> _culture(String city) {
     final result = <LocalFact>[];
@@ -402,10 +447,15 @@ class Game {
   String message = '';
 
   int requiredTaps(Town t) => max(1, t.population);
+  bool canLand(String id) =>
+      home != null &&
+      atlas.landingTowns.contains(id) &&
+      !owned.any((town) => atlas.landComponent[town] == id);
   bool isReachable(String id) =>
       home != null &&
       !owned.contains(id) &&
       ((atlas.towns[id]?.neighbors.any(owned.contains) ?? false) ||
+          canLand(id) ||
           (everOwned.contains(id) &&
               atlas.officeForTown(id) != null &&
               atlas.byCity[atlas.towns[id]!.cityId]!.every(
@@ -453,7 +503,23 @@ class Game {
 
   void observe(String city) => seen.addAll(atlas.facts[city]!.map((f) => f.id));
 
-  List<LocalFact> tipsFor({String? selectedTown, String? selectedCity}) {
+  List<LocalFact> tipsFor({
+    String? selectedTown,
+    String? selectedCity,
+    String? selectedPrefecture,
+  }) {
+    final browsingCity =
+        selectedTown == null ? selectedCity : atlas.towns[selectedTown]?.cityId;
+    if (browsingCity != null && !browsingCity.startsWith('29')) {
+      return atlas.facts[browsingCity]!;
+    }
+    if (selectedTown == null &&
+        selectedCity == null &&
+        selectedPrefecture != null &&
+        selectedPrefecture != '29') {
+      final city = citiesInPrefecture(selectedPrefecture).firstOrNull;
+      return city == null ? const [] : atlas.facts[city]!;
+    }
     final target = attackTarget ?? selectedTown;
     final city =
         target == null
@@ -467,6 +533,9 @@ class Game {
       ...local.where((f) => f.category.startsWith('県の')),
     ];
   }
+
+  Iterable<String> citiesInPrefecture(String prefecture) =>
+      atlas.cities.keys.where((id) => id.startsWith(prefecture));
 
   void setHome(String id) {
     if (home != null || !atlas.towns.containsKey(id)) return;
@@ -495,6 +564,9 @@ class Game {
     if (everOwned.length >= 10) titles.add('十郷の領主');
     if (everOwned.length >= 100) titles.add('大和の開拓者');
     message = '${town.name}を獲得しました！';
+    if (cityOwned(town.cityId) && !atlas.offices.containsKey(town.cityId)) {
+      message = '${atlas.cities[town.cityId]}の全領土を獲得しました！ 制圧クイズは準備中です。';
+    }
     if (cityOwned(town.cityId) &&
         !mastered.contains(town.cityId) &&
         atlas.offices.containsKey(town.cityId)) {

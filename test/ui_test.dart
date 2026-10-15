@@ -71,7 +71,10 @@ void main() {
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(seconds: 2));
     });
-    for (var i = 0; i < 40; i++) {
+    for (var i = 0; i < 120; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
       await tester.pump(const Duration(milliseconds: 100));
       if (find.text('旅のはじまり').evaluate().isNotEmpty) break;
     }
@@ -206,7 +209,7 @@ void main() {
     );
     expect(
       tester.widget<Text>(find.byKey(const Key('prefecture-progress'))).data,
-      '奈良県 ${number(map.atlas.towns[map.game.home]!.population + 10)} / 1,324,473',
+      '${map.atlas.cities.length > 39 ? '全国' : '奈良県'} ${number(map.atlas.towns[map.game.home]!.population + 10)} / ${number(map.atlas.towns.values.fold<int>(0, (sum, t) => sum + t.population))}',
     );
     expect(
       tester.getRect(find.byKey(const Key('attack-progress'))).bottom,

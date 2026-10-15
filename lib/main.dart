@@ -41,7 +41,7 @@ class KunitoriApp extends StatelessWidget {
   final RegionalAdRepository? adRepository;
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'くにとり · 奈良',
+    title: 'くにとり · 全国',
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
       fontFamily: 'NotoSansJP',
@@ -502,6 +502,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final facts = game!.tipsFor(
       selectedTown: selected,
       selectedCity: cityFilter,
+      selectedPrefecture: nationalView ? null : prefectureFilter,
     );
     if (facts.isEmpty) return null;
     return facts[factIndex % facts.length];
@@ -786,7 +787,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
                     child: Text(
-                      '${national == null ? '奈良県' : '全国'} ${number(g.population)} / ${number(atlas!.towns.values.fold<int>(0, (sum, t) => sum + t.population))}',
+                      '${national == null ? '奈良県' : '全国'} ${number(g.population)} / ${number(atlas!.totalPopulation)}',
                       key: const Key('prefecture-progress'),
                       style: const TextStyle(fontSize: 12),
                     ),
@@ -801,12 +802,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             tooltip: '設定',
             icon: const Icon(Icons.settings_outlined),
             onSelected: (value) {
+              if (value == 'search') _search();
               if (value == 'records') _showRecords();
               if (value == 'help') _about();
               if (value == 'tips') _tipSettings();
             },
             itemBuilder:
                 (_) => const [
+                  PopupMenuItem(
+                    value: 'search',
+                    child: ListTile(
+                      leading: Icon(Icons.search),
+                      title: Text('地名から探す'),
+                    ),
+                  ),
                   PopupMenuItem(
                     value: 'tips',
                     child: ListTile(
@@ -1208,9 +1217,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ),
             )
           else
-            const Expanded(
+            Expanded(
               child: Center(
-                child: Text('この地域はあなたの領土です', style: TextStyle(color: mint)),
+                child: Text(
+                  g.cityOwned(town.cityId) &&
+                          !atlas!.offices.containsKey(town.cityId)
+                      ? '${atlas!.cities[town.cityId]}の全領土を獲得しました（制圧クイズ準備中）'
+                      : 'この地域はあなたの領土です',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: mint),
+                ),
               ),
             ),
         ],
@@ -1227,7 +1243,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               key: const Key('attack'),
               onPressed: can ? _attack : null,
               child: Semantics(
-                label: can ? 'タップで進軍 · 1人' : '隣接する自領が必要です',
+                label:
+                    can
+                        ? (g.canLand(town.id) ? 'タップで渡航 · 1人' : 'タップで進軍 · 1人')
+                        : '隣接する自領が必要です',
                 child:
                     can
                         ? Image.asset(
@@ -1254,7 +1273,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       mapFocus = 0;
       factIndex = 0;
     });
+    _rememberVisibleFact();
     _startTipsTimer();
+    _save();
   }
 
   void _showNational() {
@@ -1264,20 +1285,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       cityFilter = null;
       selected = null;
     });
-    if (store != null) {
-      unawaited(
-        store!.saveMapView(
-          MapViewState(
-            center: const Offset(550, 750),
-            scale: 1,
-            selected: null,
-            cityId: null,
-            prefectureId: prefectureFilter,
-            nationalView: true,
-          ),
-        ),
-      );
-    }
   }
 
   Widget _prefectureMap(Widget map) {
@@ -1317,7 +1324,34 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                             data: national!,
                             game: game!,
                             onPrefectureSelected: _selectPrefecture,
+                            prefectureId: prefectureFilter,
+                            controlsBottomInset:
+                                showTips && tipAppearance.showTips
+                                    ? _tipMaxHeight(constraints) + 16
+                                    : 8,
+                            initialView:
+                                _restoredMapView?.nationalView == true
+                                    ? _restoredMapView
+                                    : null,
+                            onViewChanged: (view) {
+                              _restoredMapView = view;
+                              if (store != null) {
+                                unawaited(store!.saveMapView(view));
+                              }
+                            },
                             controls: [
+                              IconButton.filledTonal(
+                                key: const Key('map-home'),
+                                tooltip:
+                                    game!.attackTarget == null
+                                        ? '本拠地へ'
+                                        : '攻略中の町へ',
+                                onPressed:
+                                    (game!.attackTarget ?? game!.home) == null
+                                        ? null
+                                        : _focusCampaign,
+                                icon: const Icon(Icons.home_outlined),
+                              ),
                               IconButton.filledTonal(
                                 tooltip: '県全域を表示',
                                 onPressed: () => _selectCity(null),
@@ -1653,8 +1687,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       useSafeArea: true,
       backgroundColor: ink,
       builder:
-          (context) =>
-              _SearchSheet(atlas: atlas!, game: game!, initialCity: cityFilter),
+          (context) => _SearchSheet(
+            atlas: atlas!,
+            game: game!,
+            initialCity: cityFilter,
+            prefectureNames:
+                national?.prefectures.map((id, p) => MapEntry(id, p.name)) ??
+                const {'29': '奈良県'},
+          ),
     );
     if (result != null && mounted) {
       if (!_select(result)) return;
@@ -1690,7 +1730,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。',
+                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。離島など陸続きでない地域では、人口が最大の町を入口として渡航できます。金色の入口を選んで通常と同じタップ数で攻略し、その後は隣接する町へ進みます。奈良県以外は全領土獲得まで遊べます。役所・制圧クイズは準備中です。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
@@ -1700,7 +1740,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 10),
                   const SelectableText(
-                    '地域tips：全39市町村に各30件。自治体公式資料の90件に、日本語版Wikipediaの各記事の執筆者による内容を要約・編集した1,080件を追加しています。tipsは吹き出しに収まる短文で表示します。キャラ・吹き出しのデザイン、配置、表示は設定から変更できます。出典は以下の一覧で確認できます。\nWikipedia由来のtips：CC BY-SA 4.0\nhttps://creativecommons.org/licenses/by-sa/4.0/',
+                    '地域tips：奈良県の全39市町村に各30件。他県は仮tipsを表示します。自治体公式資料の90件に、日本語版Wikipediaの各記事の執筆者による内容を要約・編集した1,080件を追加しています。tipsは吹き出しに収まる短文で表示します。キャラ・吹き出しのデザイン、配置、表示は設定から変更できます。出典は以下の一覧で確認できます。\nWikipedia由来のtips：CC BY-SA 4.0\nhttps://creativecommons.org/licenses/by-sa/4.0/',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
@@ -1732,7 +1772,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    '奈良県39市町村。2020年国勢調査の3,078町丁字を、丁目・小字をまとめた町・大字単位に統合しています。人口・面積を合算し、統合後の隣接関係を使います。描画用境界のみ簡略化しています。',
+                    '全国47都道府県。2020年国勢調査の町丁・字等を、丁目をまとめた町単位に統合しています。奈良県は従来の町・大字単位を維持します。人口・面積を合算し、統合後の隣接関係を使います。描画用境界のみ簡略化しています。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 12),
@@ -1802,10 +1842,12 @@ class _SearchSheet extends StatefulWidget {
     required this.atlas,
     required this.game,
     this.initialCity,
+    required this.prefectureNames,
   });
   final String? initialCity;
   final Atlas atlas;
   final Game game;
+  final Map<String, String> prefectureNames;
   @override
   State<_SearchSheet> createState() => _SearchSheetState();
 }
@@ -1823,12 +1865,25 @@ class _SearchSheetState extends State<_SearchSheet> {
   Widget build(BuildContext context) {
     final a = widget.atlas;
     final towns =
-        a.towns.values
+        city == null
+            ? <Town>[]
+            : a.byCity[city]!
+                .where(
+                  (t) =>
+                      (city == null || t.cityId == city) &&
+                      (t.name.contains(query) ||
+                          a.cities[t.cityId]!.contains(query)),
+                )
+                .toList();
+    final cities =
+        a.cities.entries
             .where(
-              (t) =>
-                  (city == null || t.cityId == city) &&
-                  (t.name.contains(query) ||
-                      a.cities[t.cityId]!.contains(query)),
+              (c) =>
+                  c.value.contains(query) ||
+                  (widget.prefectureNames[c.key.substring(0, 2)]?.contains(
+                        query,
+                      ) ??
+                      false),
             )
             .toList();
     return SizedBox(
@@ -1862,9 +1917,9 @@ class _SearchSheetState extends State<_SearchSheet> {
               key: ValueKey(city),
               autofocus: false,
               onChanged: (v) => setState(() => query = v),
-              decoration: const InputDecoration(
-                hintText: '市区町村・町名で検索',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: city == null ? '県名・市区町村で検索' : '町名で検索',
+                prefixIcon: const Icon(Icons.search),
               ),
             ),
             const SizedBox(height: 12),
@@ -1881,20 +1936,15 @@ class _SearchSheetState extends State<_SearchSheet> {
             const SizedBox(height: 8),
             Expanded(
               child: ListView.builder(
-                itemCount:
-                    city == null
-                        ? a.cities.values
-                            .where((name) => name.contains(query))
-                            .length
-                        : towns.length,
+                itemCount: city == null ? cities.length : towns.length,
                 itemBuilder: (context, i) {
                   if (city == null) {
-                    final c = a.cities.entries
-                        .where((c) => c.value.contains(query))
-                        .elementAt(i);
+                    final c = cities[i];
                     return ListTile(
                       title: Text(c.value),
-                      subtitle: Text('${a.byCity[c.key]!.length}町'),
+                      subtitle: Text(
+                        '${widget.prefectureNames[c.key.substring(0, 2)]} · ${a.byCity[c.key]!.length}町',
+                      ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap:
                           () => setState(() {
@@ -1908,7 +1958,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                     title: Text(t.name),
                     subtitle: Text(
-                      '${a.cities[t.cityId]} · ${number(t.population)}人',
+                      '${a.cities[t.cityId]} · ${number(t.population)}人${a.landingTowns.contains(t.id) ? ' · 渡航の入口' : ''}',
                     ),
                     trailing:
                         widget.game.owned.contains(t.id)

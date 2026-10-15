@@ -121,7 +121,11 @@ void main() {
         of: find.byType(TerritoryMap),
         matching: find.byType(IconButton),
       );
-      expect(mapButtons, findsNWidgets(5));
+      final loadedMap = tester.widget<TerritoryMap>(find.byType(TerritoryMap));
+      expect(
+        mapButtons,
+        findsNWidgets(loadedMap.atlas.cities.length > 39 ? 6 : 5),
+      );
       for (final button in mapButtons.evaluate()) {
         final surface = tester.widget<Material>(
           find
