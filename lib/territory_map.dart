@@ -9,6 +9,7 @@ import 'mountains.dart';
 import 'map_outline.dart';
 import 'map_label.dart';
 import 'office_symbols.dart';
+import 'map_compass.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -558,32 +559,10 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 ),
               ),
             ),
-          Positioned(
+          const Positioned(
             left: 8,
             top: 8,
-            child: IgnorePointer(
-              child: Semantics(
-                label: '北',
-                child: const SizedBox(
-                  key: Key('map-compass'),
-                  width: 48,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.navigation_outlined,
-                        size: 22,
-                        color: Colors.white,
-                      ),
-                      Text(
-                        'N',
-                        style: TextStyle(fontSize: 12, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            child: MapCompass(),
           ),
           if (widget.showControls)
             Positioned(

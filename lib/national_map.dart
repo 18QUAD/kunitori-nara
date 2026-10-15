@@ -6,6 +6,7 @@ import 'national_atlas.dart';
 import 'territory_map.dart';
 import 'map_view.dart';
 import 'geography_tiles.dart';
+import 'map_compass.dart';
 
 class NationalMap extends StatefulWidget {
   const NationalMap({
@@ -271,13 +272,10 @@ class _NationalMapState extends State<NationalMap> {
                 ),
               ),
             ),
-            Positioned(
+            const Positioned(
               left: 8,
               top: 8,
-              child: Text(
-                '全国 · 都道府県を選択',
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
+              child: MapCompass(),
             ),
             Positioned(
               right: 12,
