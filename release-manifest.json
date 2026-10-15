@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "sourceCommit": "0a6dceb23e22bb3d9ba868dc4b3422d197f67cbe",
+  "sourceCommit": "d10b7f9c0f5dde94785323ecd74012fd54cc9efa",
   "baseHref": "/kunitori-nara/",
-  "createdAt": "2026-10-15T01:50:28.049639+00:00",
+  "createdAt": "2026-10-15T02:13:13.298326+00:00",
   "files": {
     ".last_build_id": {
       "sha256": "1e6750d7a8eddeea7e8c1a05d6a70770b204433a8c2c81e9469f679ce114ba26",
@@ -13,16 +13,16 @@
       "bytes": 0
     },
     "assets/AssetManifest.bin": {
-      "sha256": "dbb7bb12e7eecb0b6d6db5ffd72dc3d09cd93d2f9f7e93ad338457e2f93b023f",
-      "bytes": 57263
+      "sha256": "7d1d9ddba7d227497cc7ab3bdbd77b1e3508aa683127880bf1edf6b5f4e32b7a",
+      "bytes": 57407
     },
     "assets/AssetManifest.bin.json": {
-      "sha256": "af47299b940e9b87b991fbaf9c1514237f8927116962e39d907867a7a0f63671",
-      "bytes": 76354
+      "sha256": "17d79cb515b2407c8119539d797c99915bb42064e8e36226014911785fcd8a2c",
+      "bytes": 76546
     },
     "assets/AssetManifest.json": {
-      "sha256": "a60fd38fea0e80df6f3f3a9e1a0422f2b27d92c9133fb07240998936d6d640c4",
-      "bytes": 51933
+      "sha256": "7bfeb6eed27b23ba6f557c4a2a937a971f5f13c090adb220243bfdcc21dd3593",
+      "bytes": 52063
     },
     "assets/FontManifest.json": {
       "sha256": "6bd584e629122f9897757417ff3b3f80e46fdf7ee305743cca4f33fc0058a260",
@@ -67,6 +67,14 @@
     "assets/assets/data/japan_import_report.json": {
       "sha256": "f1646fcc3fc7120529eb433cd4e0625d1059d93c0543faa8e6fdb7af0604ecf8",
       "bytes": 148563
+    },
+    "assets/assets/data/japan_relief.json": {
+      "sha256": "37cd5d7059c57bdbd044e7c445698f890e7944b607c757d7a217b3c6a03a489f",
+      "bytes": 61449
+    },
+    "assets/assets/data/japan_relief.png": {
+      "sha256": "1db57c5fbb00caf58390d7d594ed1a047eb8a246fa454b0b61567e1eccd04e16",
+      "bytes": 1806041
     },
     "assets/assets/data/nara.json": {
       "sha256": "c25a9d7fe82517f0560b54dcd13aa8c2d6a1efddc454db144d3de31e5392ca9e",
@@ -3141,12 +3149,12 @@
       "bytes": 7735
     },
     "flutter_bootstrap.js": {
-      "sha256": "0c8ccb666d3aa6cbdb7b38bb6b2e389f4b499d9e701329a4ce749c1c6ee41f41",
+      "sha256": "621ba7300bab6576544fbf01e8eb22926eda0dfa9bb36207021937151ab2a54c",
       "bytes": 12216
     },
     "flutter_service_worker.js": {
-      "sha256": "d33b12756ce425ddb6992088bd66b19b5c6369651468959f5a97f54a2dddb0cc",
-      "bytes": 66928
+      "sha256": "2e56a292d5f0a6678549efd425d630770fc1242378f96c7646be850f920f1985",
+      "bytes": 67079
     },
     "icons/Icon-192.png": {
       "sha256": "3dce99077602f70421c1c6b2a240bc9b83d64d86681d45f2154143310c980be3",
@@ -3165,12 +3173,12 @@
       "bytes": 20998
     },
     "index.html": {
-      "sha256": "a0edb655cb57d407d173dde5acd6b5f162e869683ab64d79b04696ee9b7ad18c",
-      "bytes": 2428
+      "sha256": "99ba6f8ecdae7dad623450d12ac5b3fb6c228e22451a050cf8555acc168f43cd",
+      "bytes": 2430
     },
     "main.dart.js": {
-      "sha256": "6a66201e07c50c38c4b2e59e75acdd2811908e3afc09e147c3220bfd21181206",
-      "bytes": 3070877
+      "sha256": "7c9909cc9c2092b0571fa6bb31b575202c9870fc36990aa780e15315e77f0065",
+      "bytes": 3073400
     },
     "manifest.json": {
       "sha256": "81c753a36648806b90382d3a1623d6314b441b26fdbe5c637b5aa3c4693f8bc8",
