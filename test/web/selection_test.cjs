@@ -17,8 +17,11 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  const attack=page.getByRole('button',{name:'タップで進軍 · 1人',exact:true});await attack.waitFor({timeout:60000});
  const result=await page.evaluate(async()=>{
   const host=document.getElementById('app-host');
-  const text=[...host.querySelectorAll('flt-semantics span')].find(e=>e.textContent.length>15);
-  if(!text)throw Error('No game text found');
+  let text=[...host.querySelectorAll('flt-semantics span')].find(e=>e.textContent.length>15);
+  // Flutter also exposes text through aria-label without DOM text nodes.
+  // A real selectable probe exercises the host guard in either semantics mode.
+  const probe=!text;
+  if(probe){text=document.createElement('span');text.textContent='地図画面の選択抑止を確認するテキスト';host.append(text);}
   const attack=host.querySelector('button.attack-tap-native');
   if(!attack)throw Error('No native attack button');
   if(attack.textContent!=='' || attack.children.length!==0)throw Error('Attack has selectable content');
@@ -42,7 +45,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
   input.focus();input.setSelectionRange(0,2);document.dispatchEvent(new Event('selectionchange'));if(input.selectionEnd!==2)throw Error('Input selection cleared');input.remove();
   const editor=document.createElement('div');editor.contentEditable='true';editor.textContent='編集テスト';host.append(editor);
   const range=document.createRange();range.selectNodeContents(editor);getSelection().removeAllRanges();getSelection().addRange(range);await new Promise(r=>setTimeout(r,30));if(getSelection().toString()!=='編集テスト')throw Error('Editable selection cleared');getSelection().removeAllRanges();editor.remove();
-  return text.textContent;
+  const textContent=text.textContent;if(probe)text.remove();return textContent;
  });
  const game=()=>page.evaluate(()=>JSON.parse(JSON.parse(localStorage.getItem('flutter.kunitori.nara.v1'))));
  for(let i=0;i<8;i++)await attack.tap();
