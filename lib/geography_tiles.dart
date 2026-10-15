@@ -9,14 +9,18 @@ import 'package:flutter/services.dart';
 class GeographyTileIndex {
   GeographyTileIndex.fromJson(Map<String, dynamic> json)
     : available = (json['tiles'] as Map).keys.cast<String>().toSet(),
-      maxLevel = json['maxLevel'] as int;
+      maxLevel = json['maxLevel'] as int,
+      detailLevels = (json['detailLevels'] as Map<String, dynamic>? ?? {}).map(
+        (key, value) => MapEntry(key, value as int),
+      );
   final Set<String> available;
   final int maxLevel;
+  final Map<String, int> detailLevels;
   static Future<GeographyTileIndex>? _pending;
   static Future<GeographyTileIndex> load() async {
     try {
       return await (_pending ??= rootBundle
-          .loadString('assets/data/map_tiles/index.json')
+          .loadString('assets/data/map_tiles_v2/index.json')
           .then((s) => GeographyTileIndex.fromJson(jsonDecode(s))));
     } catch (_) {
       _pending = null;
@@ -32,8 +36,11 @@ class GeographyTileIndex {
 
   /// Use image resolution near the device's physical pixel density; overzoom the
   /// finest source instead of synthesizing geography during a gesture.
-  int levelFor(double pixelsPerDegree) =>
-      (math.log(pixelsPerDegree / 64) / math.ln2).ceil().clamp(0, maxLevel);
+  int levelFor(double pixelsPerDegree, {String? prefectureId}) =>
+      (math.log(pixelsPerDegree / 64) / math.ln2).ceil().clamp(
+        0,
+        detailLevels[prefectureId] ?? maxLevel,
+      );
 }
 
 /// Shared bounded LRU. Active map tiles are pinned; in-flight decodes deduplicate.
@@ -99,7 +106,9 @@ class GeographyImageCache {
     return _pending.putIfAbsent(key, () async {
       await _acquire();
       try {
-        final bytes = await rootBundle.load('assets/data/map_tiles/$key.png');
+        final bytes = await rootBundle.load(
+          'assets/data/map_tiles_v2/$key.png',
+        );
         final codec = await ui.instantiateImageCodec(
           bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
         );
@@ -126,12 +135,14 @@ class GeographyTiles extends StatefulWidget {
     required this.viewport,
     required this.clip,
     required this.enabled,
+    this.prefectureId,
   });
   final TransformationController transform;
   final Offset Function(math.Point<double>) project;
   final Size viewport;
   final Path clip;
   final bool enabled;
+  final String? prefectureId;
   @override
   State<GeographyTiles> createState() => _GeographyTilesState();
 }
@@ -173,7 +184,8 @@ class _GeographyTilesState extends State<GeographyTiles> {
         old.project != widget.project ||
         old.viewport != widget.viewport ||
         old.clip != widget.clip ||
-        old.enabled != widget.enabled) {
+        old.enabled != widget.enabled ||
+        old.prefectureId != widget.prefectureId) {
       _schedule();
     }
   }
@@ -211,6 +223,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
       math.max(unit.dx.abs(), unit.dy.abs()) *
           zoom *
           math.min(1.5, MediaQuery.devicePixelRatioOf(context)),
+      prefectureId: widget.prefectureId,
     );
     final scene = Rect.fromPoints(
       widget.transform.toScene(Offset.zero),

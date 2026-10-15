@@ -461,6 +461,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         ),
                       ),
                       GeographyTiles(
+                        prefectureId: widget.prefectureId,
                         transform: controller,
                         project: project,
                         viewport: size,

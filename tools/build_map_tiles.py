@@ -17,7 +17,7 @@ from shapely import make_valid
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / 'assets/data'
-OUT = DATA / 'map_tiles'
+OUT = DATA / 'map_tiles_v2'
 SIZE = 256
 MAX_LEVEL = 4
 PPD = 64 * 2**MAX_LEVEL
@@ -213,7 +213,9 @@ def main():
     # National labels are already filtered for overview density.
     water = read(DATA/'water/national.json')
     (labeldir/'national.json').write_text(json.dumps({'lines':[], 'areas':[], 'labels':water['labels']}, ensure_ascii=False,separators=(',',':')))
-    print(f'{len(tiles)} images, {sum(tiles.values())/1024**2:.1f} MiB', flush=True)
+    from restore_nara_water_tiles import restore
+    restore(OUT)
+    print(f'{len(tiles)} base images, {sum(tiles.values())/1024**2:.1f} MiB', flush=True)
 
 if __name__ == '__main__':
     main()
