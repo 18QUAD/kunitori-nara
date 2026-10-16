@@ -563,9 +563,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       (office) => office.townId == id,
     );
     if (g.isReachable(id) && !g.selectAttackTarget(id) && !isOffice) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('攻略先は1か所です。攻略中の町を獲得してから選んでください。')),
-      );
       return false;
     }
     setState(() {

@@ -199,10 +199,10 @@ void main() {
     );
     expect(map.game.attackTarget, target.id);
     expect(map.game.progress.containsKey(other.id), isFalse);
-    ScaffoldMessenger.of(
-      tester.element(find.byType(TerritoryMap)),
-    ).hideCurrentSnackBar();
-    await tester.pumpAndSettle();
+    expect(
+      find.text('攻略先は1か所です。攻略中の町を獲得してから選んでください。'),
+      findsNothing,
+    );
     expect(
       tester.widget<Text>(find.byKey(const Key('attack-progress'))).data,
       '10',
