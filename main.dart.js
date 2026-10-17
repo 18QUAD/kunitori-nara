@@ -26325,7 +26325,7 @@ var $async$a4P=A.O(function(a,b){if(a===1){o.push(b)
 s=p}while(true)switch(s){case 0:p=4
 n=$.ayw
 s=7
-return A.P(n==null?$.ayw=$.jo().jl("assets/data/border_tiles/index.json",!1).bN(new A.a4Q(),t.Q9):n,$async$a4P)
+return A.P(n==null?$.ayw=$.jo().jl("assets/data/border_tiles/index-contrast.json",!1).bN(new A.a4Q(),t.Q9):n,$async$a4P)
 case 7:n=b
 q=n
 s=1
@@ -26368,8 +26368,8 @@ break
 case 6:case 1:return A.L(q,r)
 case 2:return A.K(o.at(-1),r)}})
 return A.M($async$a4O,r)},
-aDx(a,b){var s=t.N
-return new A.a4J(b,a,A.u(s,t.lu),A.u(s,t.pZ),A.u(t.K,t.c8),A.c([],t.LU))},
+aDx(a,b,c){var s=t.N
+return new A.a4J(b,a,c,A.u(s,t.lu),A.u(s,t.pZ),A.u(t.K,t.c8),A.c([],t.LU))},
 te:function te(a,b,c,d,e,f){var _=this
 _.a=a
 _.b=b
@@ -26381,14 +26381,15 @@ a4M:function a4M(){},
 a4N:function a4N(){},
 a4Q:function a4Q(){},
 a4R:function a4R(){},
-a4J:function a4J(a,b,c,d,e,f){var _=this
+a4J:function a4J(a,b,c,d,e,f,g){var _=this
 _.a=a
 _.b=b
 _.c=c
 _.d=d
 _.e=e
 _.f=f
-_.r=0},
+_.r=g
+_.w=0},
 a4K:function a4K(){},
 a4L:function a4L(a,b){this.a=a
 this.b=b},
@@ -88420,26 +88421,26 @@ $S:216}
 A.a4J.prototype={
 xt(){var s=0,r=A.N(t.H),q,p=this,o
 var $async$xt=A.O(function(a,b){if(a===1)return A.K(b,r)
-while(true)switch(s){case 0:o=p.r
-if(o<2){p.r=o+1
+while(true)switch(s){case 0:o=p.w
+if(o<2){p.w=o+1
 s=1
 break}o=new A.af($.al,t.W)
-p.f.push(new A.b_(o,t.Q))
+p.r.push(new A.b_(o,t.Q))
 s=3
 return A.P(o,$async$xt)
 case 3:case 1:return A.L(q,r)}})
 return A.M($async$xt,r)},
-gF(a){return this.c.a},
-arl(a){var s=this.c,r=s.E(0,a)
+gF(a){return this.d.a},
+arl(a){var s=this.d,r=s.E(0,a)
 if(r!=null)s.m(0,a,r)
 return r},
-uo(){var s,r,q,p=this.e,o=A.k(p).i("aq<2>"),n=o.i("ca<r.E,l>"),m=A.ce(new A.ca(new A.aq(p,o),new A.a4K(),n),n.i("r.E"))
-for(p=this.c,o=A.k(p).i("ay<1>"),o=A.a_(new A.ay(p,o),!0,o.i("r.E")),n=o.length,s=this.a,r=0;r<n;++r){q=o[r]
+uo(){var s,r,q,p=this.f,o=A.k(p).i("aq<2>"),n=o.i("ca<r.E,l>"),m=A.ce(new A.ca(new A.aq(p,o),new A.a4K(),n),n.i("r.E"))
+for(p=this.d,o=A.k(p).i("ay<1>"),o=A.a_(new A.ay(p,o),!0,o.i("r.E")),n=o.length,s=this.a,r=0;r<n;++r){q=o[r]
 if(p.a<=s)break
 if(!m.n(0,q))p.E(0,q).k()}},
-eV(a){var s=this.c,r=s.E(0,a)
+eV(a){var s=this.d,r=s.E(0,a)
 if(r!=null){s.m(0,a,r)
-return A.cx(r,t.lu)}return this.d.bx(a,new A.a4L(this,a))}}
+return A.cx(r,t.lu)}return this.e.bx(a,new A.a4L(this,a))}}
 A.a4K.prototype={
 $1(a){return a},
 $S:561}
@@ -88452,7 +88453,7 @@ return A.P(g.xt(),$async$$0)
 case 3:p=4
 i=m.b
 s=7
-return A.P($.jo().eV(g.b+"/"+i+".webp"),$async$$0)
+return A.P($.jo().eV(g.b+"/"+g.c+i+".webp"),$async$$0)
 case 7:l=b
 h=J.hy(J.aBE(l),l.byteOffset,l.byteLength)
 s=8
@@ -88462,7 +88463,7 @@ p=9
 s=12
 return A.P(k.fn(),$async$$0)
 case 12:j=b.geQ()
-g.c.m(0,i,j)
+g.d.m(0,i,j)
 q=j
 n=[1,5]
 s=10
@@ -88480,10 +88481,10 @@ s=5
 break
 case 4:n=[2]
 case 5:p=2
-g.d.E(0,m.b)
-i=g.f
+g.e.E(0,m.b)
+i=g.r
 if(i.length!==0)B.c.nj(i,0).fd()
-else --g.r
+else --g.w
 g.uo()
 s=n.pop()
 break
@@ -88549,7 +88550,7 @@ if(p.c==null||c4==null){s=1
 break}o=++p.r
 n=p.a
 if(!n.r){o=p.go8()
-o.e.m(0,p,A.aj(t.N))
+o.f.m(0,p,A.aj(t.N))
 o.uo()
 p.O(new A.ao6(p))
 s=1
@@ -88603,7 +88604,7 @@ b9=""+b5+"_"+b7+"_"+b8+"_"+b0
 if(!i.n(0,b9))continue
 a1.D(0,b9)
 a2.push(new A.Uz([b9,p.R2(b5,b7,b8),b0,a8]))}}}n=p.go8()
-n.e.m(0,p,a1)
+n.f.m(0,p,a1)
 n.uo()
 c0=new A.aoc(p,o,a2)
 c0.$0()
@@ -88627,7 +88628,7 @@ case 4:c2+=2
 s=3
 break
 case 5:n=p.go8()
-n.e.m(0,p,a1)
+n.f.m(0,p,a1)
 n.uo()
 if(p.c!=null&&o===p.r)p.O(new A.aob(p))
 case 1:return A.L(q,r)}})
@@ -88637,7 +88638,7 @@ s=r.f
 if(s!=null)s.aI()
 r.a.c.G(r.gFo())
 s=r.go8()
-s.e.E(0,r)
+s.f.E(0,r)
 s.uo()
 r.aC()},
 K(a){return A.hz(this.a.c,new A.aoj(this),null)}}
@@ -88683,7 +88684,7 @@ m=n[0]
 l=n[1]
 k=n[2]
 j=n[3]
-n=g.go8().c
+n=g.go8().d
 i=n.E(0,m)
 h=i!=null
 if(h)n.m(0,m,i)
@@ -91336,7 +91337,7 @@ b5.hQ(a3,2/b2,s)}}a4=A.aj(t.N)
 for(s=[i,b1.e],a5=0;a5<2;++a5){a6=m.h(0,s[a5])
 if(a6==null)continue
 if(b4)a4.D(0,a6.c)
-else if(a6.c===b3)a4.D(0,a6.a)}for(s=A.bK(a4,a4.r,a4.$ti.c),q=2/b2,o=a9.r,m=s.$ti.c;s.q();){j=s.d
+else if(a6.c===b3)a4.D(0,a6.a)}for(s=A.bK(a4,a4.r,a4.$ti.c),q=6/b2,o=a9.r,m=s.$ti.c;s.q();){j=s.d
 a7=o.h(0,j==null?m.a(j):j)
 if(a7==null)continue
 j=$.Z().aJ()
@@ -100812,8 +100813,8 @@ s($,"b0e","aLd",()=>A.a72(A.ch([B.kj],t.T)))
 s($,"b1b","aLE",()=>new A.abM(A.u(t.N,A.av("ai<d2?>?(d2?)"))))
 s($,"aXB","aJ1",()=>A.eP("^[\\w!#%&'*+\\-.^`|~]+$",!0,!1))
 s($,"b0J","axz",()=>A.aTS())
-s($,"aY4","aJe",()=>A.aDx("assets/data/map_tiles_uniform",48))
-s($,"aY3","aJd",()=>A.aDx("assets/data/border_tiles",8))
+s($,"aY4","aJe",()=>A.aDx("assets/data/map_tiles_uniform",48,""))
+s($,"aY3","aJd",()=>A.aDx("assets/data/border_tiles",8,"contrast_"))
 r($,"aYc","aB3",()=>{var q=null
 return A.bz(q,q,!0,"background",new A.a7k(),q,new A.a7l(),q)})
 r($,"aYi","aJl",()=>A.bz(new A.a7C(),A.cg(3,3,4.5,7),!1,"on_background",new A.a7D(),null,new A.a7E(),null))
