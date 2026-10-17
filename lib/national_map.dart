@@ -252,13 +252,6 @@ class _NationalMapState extends State<NationalMap> {
                           clip: land,
                           enabled: showGeography,
                         ),
-                        BorderTiles(
-                          transform: transform,
-                          project: project,
-                          viewport: size,
-                          clip: land,
-                          layer: 'pref',
-                        ),
                         RepaintBoundary(
                           child: CustomPaint(
                             willChange: true,
@@ -274,6 +267,14 @@ class _NationalMapState extends State<NationalMap> {
                               foreground: true,
                             ),
                           ),
+                        ),
+                        // Keep static boundaries above every other map layer.
+                        BorderTiles(
+                          transform: transform,
+                          project: project,
+                          viewport: size,
+                          clip: land,
+                          layer: 'pref',
                         ),
                       ],
                     ),

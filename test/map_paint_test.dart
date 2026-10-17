@@ -51,7 +51,8 @@ void main() {
         find.byType(InteractiveViewer),
       );
       final box = (current.child as GestureDetector).child as SizedBox;
-      return (((box.child as Stack).children.last as RepaintBoundary).child
+      return (((box.child as Stack).children.whereType<RepaintBoundary>().last)
+                  .child
               as CustomPaint)
           .painter;
     }
@@ -221,7 +222,9 @@ void main() {
       final detector = viewer.child as GestureDetector;
       final canvasWidget = detector.child as SizedBox;
       final dynamic painter =
-          (((canvasWidget.child as Stack).children.last as RepaintBoundary)
+          (((canvasWidget.child as Stack).children
+                          .whereType<RepaintBoundary>()
+                          .last)
                       .child
                   as CustomPaint)
               .painter;

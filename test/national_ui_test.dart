@@ -80,6 +80,10 @@ void main() {
       final viewer = tester.widget<InteractiveViewer>(
         find.byType(InteractiveViewer),
       );
+      final nationalStack =
+          (((viewer.child as GestureDetector).child as SizedBox).child
+              as Stack);
+      expect(nationalStack.children.last, isA<BorderTiles>());
       for (var attempt = 0; attempt < 100; attempt++) {
         if (find.text('起伏を読み込み中…').evaluate().isEmpty &&
             find.text('市街地を読み込み中…').evaluate().isEmpty &&
@@ -246,13 +250,20 @@ void main() {
       final prefectureViewer = tester.widget<InteractiveViewer>(
         find.byType(InteractiveViewer),
       );
+      final prefectureStack =
+          (((prefectureViewer.child as GestureDetector).child as SizedBox).child
+              as Stack);
+      expect(prefectureStack.children.last, isA<BorderTiles>());
       final camera = prefectureViewer.transformationController!.value.clone();
       dynamic detailPainter() {
         final current = tester.widget<InteractiveViewer>(
           find.byType(InteractiveViewer),
         );
         final box = (current.child as GestureDetector).child as SizedBox;
-        return (((box.child as Stack).children.last as RepaintBoundary).child
+        return (((box.child as Stack).children
+                        .whereType<RepaintBoundary>()
+                        .last)
+                    .child
                 as CustomPaint)
             .painter;
       }

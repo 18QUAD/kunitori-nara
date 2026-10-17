@@ -211,15 +211,18 @@ void main() {
       final viewer = tester.widget<InteractiveViewer>(
         find.byType(InteractiveViewer),
       );
+      final mapStack =
+          (((viewer.child as GestureDetector).child as SizedBox).child
+              as Stack);
+      expect(mapStack.children.last, isA<BorderTiles>());
       dynamic mapPainter(bool foreground) {
         final current = tester.widget<InteractiveViewer>(
           find.byType(InteractiveViewer),
         );
         final box = (current.child as GestureDetector).child as SizedBox;
         final stack = box.child as Stack;
-        final boundary =
-            (foreground ? stack.children.last : stack.children.first)
-                as RepaintBoundary;
+        final overlays = stack.children.whereType<RepaintBoundary>();
+        final boundary = foreground ? overlays.last : overlays.first;
         return (boundary.child as CustomPaint).painter;
       }
 

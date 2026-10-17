@@ -500,17 +500,6 @@ class _TerritoryMapState extends State<TerritoryMap> {
                                 : cityPaths[widget.cityId]!,
                         enabled: showGeography,
                       ),
-                      BorderTiles(
-                        transform: controller,
-                        project: project,
-                        viewport: size,
-                        clip:
-                            widget.cityId == null
-                                ? prefecturePath
-                                : cityPaths[widget.cityId]!,
-                        prefectureId: widget.prefectureId,
-                        layer: widget.cityId == null ? 'city' : 'town',
-                      ),
                       RepaintBoundary(
                         child: CustomPaint(
                           willChange: true,
@@ -535,6 +524,18 @@ class _TerritoryMapState extends State<TerritoryMap> {
                             foreground: true,
                           ),
                         ),
+                      ),
+                      // Keep static boundaries above every other map layer.
+                      BorderTiles(
+                        transform: controller,
+                        project: project,
+                        viewport: size,
+                        clip:
+                            widget.cityId == null
+                                ? prefecturePath
+                                : cityPaths[widget.cityId]!,
+                        prefectureId: widget.prefectureId,
+                        layer: widget.cityId == null ? 'city' : 'town',
                       ),
                     ],
                   ),
@@ -751,7 +752,7 @@ class _MapPainter extends CustomPainter {
         if (overview || e.key == cityId)
           Rect.fromCircle(center: e.value, radius: 11 / zoom),
     ];
-    // Borders, labels and selection remain above the terrain and water.
+    // Labels and selection remain above the terrain and water.
     for (final e in paths.entries) {
       if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
       // Static city/town outlines are supplied by BorderTiles.
@@ -842,7 +843,7 @@ class _MapPainter extends CustomPainter {
         canvas.drawCircle(p, 2 / zoom, Paint()..color = Colors.white);
       }
     }
-    // Keep both the selection and active campaign above all other map layers.
+    // Keep the selection and active campaign above map fills and labels.
     final highlighted = <String>{};
     for (final id in [selected, game.attackTarget]) {
       final town = atlas.towns[id];

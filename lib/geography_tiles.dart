@@ -424,11 +424,13 @@ class _GeographyTilesState extends State<GeographyTiles> {
                   Positioned.fromRect(
                     rect: visible,
                     child: RepaintBoundary(
-                      child: CustomPaint(
-                        painter: _GeographyPainter(
-                          widget.enabled ? tiles : [],
-                          widget.clip,
-                          visible.topLeft,
+                      child: IgnorePointer(
+                        child: CustomPaint(
+                          painter: _GeographyPainter(
+                            widget.enabled ? tiles : [],
+                            widget.clip,
+                            visible.topLeft,
+                          ),
                         ),
                       ),
                     ),

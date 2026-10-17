@@ -56,7 +56,8 @@ void main() {
       find.byType(InteractiveViewer),
     );
     final box = (viewer.child as GestureDetector).child as SizedBox;
-    return (((box.child as Stack).children.last as RepaintBoundary).child
+    return (((box.child as Stack).children.whereType<RepaintBoundary>().last)
+                .child
             as CustomPaint)
         .painter;
   }
