@@ -38,10 +38,7 @@ class GeographyTileIndex {
   static Future<GeographyTileIndex> loadBorders() async {
     try {
       return await (_borderPending ??= rootBundle
-          .loadString(
-            'assets/data/border_tiles/index-contrast.json',
-            cache: false,
-          )
+          .loadString('assets/data/border_tiles/index-plain.json', cache: false)
           .then((s) => GeographyTileIndex.fromJson(jsonDecode(s))));
     } catch (_) {
       _borderPending = null;
@@ -86,7 +83,7 @@ class GeographyImageCache {
   static final borders = GeographyImageCache(
     capacity: 8,
     assetDirectory: 'assets/data/border_tiles',
-    filenamePrefix: 'contrast_',
+    filenamePrefix: 'plain_',
   );
   final int capacity;
   final String assetDirectory, filenamePrefix;
@@ -201,6 +198,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
   GeographyTileIndex? index;
   Timer? timer;
   int revision = 0;
+  double? refreshedZoom;
   bool failed = false;
   bool loading = true;
   List<_Tile> tiles = [];
@@ -245,8 +243,15 @@ class _GeographyTilesState extends State<GeographyTiles> {
   }
 
   void _schedule() {
-    // Coalesce pinch/pan events. The existing raster remains on screen meanwhile.
     timer?.cancel();
+    // Never stretch the previous border LOD for a debounce frame. Refresh the
+    // exact LOD synchronously on scale changes; cached tiles appear immediately.
+    if (widget.boundaryLayer != null &&
+        widget.transform.value.getMaxScaleOnAxis() != refreshedZoom) {
+      _refresh();
+      return;
+    }
+    // Panning and terrain images can keep their current raster while coalescing.
     timer = Timer(const Duration(milliseconds: 70), _refresh);
   }
 
@@ -274,6 +279,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     final unit = widget.project(const math.Point(121.0, 47.0)) - origin;
     final zoom = widget.transform.value.getMaxScaleOnAxis();
     final borders = widget.boundaryLayer != null;
+    refreshedZoom = zoom;
     var level = manifest.levelFor(
       math.max(unit.dx.abs(), unit.dy.abs()) *
           zoom *
@@ -325,11 +331,10 @@ class _GeographyTilesState extends State<GeographyTiles> {
       for (final layer in layers) {
         final sourceLevel = manifest.layerLevel(level, layer);
         if (!manifest.hasTile(level, x, y, layer)) continue;
-        // Parent images fill the target until its sharper tile arrives.
+        // Only terrain may use coarse parents. Enlarged border parents would
+        // briefly show much thicker strokes while sharp tiles are loading.
         final fallback =
-            widget.boundaryLayer == null
-                ? manifest.minLevel
-                : math.max(manifest.minLevel, sourceLevel - 2);
+            widget.boundaryLayer == null ? manifest.minLevel : sourceLevel;
         for (final lod in [sourceLevel, if (sourceLevel > fallback) fallback]) {
           final divisor = 1 << (level - lod);
           final parent = '${lod}_${x ~/ divisor}_${y ~/ divisor}_$layer';

@@ -83,7 +83,8 @@ void main() {
       final nationalStack =
           (((viewer.child as GestureDetector).child as SizedBox).child
               as Stack);
-      expect(nationalStack.children.last, isA<BorderTiles>());
+      expect(nationalStack.children[2], isA<BorderTiles>());
+      expect(nationalStack.children.last, isA<RepaintBoundary>());
       for (var attempt = 0; attempt < 100; attempt++) {
         if (find.text('起伏を読み込み中…').evaluate().isEmpty &&
             find.text('市街地を読み込み中…').evaluate().isEmpty &&
@@ -253,7 +254,8 @@ void main() {
       final prefectureStack =
           (((prefectureViewer.child as GestureDetector).child as SizedBox).child
               as Stack);
-      expect(prefectureStack.children.last, isA<BorderTiles>());
+      expect(prefectureStack.children[2], isA<BorderTiles>());
+      expect(prefectureStack.children.last, isA<RepaintBoundary>());
       final camera = prefectureViewer.transformationController!.value.clone();
       dynamic detailPainter() {
         final current = tester.widget<InteractiveViewer>(

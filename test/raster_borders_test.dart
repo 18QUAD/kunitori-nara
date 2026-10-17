@@ -53,7 +53,7 @@ void main() {
     final data =
         jsonDecode(
               File(
-                'assets/data/border_tiles/index-contrast.json',
+                'assets/data/border_tiles/index-plain.json',
               ).readAsStringSync(),
             )
             as Map<String, dynamic>;
@@ -79,32 +79,29 @@ void main() {
   });
 
   test(
-    'real prefecture border image has opaque white core and dark casing',
+    'real prefecture border image has thin white lines without any casing',
     () async {
       final bytes =
           File(
-            'assets/data/border_tiles/contrast_3_31_26_pref.webp',
+            'assets/data/border_tiles/plain_3_31_26_pref.webp',
           ).readAsBytesSync();
       final codec = await ui.instantiateImageCodec(bytes);
       final image = (await codec.getNextFrame()).image;
       final pixels =
-          (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
-      var white = 0, dark = 0;
+          (await image.toByteData(format: ui.ImageByteFormat.rawStraightRgba))!;
+      var white = 0, nonWhite = 0;
       for (var i = 0; i < pixels.lengthInBytes; i += 4) {
-        if (pixels.getUint8(i + 3) != 255) continue;
+        if (pixels.getUint8(i + 3) == 0) continue;
         if (pixels.getUint8(i) == 255 &&
             pixels.getUint8(i + 1) == 255 &&
             pixels.getUint8(i + 2) == 255) {
           white++;
-        }
-        if (pixels.getUint8(i) == 12 &&
-            pixels.getUint8(i + 1) == 27 &&
-            pixels.getUint8(i + 2) == 39) {
-          dark++;
+        } else {
+          nonWhite++;
         }
       }
       expect(white, greaterThan(100));
-      expect(dark, greaterThan(100));
+      expect(nonWhite, 0);
       expect(image.width, 512);
       image.dispose();
       codec.dispose();
@@ -184,6 +181,37 @@ void main() {
             reason:
                 'Every loaded boundary image must match the physical pixels',
           );
+        }
+        for (final zoom in [8.0, 1.0, 4.0]) {
+          transform.value = Matrix4.identity()..scale(zoom);
+          // No real-async delay: this inspects the very first zoom frame too.
+          for (var frame = 0; frame < 100; frame++) {
+            await tester.pump();
+            final dynamic current =
+                tester
+                    .widget<CustomPaint>(
+                      find
+                          .descendant(
+                            of: find.byType(BorderTiles),
+                            matching: find.byType(CustomPaint),
+                          )
+                          .first,
+                    )
+                    .painter;
+            for (final dynamic tile in current.tiles as Iterable) {
+              expect(
+                tile.image.width / (tile.rect.width * zoom),
+                greaterThanOrEqualTo(2),
+                reason:
+                    'Zoom frame $frame must not stretch an older LOD or coarse fallback',
+              );
+            }
+            if (ready.evaluate().isNotEmpty) break;
+            await tester.runAsync(
+              () => Future<void>.delayed(const Duration(milliseconds: 100)),
+            );
+          }
+          expect(ready, findsOneWidget);
         }
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
@@ -275,13 +303,16 @@ void main() {
       expect(
         visibleRed,
         greaterThan(20),
-        reason:
-            'The attack outline must remain visible below opaque border images',
+        reason: 'The attack outline must remain above the boundary images',
       );
       final mapStack =
           (((viewer.child as GestureDetector).child as SizedBox).child
               as Stack);
-      expect(mapStack.children.last, isA<BorderTiles>());
+      expect(mapStack.children[2], isA<BorderTiles>());
+      expect(mapStack.children[3], isA<RepaintBoundary>());
+      expect(mapStack.children.last, isA<RepaintBoundary>());
+      final dynamic colors = (mapStack.children[3] as RepaintBoundary).child;
+      expect(colors.painter.colors, isTrue);
       dynamic mapPainter(bool foreground) {
         final current = tester.widget<InteractiveViewer>(
           find.byType(InteractiveViewer),
@@ -289,7 +320,7 @@ void main() {
         final box = (current.child as GestureDetector).child as SizedBox;
         final stack = box.child as Stack;
         final overlays = stack.children.whereType<RepaintBoundary>();
-        final boundary = foreground ? overlays.last : overlays.first;
+        final boundary = foreground ? overlays.last : overlays.elementAt(1);
         return (boundary.child as CustomPaint).painter;
       }
 

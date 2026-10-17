@@ -10,7 +10,7 @@ for folder in ['water','urban','relief','map_tiles','map_tiles_v2']:
 assert 'assets/data/map_tiles_uniform/' in compiled
 assert 'assets/data/map_labels/' in compiled
 assert 'assets/data/border_tiles/' in compiled
-assert (root/'assets/assets/data/border_tiles/index-contrast.json').is_file()
+assert (root/'assets/assets/data/border_tiles/index-plain.json').is_file()
 size = sum(p.stat().st_size for p in root.rglob('*') if p.is_file())
 assert size < 1024**3, f'Pages release exceeds 1 GiB: {size:,} bytes'
 print(f'PASS: runtime uses baked geography/border tiles and labels; no source GIS references; release {size:,} bytes (<1 GiB).')

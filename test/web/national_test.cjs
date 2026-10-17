@@ -59,7 +59,7 @@ let browser;
   await page.getByLabel('背景地図の読込完了', {exact: true}).or(page.getByText('背景地図の読込完了', {exact: true})).first().waitFor({timeout: 30000});
   await page.getByLabel('境界線画像の読込完了', {exact: true}).or(page.getByText('境界線画像の読込完了', {exact: true})).first().waitFor({timeout: 120000});
   if (Number(process.env.DEVICE_SCALE_FACTOR || 1) >= 2) {
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/contrast_6_.*_town\.webp/.test(e.name))), 'High-DPI municipality maps must use the fine 8192px/degree boundaries');
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/plain_6_.*_town\.webp/.test(e.name))), 'High-DPI municipality maps must use the fine 8192px/degree boundaries');
   }
   const bordersBeforeTap = await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.includes('/border_tiles/')).length);
   const tilesBeforeTap = await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.includes('/map_tiles_uniform/')).length);
@@ -107,7 +107,7 @@ let browser;
   if (Number(process.env.DEVICE_SCALE_FACTOR || 1) >= 2) {
     // Zoom refresh is debounced; the preceding ready label may still describe
     // the old scale. Wait for the actual sharper image instead of racing it.
-    await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /border_tiles\/contrast_-1_.*_pref\.webp/.test(e.name)), null, {timeout: 30000});
+    await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /border_tiles\/plain_-1_.*_pref\.webp/.test(e.name)), null, {timeout: 30000});
   }
   await page.screenshot({path: path.join(output, 'national-urban-zoom.png')});
   for (var i = 0; i < 4; i++) { await page.getByRole('button', {name: '拡大', exact: true}).click(); console.log('National zoom step', i + 2); }

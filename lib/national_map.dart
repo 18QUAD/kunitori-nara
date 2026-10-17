@@ -252,6 +252,31 @@ class _NationalMapState extends State<NationalMap> {
                           clip: land,
                           enabled: showGeography,
                         ),
+                        // Boundaries top the background images, below gameplay and labels.
+                        BorderTiles(
+                          transform: transform,
+                          project: project,
+                          viewport: size,
+                          clip: land,
+                          layer: 'pref',
+                        ),
+                        RepaintBoundary(
+                          child: CustomPaint(
+                            isComplex: true,
+                            painter: _NationalPainter(
+                              paths,
+                              labelBounds,
+                              territory,
+                              widget.data,
+                              widget.game,
+                              adjacent,
+                              transform,
+                              widget.onPrefectureSelected,
+                              colors: true,
+                              colorOpacity: showGeography ? 0.55 : 1.0,
+                            ),
+                          ),
+                        ),
                         RepaintBoundary(
                           child: CustomPaint(
                             willChange: true,
@@ -267,14 +292,6 @@ class _NationalMapState extends State<NationalMap> {
                               foreground: true,
                             ),
                           ),
-                        ),
-                        // Keep static boundaries above every other map layer.
-                        BorderTiles(
-                          transform: transform,
-                          project: project,
-                          viewport: size,
-                          clip: land,
-                          layer: 'pref',
                         ),
                       ],
                     ),
@@ -367,12 +384,16 @@ class _NationalPainter extends CustomPainter {
     this.transform,
     this.onPrefectureSelected, {
     this.foreground = false,
+    this.colors = false,
+    this.colorOpacity = 1.0,
   }) : snapshot = MapPaintSnapshot(game),
        territoryCount = territory.length,
        super(repaint: foreground ? transform : null);
   final MapPaintSnapshot snapshot;
   final int territoryCount;
   final bool foreground;
+  final bool colors;
+  final double colorOpacity;
   final Map<String, Path> paths, territory;
   final Map<String, Rect> labelBounds;
   final NationalAtlas data;
@@ -406,10 +427,13 @@ class _NationalPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final zoom = transform.value.getMaxScaleOnAxis();
-    if (!foreground) {
+    if (!foreground && !colors) {
       for (final path in paths.values) {
         canvas.drawPath(path, Paint()..color = const Color(0xFF43616A));
       }
+      return;
+    }
+    if (colors) {
       // Only town shapes receive ownership and progress colors; prefectures stay neutral.
       for (final e in territory.entries) {
         canvas.drawPath(
@@ -419,7 +443,7 @@ class _NationalPainter extends CustomPainter {
               data.atlas.towns[e.key]!,
               game,
               reachable: adjacent.contains(e.key),
-            ),
+            ).withValues(alpha: colorOpacity),
         );
       }
       return;
@@ -452,6 +476,8 @@ class _NationalPainter extends CustomPainter {
   @override
   bool shouldRepaint(_NationalPainter old) =>
       foreground != old.foreground ||
+      colors != old.colors ||
+      colorOpacity != old.colorOpacity ||
       paths != old.paths ||
       labelBounds != old.labelBounds ||
       territoryCount != old.territoryCount ||

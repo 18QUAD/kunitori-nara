@@ -500,6 +500,44 @@ class _TerritoryMapState extends State<TerritoryMap> {
                                 : cityPaths[widget.cityId]!,
                         enabled: showGeography,
                       ),
+                      // Boundaries top the background images, below gameplay and labels.
+                      BorderTiles(
+                        transform: controller,
+                        project: project,
+                        viewport: size,
+                        clip:
+                            widget.cityId == null
+                                ? prefecturePath
+                                : cityPaths[widget.cityId]!,
+                        prefectureId: widget.prefectureId,
+                        layer: widget.cityId == null ? 'city' : 'town',
+                      ),
+                      RepaintBoundary(
+                        child: CustomPaint(
+                          isComplex: true,
+                          painter: _MapPainter(
+                            widget.cityId == null ? cityPaths : paths,
+                            widget.cityId == null ? cityOutlines : townOutlines,
+                            widget.cityId == null ? cityBounds : bounds,
+                            widget.atlas,
+                            widget.game,
+                            widget.selected,
+                            controller,
+                            widget.cityId,
+                            officePoints,
+                            _selectOffice,
+                            showGeography ? water : null,
+                            showGeography ? mountains : null,
+                            widget.cityId == null
+                                ? prefecturePath
+                                : cityPaths[widget.cityId]!,
+                            size,
+                            paths,
+                            colors: true,
+                            colorOpacity: showGeography ? 0.55 : 1.0,
+                          ),
+                        ),
+                      ),
                       RepaintBoundary(
                         child: CustomPaint(
                           willChange: true,
@@ -524,18 +562,6 @@ class _TerritoryMapState extends State<TerritoryMap> {
                             foreground: true,
                           ),
                         ),
-                      ),
-                      // Keep static boundaries above every other map layer.
-                      BorderTiles(
-                        transform: controller,
-                        project: project,
-                        viewport: size,
-                        clip:
-                            widget.cityId == null
-                                ? prefecturePath
-                                : cityPaths[widget.cityId]!,
-                        prefectureId: widget.prefectureId,
-                        layer: widget.cityId == null ? 'city' : 'town',
                       ),
                     ],
                   ),
@@ -692,10 +718,14 @@ class _MapPainter extends CustomPainter {
     this.viewportSize,
     this.townPaths, {
     this.foreground = false,
+    this.colors = false,
+    this.colorOpacity = 1.0,
   }) : snapshot = MapPaintSnapshot(game),
        super(repaint: foreground ? transform : null);
   final MapPaintSnapshot snapshot;
   final bool foreground;
+  final bool colors;
+  final double colorOpacity;
   final TransformationController transform;
   final Map<String, Path> paths;
   final Map<String, Path> townPaths;
@@ -714,36 +744,32 @@ class _MapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final zoom = transform.value.getMaxScaleOnAxis();
     final overview = cityId == null;
-    if (!foreground) {
+    if (!foreground && !colors) {
       for (final e in paths.entries) {
         if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
-        canvas.drawPath(
-          e.value,
-          Paint()
-            ..color =
-                overview
-                    ? const Color(0xFF43616A)
-                    : townFillColor(
-                      atlas.towns[e.key]!,
-                      game,
-                      reachable: game.isReachable(e.key),
-                    ),
-        );
+        canvas.drawPath(e.value, Paint()..color = const Color(0xFF43616A));
       }
-      if (overview) {
-        for (final entry in townPaths.entries) {
-          final town = atlas.towns[entry.key]!;
-          final reachable = game.isReachable(entry.key);
-          if (!game.owned.contains(entry.key) &&
-              !game.progress.containsKey(entry.key) &&
-              !reachable) {
-            continue;
-          }
-          canvas.drawPath(
-            entry.value,
-            Paint()..color = townFillColor(town, game, reachable: reachable),
-          );
+      return;
+    }
+    if (colors) {
+      for (final entry in townPaths.entries) {
+        final town = atlas.towns[entry.key]!;
+        if (!overview && town.cityId != cityId) continue;
+        final reachable = game.isReachable(entry.key);
+        if (!game.owned.contains(entry.key) &&
+            !game.progress.containsKey(entry.key) &&
+            !reachable) {
+          continue;
         }
+        canvas.drawPath(
+          entry.value,
+          Paint()
+            ..color = townFillColor(
+              town,
+              game,
+              reachable: reachable,
+            ).withValues(alpha: colorOpacity),
+        );
       }
       return;
     }
@@ -861,8 +887,7 @@ class _MapPainter extends CustomPainter {
         path,
         Paint()
           ..style = PaintingStyle.stroke
-          // Leave a visible red halo outside the opaque boundary casing above.
-          ..strokeWidth = 6 / zoom
+          ..strokeWidth = 2 / zoom
           ..color = const Color(0xFFFF3B30),
       );
     }
@@ -920,6 +945,8 @@ class _MapPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _MapPainter old) =>
       foreground != old.foreground ||
+      colors != old.colors ||
+      colorOpacity != old.colorOpacity ||
       paths != old.paths ||
       cityId != old.cityId ||
       atlas != old.atlas ||

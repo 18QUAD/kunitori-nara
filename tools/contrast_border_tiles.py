@@ -1,4 +1,4 @@
-"""Bake opaque white cores and dark casings from the original border pyramid.
+"""Bake thin white borders without casings from the original border pyramid.
 
 Run build_border_tiles.py first on a fresh checkout. The first run preserves its
 thin centerline images in data/raw/border_centerlines; subsequent runs reuse them
@@ -17,8 +17,8 @@ from PIL import Image, ImageFilter
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'data/raw/border_centerlines'
 OUT = ROOT / 'assets/data/border_tiles'
-PREFIX = 'contrast_'
-INDEX = 'index-contrast.json'
+PREFIX = 'plain_'
+INDEX = 'index-plain.json'
 SIZE = 512
 PAD = 4
 AVAILABLE = set()
@@ -50,18 +50,16 @@ def render(key):
             crop = source_alpha(neighbor).crop((area[0]-ox, area[1]-oy,
                                                 area[2]-ox, area[3]-oy))
             alpha.paste(crop, area[:2])
-    # The old line was only .75 source pixels wide. Three pixels of opaque
-    # white, a middle coverage tone, and a five-pixel dark casing remain clear
-    # after physical-pixel downsampling without allocating bigger images.
-    core = alpha.filter(ImageFilter.MaxFilter(3)).point(
-        lambda value: 255 if value >= 64 else (128 if value >= 24 else 0))
-    rim = alpha.filter(ImageFilter.MaxFilter(5)).point(
-        lambda value: 255 if value >= 24 else 0)
-    image = Image.new('RGBA', (side, side), (12, 27, 39, 0))
-    image.putalpha(rim)
-    white = Image.new('RGBA', (side, side), (255, 255, 255, 0))
-    white.putalpha(core)
-    image = Image.alpha_composite(image, white).crop((PAD, PAD, SIZE+PAD, SIZE+PAD))
+    # Boost the original coverage, then expand by only half a source pixel
+    # on each side. BOX reduction keeps a narrow antialiased white line.
+    core = alpha.point(lambda value: min(255, value * 2))
+    core = core.resize((side*2, side*2), Image.Resampling.NEAREST)
+    core = core.filter(ImageFilter.MaxFilter(3)).resize((side, side), Image.Resampling.BOX)
+    # Three coverage tones keep lossless downloads small without a dark rim.
+    core = core.point(lambda value: 0 if value < 48 else (128 if value < 192 else 255))
+    image = Image.new('RGBA', (side, side), (255, 255, 255, 0))
+    image.putalpha(core)
+    image = image.crop((PAD, PAD, SIZE+PAD, SIZE+PAD))
     if not image.getbbox():
         return None
     path = OUT / f'{PREFIX}{key}.webp'
@@ -107,12 +105,13 @@ def main():
         if not old.name.startswith(PREFIX):
             old.unlink()
     (OUT / 'index.json').unlink(missing_ok=True)
+    (OUT / 'index-contrast.json').unlink(missing_ok=True)
     original.update(tiles=dict(sorted(tiles.items())), filenamePrefix=PREFIX,
-        style='opaque white core with dark casing',
+        style='thin antialiased white line without casing',
         sourceIndexSha256=hashlib.sha256((SOURCE / 'index.json').read_bytes()).hexdigest(),
-        processing=original['processing'] + ' 白い不透明の芯と暗い縁取りを事前生成。隣接タイルの画素を含めて太線化し、継ぎ目を防止。')
+        processing=original['processing'] + ' 縁取りなしの細い白線を事前生成。隣接タイルの画素を含めて継ぎ目を防止。')
     (OUT / INDEX).write_text(json.dumps(original, ensure_ascii=False, separators=(',', ':')))
-    print('Contrast borders:', len(tiles), 'images;', sum(tiles.values()), 'bytes', flush=True)
+    print('Plain borders:', len(tiles), 'images;', sum(tiles.values()), 'bytes', flush=True)
 
 
 if __name__ == '__main__':

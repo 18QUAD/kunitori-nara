@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 let browser;
 (async () => {
   const base = process.env.BASE_URL || 'http://127.0.0.1:8766/kunitori-nara/';
-  const output = process.env.SCREENSHOT || '/workspace/borders-contrast-after.png';
+  const output = process.env.SCREENSHOT || '/workspace/borders-plain-after.png';
   const nara = JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/data/nara.json')));
   const owned = nara.towns.filter(t => t.cityId === '29204').map(t => t.id);
   const game = {version: 1, quizRule: 'office-five-v1', dataset: 'nara-2020-v1',
@@ -36,9 +36,9 @@ let browser;
   const saved = await page.evaluate(() => JSON.parse(JSON.parse(localStorage.getItem('flutter.kunitori.nara.mapView.v1'))));
   assert.equal(saved.scale, 8);
   assert.equal(saved.nationalView, true);
-  if (process.env.EXPECT_CONTRAST !== '0') {
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/contrast_.*_pref\.webp/.test(e.name))));
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/index-contrast\.json/.test(e.name))));
+  if (process.env.EXPECT_PLAIN !== '0') {
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/plain_.*_pref\.webp/.test(e.name))));
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/index-plain\.json/.test(e.name))));
     assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/\d_/.test(e.name)))));
   }
   await page.screenshot({path: output});
