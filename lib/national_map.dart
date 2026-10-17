@@ -253,16 +253,6 @@ class _NationalMapState extends State<NationalMap> {
                           clip: land,
                           enabled: showGeography,
                         ),
-                        // Boundaries top the background images, below gameplay and labels.
-                        BorderTiles(
-                          transform: transform,
-                          project: project,
-                          viewport: size,
-                          // The baked coast clips itself. Simplified per-county
-                          // faces contain gaps/overlaps and must not cut this mesh.
-                          clip: boundaryClip,
-                          layer: 'pref',
-                        ),
                         RepaintBoundary(
                           child: CustomPaint(
                             isComplex: true,
@@ -279,6 +269,16 @@ class _NationalMapState extends State<NationalMap> {
                               colorOpacity: showGeography ? 0.55 : 1.0,
                             ),
                           ),
+                        ),
+                        // Boundaries top territory colors; labels and attack highlights stay in front.
+                        BorderTiles(
+                          transform: transform,
+                          project: project,
+                          viewport: size,
+                          // The baked coast clips itself. Simplified per-county
+                          // faces contain gaps/overlaps and must not cut this mesh.
+                          clip: boundaryClip,
+                          layer: 'pref',
                         ),
                         RepaintBoundary(
                           child: CustomPaint(

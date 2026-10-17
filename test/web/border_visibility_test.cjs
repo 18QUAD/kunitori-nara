@@ -40,10 +40,12 @@ let browser;
   assert.equal(saved.scale, scale);
   assert.equal(saved.nationalView, true);
   if (process.env.EXPECT_PLAIN !== '0') {
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/shared_.*_pref\.webp/.test(e.name))));
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/index-shared\.json/.test(e.name))));
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/slimshared_.*_pref\.webp/.test(e.name))));
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/index-slim\.json/.test(e.name))));
     assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/\d_/.test(e.name)))));
   }
+  // CanvasKit may finish late icon-font frames after the tile status is ready.
+  await page.waitForTimeout(1500);
   await page.screenshot({path: output});
   await page.screenshot({path: output.replace('.png', '-map.png'), clip: {x: 0, y: 88, width: 375, height: 300}});
   console.log('PASS: national camera scale', scale, 'center', longitude, latitude, '; screenshot:', output);

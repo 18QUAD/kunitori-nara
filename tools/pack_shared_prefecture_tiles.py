@@ -40,8 +40,8 @@ def main():
         sourceSha256={p.stem:p.read_text() for p in sorted(WORK.glob('??.sha256'))})
     old['sharedPrefectureMesh']=report
     (source/'index.json').write_text(json.dumps(old,ensure_ascii=False,separators=(',',':')))
-    index=style.OUT/'index-plain.json'
-    if not index.exists():index=style.OUT/'index-shared.json'
+    index=style.OUT/style.INDEX
+    if not index.exists(): raise RuntimeError('Run contrast_border_tiles.py first for the current style')
     data=json.loads(index.read_text())
     for path in style.OUT.glob('*_pref.webp'):path.unlink()
     data['tiles']={k:v for k,v in data['tiles'].items() if not k.endswith('_pref')}
@@ -51,10 +51,10 @@ def main():
         for done,result in enumerate(pool.map(style.render,jobs,chunksize=32),1):
             if result:data['tiles'][result[0]]=result[1]
             if done%2000==0:print('Styled shared tiles',done,'/',len(jobs),flush=True)
-    data.update(layerFilenamePrefixes={'pref':'shared_'},sharedPrefectureMesh=report,
+    data.update(layerFilenamePrefixes={'pref':style.PREF_PREFIX},sharedPrefectureMesh=report,
         sourceIndexSha256=hashlib.sha256((source/'index.json').read_bytes()).hexdigest())
     data['processing']+=' 県境は詳細な市区町村形状から全国共通の共有線網を生成し一度だけ描画。'
-    (style.OUT/'index-shared.json').write_text(json.dumps(data,ensure_ascii=False,separators=(',',':')))
+    (style.OUT/style.INDEX).write_text(json.dumps(data,ensure_ascii=False,separators=(',',':')))
     (style.OUT/'index-plain.json').unlink(missing_ok=True)
     print('PASS shared pack:',len(keys),'source cells;',len(data['tiles']),'total cells',flush=True)
 

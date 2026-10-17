@@ -12,13 +12,15 @@ import json
 from pathlib import Path
 import shutil
 
-from PIL import Image, ImageFilter
+from PIL import Image
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'data/raw/border_centerlines'
 OUT = ROOT / 'assets/data/border_tiles'
-PREFIX = 'plain_'
-INDEX = 'index-shared.json'
+PREFIX = 'slim_'
+PREF_PREFIX = 'slimshared_'
+INDEX = 'index-slim.json'
 SIZE = 512
 PAD = 4
 AVAILABLE = set()
@@ -33,6 +35,26 @@ def source_alpha(key):
 def initialize(keys):
     global AVAILABLE
     AVAILABLE = set(keys)
+
+
+def quarter_expand(image):
+    """Exact nearest-4x / 3x3 max / BOX reduction, using native-size arrays.
+
+    Each output pixel has four central samples, eight side samples and four
+    corner samples. Match Pillow's two-pass integer BOX rounding without the
+    16-times larger intermediate bitmap.
+    """
+    padded = np.pad(np.asarray(image, dtype=np.uint16), 1, mode='edge')
+    c = padded[1:-1, 1:-1]
+    left, right = padded[1:-1, :-2], padded[1:-1, 2:]
+    up, down = padded[:-2, 1:-1], padded[2:, 1:-1]
+    middle = (2*c + np.maximum(c, left) + np.maximum(c, right) + 2) // 4
+    cu, cd = np.maximum(c, up), np.maximum(c, down)
+    top = (2*cu + np.maximum(cu, np.maximum(left, padded[:-2, :-2])) +
+           np.maximum(cu, np.maximum(right, padded[:-2, 2:])) + 2) // 4
+    bottom = (2*cd + np.maximum(cd, np.maximum(left, padded[2:, :-2])) +
+              np.maximum(cd, np.maximum(right, padded[2:, 2:])) + 2) // 4
+    return Image.fromarray(((2*middle + top + bottom + 2) // 4).astype(np.uint8))
 
 
 def render(key):
@@ -50,19 +72,17 @@ def render(key):
             crop = source_alpha(neighbor).crop((area[0]-ox, area[1]-oy,
                                                 area[2]-ox, area[3]-oy))
             alpha.paste(crop, area[:2])
-    # Boost the original coverage, then expand by only half a source pixel
-    # on each side. BOX reduction keeps a narrow antialiased white line.
+    # One width step thinner: expand by a quarter rather than half a source
+    # pixel per side. Four coverage tones preserve that smaller antialias fringe.
     core = alpha.point(lambda value: min(255, value * 2))
-    core = core.resize((side*2, side*2), Image.Resampling.NEAREST)
-    core = core.filter(ImageFilter.MaxFilter(3)).resize((side, side), Image.Resampling.BOX)
-    # Three coverage tones keep lossless downloads small without a dark rim.
-    core = core.point(lambda value: 0 if value < 48 else (128 if value < 192 else 255))
+    core = quarter_expand(core)
+    core = core.point(lambda value: 0 if value < 32 else (64 if value < 144 else (192 if value < 224 else 255)))
     image = Image.new('RGBA', (side, side), (255, 255, 255, 0))
     image.putalpha(core)
     image = image.crop((PAD, PAD, SIZE+PAD, SIZE+PAD))
     if not image.getbbox():
         return None
-    prefix = 'shared_' if layer == 'pref' else PREFIX
+    prefix = PREF_PREFIX if layer == 'pref' else PREFIX
     path = OUT / f'{prefix}{key}.webp'
     image.save(path, lossless=True, method=6)
     return key, path.stat().st_size
@@ -93,7 +113,7 @@ def main():
     original = json.loads((SOURCE / 'index.json').read_text())
     jobs = candidates(original['tiles'])
     for old in OUT.glob('*.webp'):
-        if old.name.startswith((PREFIX, 'shared_')): old.unlink()
+        if old.name.startswith((PREFIX, PREF_PREFIX)): old.unlink()
     tiles = {}
     with concurrent.futures.ProcessPoolExecutor(max_workers=args.workers,
             initializer=initialize, initargs=(list(original['tiles']),)) as pool:
@@ -103,13 +123,14 @@ def main():
             if done % 5000 == 0:
                 print('Processed', done, '/', len(jobs), 'cells;', len(tiles), 'images', flush=True)
     for old in OUT.glob('*.webp'):
-        if not old.name.startswith((PREFIX, 'shared_')):
+        if not old.name.startswith((PREFIX, PREF_PREFIX)):
             old.unlink()
     (OUT / 'index.json').unlink(missing_ok=True)
     (OUT / 'index-contrast.json').unlink(missing_ok=True)
     (OUT / 'index-plain.json').unlink(missing_ok=True)
-    original.update(tiles=dict(sorted(tiles.items())), filenamePrefix=PREFIX, layerFilenamePrefixes={'pref': 'shared_'},
-        style='thin antialiased white line without casing',
+    (OUT / 'index-shared.json').unlink(missing_ok=True)
+    original.update(tiles=dict(sorted(tiles.items())), filenamePrefix=PREFIX, layerFilenamePrefixes={'pref': PREF_PREFIX},
+        style='slimmer antialiased white line without casing; quarter-pixel expansion',
         sourceIndexSha256=hashlib.sha256((SOURCE / 'index.json').read_bytes()).hexdigest(),
         processing=original['processing'] + ' 縁取りなしの細い白線を事前生成。隣接タイルの画素を含めて継ぎ目を防止。')
     (OUT / INDEX).write_text(json.dumps(original, ensure_ascii=False, separators=(',', ':')))

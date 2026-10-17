@@ -500,18 +500,6 @@ class _TerritoryMapState extends State<TerritoryMap> {
                                 : cityPaths[widget.cityId]!,
                         enabled: showGeography,
                       ),
-                      // Boundaries top the background images, below gameplay and labels.
-                      BorderTiles(
-                        transform: controller,
-                        project: project,
-                        viewport: size,
-                        clip:
-                            widget.cityId == null
-                                ? prefecturePath
-                                : cityPaths[widget.cityId]!,
-                        prefectureId: widget.prefectureId,
-                        layer: widget.cityId == null ? 'city' : 'town',
-                      ),
                       RepaintBoundary(
                         child: CustomPaint(
                           isComplex: true,
@@ -537,6 +525,18 @@ class _TerritoryMapState extends State<TerritoryMap> {
                             colorOpacity: showGeography ? 0.55 : 1.0,
                           ),
                         ),
+                      ),
+                      // Boundaries top territory colors; labels and attack highlights stay in front.
+                      BorderTiles(
+                        transform: controller,
+                        project: project,
+                        viewport: size,
+                        clip:
+                            widget.cityId == null
+                                ? prefecturePath
+                                : cityPaths[widget.cityId]!,
+                        prefectureId: widget.prefectureId,
+                        layer: widget.cityId == null ? 'city' : 'town',
                       ),
                       RepaintBoundary(
                         child: CustomPaint(

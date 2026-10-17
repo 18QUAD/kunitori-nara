@@ -38,10 +38,7 @@ class GeographyTileIndex {
   static Future<GeographyTileIndex> loadBorders() async {
     try {
       return await (_borderPending ??= rootBundle
-          .loadString(
-            'assets/data/border_tiles/index-shared.json',
-            cache: false,
-          )
+          .loadString('assets/data/border_tiles/index-slim.json', cache: false)
           .then((s) => GeographyTileIndex.fromJson(jsonDecode(s))));
     } catch (_) {
       _borderPending = null;
@@ -87,8 +84,8 @@ class GeographyImageCache {
   static final borders = GeographyImageCache(
     capacity: 8,
     assetDirectory: 'assets/data/border_tiles',
-    filenamePrefix: 'plain_',
-    layerFilenamePrefixes: const {'pref': 'shared_'},
+    filenamePrefix: 'slim_',
+    layerFilenamePrefixes: const {'pref': 'slimshared_'},
   );
   final int capacity;
   final String assetDirectory, filenamePrefix;

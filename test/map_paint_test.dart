@@ -125,7 +125,7 @@ void main() {
     );
     final box = (viewer.child as GestureDetector).child as SizedBox;
     final dynamic painter =
-        (((box.child as Stack).children[3] as RepaintBoundary).child
+        (((box.child as Stack).children[2] as RepaintBoundary).child
                 as CustomPaint)
             .painter;
     final outer = Path()..addRect(const Rect.fromLTWH(0, 0, 200, 100));

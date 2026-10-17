@@ -53,7 +53,7 @@ void main() {
     final data =
         jsonDecode(
               File(
-                'assets/data/border_tiles/index-shared.json',
+                'assets/data/border_tiles/index-slim.json',
               ).readAsStringSync(),
             )
             as Map<String, dynamic>;
@@ -62,8 +62,11 @@ void main() {
     expect(index.basePixelsPerDegree * (1 << index.maxLevel), 8192);
     expect((data['prefectureCoverage'] as Map).length, 47);
     expect(data['filenamePrefix'], GeographyImageCache.borders.filenamePrefix);
-    expect(GeographyImageCache.borders.prefixFor('3_31_26_pref'), 'shared_');
-    expect(GeographyImageCache.borders.prefixFor('6_31_26_town'), 'plain_');
+    expect(
+      GeographyImageCache.borders.prefixFor('3_31_26_pref'),
+      'slimshared_',
+    );
+    expect(GeographyImageCache.borders.prefixFor('6_31_26_town'), 'slim_');
     expect((data['sharedPrefectureMesh']['sourceSha256'] as Map).length, 47);
     for (final layer in ['pref', 'city', 'town']) {
       expect(index.available.any((key) => key.endsWith('_$layer')), isTrue);
@@ -86,7 +89,7 @@ void main() {
     () async {
       final bytes =
           File(
-            'assets/data/border_tiles/shared_3_31_26_pref.webp',
+            'assets/data/border_tiles/slimshared_3_31_26_pref.webp',
           ).readAsBytesSync();
       final codec = await ui.instantiateImageCodec(bytes);
       final image = (await codec.getNextFrame()).image;
@@ -117,7 +120,7 @@ void main() {
       // Before the mesh, these rows contained two separate parallel strokes.
       final codec = await ui.instantiateImageCodec(
         File(
-          'assets/data/border_tiles/shared_5_125_108_pref.webp',
+          'assets/data/border_tiles/slimshared_5_125_108_pref.webp',
         ).readAsBytesSync(),
       );
       final image = (await codec.getNextFrame()).image;
@@ -341,10 +344,10 @@ void main() {
       final mapStack =
           (((viewer.child as GestureDetector).child as SizedBox).child
               as Stack);
-      expect(mapStack.children[2], isA<BorderTiles>());
-      expect(mapStack.children[3], isA<RepaintBoundary>());
+      expect(mapStack.children[3], isA<BorderTiles>());
+      expect(mapStack.children[2], isA<RepaintBoundary>());
       expect(mapStack.children.last, isA<RepaintBoundary>());
-      final dynamic colors = (mapStack.children[3] as RepaintBoundary).child;
+      final dynamic colors = (mapStack.children[2] as RepaintBoundary).child;
       expect(colors.painter.colors, isTrue);
       dynamic mapPainter(bool foreground) {
         final current = tester.widget<InteractiveViewer>(

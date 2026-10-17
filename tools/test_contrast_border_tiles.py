@@ -21,12 +21,13 @@ class ContrastBordersTest(unittest.TestCase):
                 borders.initialize(keys)
                 for key in keys:
                     borders.render(key)
-                with Image.open(root / 'shared_0_0_0_pref.webp') as left, Image.open(root / 'shared_0_1_0_pref.webp') as right:
+                with Image.open(root / 'slimshared_0_0_0_pref.webp') as left, Image.open(root / 'slimshared_0_1_0_pref.webp') as right:
                     a = [left.getpixel((511, y)) for y in range(512)]
                     b = [right.getpixel((0, y)) for y in range(512)]
                     self.assertEqual(a, b)
                     self.assertEqual(a.count((255, 255, 255, 255)), 1)
-                    self.assertEqual(a.count((255, 255, 255, 128)), 2)
+                    self.assertEqual(a.count((255, 255, 255, 64)), 2)
+                    self.assertAlmostEqual(sum(pixel[3] for pixel in a) / 255, 1.5, delta=.01)
                     self.assertTrue(all(pixel[:3] == (255, 255, 255) for pixel in a if pixel[3]))
                     self.assertEqual(left.size, (512, 512))
                 borders.source_alpha.cache_clear()
@@ -42,8 +43,8 @@ class ContrastBordersTest(unittest.TestCase):
                 borders.initialize(['0_0_0_town'])
                 self.assertIn('0_1_0_town', borders.candidates(['0_0_0_town']))
                 self.assertIsNotNone(borders.render('0_1_0_town'))
-                with Image.open(root / 'plain_0_1_0_town.webp') as neighbor:
-                    self.assertEqual(neighbor.getpixel((0, 60)), (255, 255, 255, 128))
+                with Image.open(root / 'slim_0_1_0_town.webp') as neighbor:
+                    self.assertEqual(neighbor.getpixel((0, 60)), (255, 255, 255, 64))
                     self.assertEqual(neighbor.getpixel((1, 60))[3], 0)
                 borders.source_alpha.cache_clear()
 
