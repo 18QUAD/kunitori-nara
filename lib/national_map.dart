@@ -420,7 +420,8 @@ class _NationalPainter extends CustomPainter {
         e.value,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 0.7 / zoom
+          // Thin borders on zoom-out while retaining a readable minimum.
+          ..strokeWidth = (0.7 * math.sqrt(zoom)).clamp(0.2, 0.7) / zoom
           ..color = Colors.white,
       );
       final bounds = labelBounds[e.key]!;
