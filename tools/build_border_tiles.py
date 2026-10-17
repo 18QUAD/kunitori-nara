@@ -169,6 +169,7 @@ def main():
     if args.rebuild and args.finalize_only:
         parser.error('--rebuild cannot be combined with --finalize-only')
     if args.rebuild:
+        shutil.rmtree(WORK.parent / 'shared_prefectures', ignore_errors=True)
         for pid in ids:
             shutil.rmtree(WORK / pid, ignore_errors=True)
     coverage = {}
@@ -188,14 +189,24 @@ def main():
     OUT.mkdir(exist_ok=True)
     for old in OUT.glob('*.webp'):
         old.unlink()
+    # All prefectures share ONE detailed network. Never rasterize each simplified
+    # overview face: its independently simplified shared sides disagree.
+    from prefecture_border_mesh import build_mesh, render_level, WORK as MESH_WORK
+    build_mesh(args.workers)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=args.workers) as pool:
+        for level, count in pool.map(render_level, range(MIN_LEVEL, LAYER_MAX_LEVELS['pref'] + 1)):
+            print('Shared prefecture level', level, count, flush=True)
     sources = defaultdict(list)
     for pid in ids:
         for path in (WORK / pid).glob('*.webp'):
             level, x, y, layer = path.stem.split('_')
-            if int(level) > LAYER_MAX_LEVELS[layer]:
+            if layer == 'pref' or int(level) > LAYER_MAX_LEVELS[layer]:
                 continue
             name = f'{int(level)-1}_{int(x)//2}_{int(y)//2}_{layer}.webp'
             sources[name].append(path)
+    for path in (MESH_WORK / 'tiles').glob('*_pref.webp'):
+        level, x, y, layer = path.stem.split('_')
+        sources[f'{int(level)-1}_{int(x)//2}_{int(y)//2}_{layer}.webp'].append(path)
     with concurrent.futures.ProcessPoolExecutor(max_workers=args.workers) as pool:
         for index, _ in enumerate(pool.map(merge_tile, sorted(sources.items()), chunksize=64), 1):
             if index % 5000 == 0:
@@ -206,6 +217,9 @@ def main():
                     detailLevels={pid: MAX_LEVEL-1 for pid in ids},
                     layerMaxLevels={k: v-1 for k, v in LAYER_MAX_LEVELS.items()},
                     prefectureCoverage=coverage, tiles=tiles,
+                    sharedPrefectureMesh=dict(toleranceDegrees=0.0002,
+                        networkSha256=hashlib.sha256((MESH_WORK/'network.wkb').read_bytes()).hexdigest(),
+                        sourceSha256={p.stem:p.read_text() for p in sorted(MESH_WORK.glob('??.sha256'))}),
                     layers=['pref', 'city', 'town'], format='lossless WebP',
                     groupSha256=hashlib.sha256((WORK / 'groups.json').read_bytes()).hexdigest(),
                     attribution='国勢調査町丁・字等別境界データセット（CODH作成）、e-Stat。CC BY 4.0。',

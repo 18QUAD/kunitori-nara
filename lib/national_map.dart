@@ -37,6 +37,7 @@ class NationalMap extends StatefulWidget {
 class _NationalMapState extends State<NationalMap> {
   // Include Minamitorishima and Okinotorishima in Tokyo's offshore territory.
   static const sceneSize = Size(1440, 1360);
+  final boundaryClip = Path()..addRect(Offset.zero & sceneSize);
   final transform = TransformationController();
   final paths = <String, Path>{};
   final labelBounds = <String, Rect>{};
@@ -257,7 +258,9 @@ class _NationalMapState extends State<NationalMap> {
                           transform: transform,
                           project: project,
                           viewport: size,
-                          clip: land,
+                          // The baked coast clips itself. Simplified per-county
+                          // faces contain gaps/overlaps and must not cut this mesh.
+                          clip: boundaryClip,
                           layer: 'pref',
                         ),
                         RepaintBoundary(

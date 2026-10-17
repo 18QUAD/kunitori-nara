@@ -53,7 +53,7 @@ void main() {
     final data =
         jsonDecode(
               File(
-                'assets/data/border_tiles/index-plain.json',
+                'assets/data/border_tiles/index-shared.json',
               ).readAsStringSync(),
             )
             as Map<String, dynamic>;
@@ -62,6 +62,9 @@ void main() {
     expect(index.basePixelsPerDegree * (1 << index.maxLevel), 8192);
     expect((data['prefectureCoverage'] as Map).length, 47);
     expect(data['filenamePrefix'], GeographyImageCache.borders.filenamePrefix);
+    expect(GeographyImageCache.borders.prefixFor('3_31_26_pref'), 'shared_');
+    expect(GeographyImageCache.borders.prefixFor('6_31_26_town'), 'plain_');
+    expect((data['sharedPrefectureMesh']['sourceSha256'] as Map).length, 47);
     for (final layer in ['pref', 'city', 'town']) {
       expect(index.available.any((key) => key.endsWith('_$layer')), isTrue);
       expect(index.layerLevel(6, layer), layer == 'town' ? 6 : 5);
@@ -83,7 +86,7 @@ void main() {
     () async {
       final bytes =
           File(
-            'assets/data/border_tiles/plain_3_31_26_pref.webp',
+            'assets/data/border_tiles/shared_3_31_26_pref.webp',
           ).readAsBytesSync();
       final codec = await ui.instantiateImageCodec(bytes);
       final image = (await codec.getNextFrame()).image;
@@ -103,6 +106,36 @@ void main() {
       expect(white, greaterThan(100));
       expect(nonWhite, 0);
       expect(image.width, 512);
+      image.dispose();
+      codec.dispose();
+    },
+  );
+
+  test(
+    'real Osaka–Nara shared border is one stroke at the finest prefecture LOD',
+    () async {
+      // Before the mesh, these rows contained two separate parallel strokes.
+      final codec = await ui.instantiateImageCodec(
+        File(
+          'assets/data/border_tiles/shared_5_125_108_pref.webp',
+        ).readAsBytesSync(),
+      );
+      final image = (await codec.getNextFrame()).image;
+      final pixels =
+          (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      for (var y = 120; y <= 124; y++) {
+        var runs = 0, previous = false;
+        for (var x = 180; x <= 310; x++) {
+          final active = pixels.getUint8((y * 512 + x) * 4 + 3) >= 64;
+          if (active && !previous) runs++;
+          previous = active;
+        }
+        expect(
+          runs,
+          1,
+          reason: 'Osaka–Nara row $y must contain one shared boundary',
+        );
+      }
       image.dispose();
       codec.dispose();
     },

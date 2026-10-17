@@ -38,7 +38,10 @@ class GeographyTileIndex {
   static Future<GeographyTileIndex> loadBorders() async {
     try {
       return await (_borderPending ??= rootBundle
-          .loadString('assets/data/border_tiles/index-plain.json', cache: false)
+          .loadString(
+            'assets/data/border_tiles/index-shared.json',
+            cache: false,
+          )
           .then((s) => GeographyTileIndex.fromJson(jsonDecode(s))));
     } catch (_) {
       _borderPending = null;
@@ -78,15 +81,20 @@ class GeographyImageCache {
     this.capacity = 48,
     this.assetDirectory = 'assets/data/map_tiles_uniform',
     this.filenamePrefix = '',
+    this.layerFilenamePrefixes = const {},
   });
   static final shared = GeographyImageCache();
   static final borders = GeographyImageCache(
     capacity: 8,
     assetDirectory: 'assets/data/border_tiles',
     filenamePrefix: 'plain_',
+    layerFilenamePrefixes: const {'pref': 'shared_'},
   );
   final int capacity;
   final String assetDirectory, filenamePrefix;
+  final Map<String, String> layerFilenamePrefixes;
+  String prefixFor(String key) =>
+      layerFilenamePrefixes[key.split('_').last] ?? filenamePrefix;
   final _images = <String, ui.Image>{};
   final _pending = <String, Future<ui.Image>>{};
   final _pins = <Object, Set<String>>{};
@@ -146,7 +154,7 @@ class GeographyImageCache {
       await _acquire();
       try {
         final bytes = await rootBundle.load(
-          '$assetDirectory/$filenamePrefix$key.webp',
+          '$assetDirectory/${prefixFor(key)}$key.webp',
         );
         final codec = await ui.instantiateImageCodec(
           bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),

@@ -107,7 +107,7 @@ let browser;
   if (Number(process.env.DEVICE_SCALE_FACTOR || 1) >= 2) {
     // Zoom refresh is debounced; the preceding ready label may still describe
     // the old scale. Wait for the actual sharper image instead of racing it.
-    await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /border_tiles\/plain_-1_.*_pref\.webp/.test(e.name)), null, {timeout: 30000});
+    await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /border_tiles\/shared_-1_.*_pref\.webp/.test(e.name)), null, {timeout: 30000});
   }
   await page.screenshot({path: path.join(output, 'national-urban-zoom.png')});
   for (var i = 0; i < 4; i++) { await page.getByRole('button', {name: '拡大', exact: true}).click(); console.log('National zoom step', i + 2); }

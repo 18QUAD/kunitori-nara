@@ -7,6 +7,9 @@ let browser;
 (async () => {
   const base = process.env.BASE_URL || 'http://127.0.0.1:8766/kunitori-nara/';
   const output = process.env.SCREENSHOT || '/workspace/borders-plain-after.png';
+  const scale = Number(process.env.MAP_SCALE || 8);
+  const longitude = Number(process.env.CENTER_LON || 135.8);
+  const latitude = Number(process.env.CENTER_LAT || 34.62);
   const nara = JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/data/nara.json')));
   const owned = nara.towns.filter(t => t.cityId === '29204').map(t => t.id);
   const game = {version: 1, quizRule: 'office-five-v1', dataset: 'nara-2020-v1',
@@ -15,7 +18,7 @@ let browser;
     mastered: [], seen: [], progress: {}, totalTaps: 160501,
     cityTaps: {'29204': 160501}, cityTapsComplete: true, wins: 0, losses: 0, quiz: null};
   const view = {dataset: 'nara-2020-v1', projection: '1100x1500-v1',
-    center: [40 + (135.8 - 122) * 42, 40 + (46 - 34.62) * 50], scale: 8,
+    center: [40 + (longitude - 122) * 42, 40 + (46 - latitude) * 50], scale,
     selected: null, cityId: null, prefectureId: '29', nationalView: true, showGeography: true};
   browser = await chromium.launch({executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium',
     proxy: process.env.HTTPS_PROXY ? {server: process.env.HTTPS_PROXY, bypass: '127.0.0.1,localhost'} : undefined,
@@ -34,15 +37,15 @@ let browser;
     await page.getByLabel(label, {exact: true}).or(page.getByText(label, {exact: true})).first().waitFor({timeout: 120000});
   }
   const saved = await page.evaluate(() => JSON.parse(JSON.parse(localStorage.getItem('flutter.kunitori.nara.mapView.v1'))));
-  assert.equal(saved.scale, 8);
+  assert.equal(saved.scale, scale);
   assert.equal(saved.nationalView, true);
   if (process.env.EXPECT_PLAIN !== '0') {
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/plain_.*_pref\.webp/.test(e.name))));
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/index-plain\.json/.test(e.name))));
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/shared_.*_pref\.webp/.test(e.name))));
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/index-shared\.json/.test(e.name))));
     assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/\d_/.test(e.name)))));
   }
   await page.screenshot({path: output});
   await page.screenshot({path: output.replace('.png', '-map.png'), clip: {x: 0, y: 88, width: 375, height: 300}});
-  console.log('PASS: same national camera at scale 8; screenshot:', output);
+  console.log('PASS: national camera scale', scale, 'center', longitude, latitude, '; screenshot:', output);
   await browser.close();
 })().catch(async e => {console.error(e); await browser?.close(); process.exitCode = 1;});

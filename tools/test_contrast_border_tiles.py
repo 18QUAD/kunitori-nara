@@ -21,7 +21,7 @@ class ContrastBordersTest(unittest.TestCase):
                 borders.initialize(keys)
                 for key in keys:
                     borders.render(key)
-                with Image.open(root / 'plain_0_0_0_pref.webp') as left, Image.open(root / 'plain_0_1_0_pref.webp') as right:
+                with Image.open(root / 'shared_0_0_0_pref.webp') as left, Image.open(root / 'shared_0_1_0_pref.webp') as right:
                     a = [left.getpixel((511, y)) for y in range(512)]
                     b = [right.getpixel((0, y)) for y in range(512)]
                     self.assertEqual(a, b)
