@@ -49,6 +49,34 @@ class BorderTilesTest(unittest.TestCase):
                                  [alpha.getpixel((256, y)) for y in range(512)])
                 self.assertTrue(all(value % 17 == 0 for value in alpha.tobytes()))
 
+    def test_finest_town_edges_preserve_subpixel_position(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            raster([LineString([(135.8, 34.6), (135.81, 34.61)])], 'town', 7, folder)
+            sources = list(folder.glob('7_*_town.webp'))
+            self.assertTrue(sources)
+            first = sources[0].stem.split('_')
+            x, y = int(first[1]) // 2, int(first[2]) // 2
+            group = [p for p in sources if int(p.stem.split('_')[1]) // 2 == x
+                     and int(p.stem.split('_')[2]) // 2 == y]
+            name = f'6_{x}_{y}_town.webp'
+            with patch('build_border_tiles.OUT', folder):
+                merge_tile((name, group))
+            with Image.open(folder / name) as image:
+                alpha = image.getchannel('A')
+                self.assertTrue(set(alpha.tobytes()) <= {0, 85, 170, 255})
+                self.assertTrue(set(alpha.tobytes()) & {85, 170})
+                ppd = 8192
+                west, north = 120 + x / 16, 48 - y / 16
+                # The line is lon - lat = 101.2. Quantizing alpha does not
+                # move its geometry, even along a diagonal at the finest LOD.
+                for py in range(512):
+                    for px in range(512):
+                        if alpha.getpixel((px, py)):
+                            lon = west + (px + .5) / ppd
+                            lat = north - (py + .5) / ppd
+                            self.assertLess(abs(lon - lat - 101.2) * ppd, 3)
+
 
 if __name__ == '__main__':
     unittest.main()

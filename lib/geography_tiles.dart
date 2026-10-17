@@ -266,10 +266,11 @@ class _GeographyTilesState extends State<GeographyTiles> {
     final origin = widget.project(const math.Point(120.0, 48.0));
     final unit = widget.project(const math.Point(121.0, 47.0)) - origin;
     final zoom = widget.transform.value.getMaxScaleOnAxis();
+    final borders = widget.boundaryLayer != null;
     var level = manifest.levelFor(
       math.max(unit.dx.abs(), unit.dy.abs()) *
           zoom *
-          math.min(1.5, MediaQuery.devicePixelRatioOf(context)),
+          math.min(borders ? 3.0 : 1.5, MediaQuery.devicePixelRatioOf(context)),
       prefectureId: widget.prefectureId,
     );
     final scene = Rect.fromPoints(
@@ -283,7 +284,11 @@ class _GeographyTilesState extends State<GeographyTiles> {
             : [widget.boundaryLayer!];
     List<(int, int)> visible(int lod) {
       final span = GeographyTileIndex.span(lod);
-      final margin = span * math.max(unit.dx.abs(), unit.dy.abs());
+      // Thin boundaries need native display resolution. Loading a whole ring
+      // of offscreen border tiles used to exceed the cell budget and downgrade
+      // even small phone viewports by several image levels.
+      final margin =
+          borders ? 0.0 : span * math.max(unit.dx.abs(), unit.dy.abs());
       final view = scene.inflate(margin).intersect(widget.clip.getBounds());
       if (view.isEmpty) return [];
       final xmin = ((view.left - origin.dx) / unit.dx / span).floor();
@@ -300,7 +305,9 @@ class _GeographyTilesState extends State<GeographyTiles> {
 
     var cells = visible(level);
     // Keep requests/memory bounded even on a very large or high-DPI viewport.
-    final cellLimit = widget.boundaryLayer == null ? 12 : 6;
+    // 24 x 512px bounds the sharp border surface at 24 MiB, plus parents.
+    // Offscreen images still use the small shared LRU rather than staying pinned.
+    final cellLimit = borders ? 24 : 12;
     while (cells.length > cellLimit && level > manifest.minLevel) {
       cells = visible(--level);
     }

@@ -58,6 +58,9 @@ let browser;
   assert.deepEqual((await game()).progress, fixture.progress);
   await page.getByLabel('背景地図の読込完了', {exact: true}).or(page.getByText('背景地図の読込完了', {exact: true})).first().waitFor({timeout: 30000});
   await page.getByLabel('境界線画像の読込完了', {exact: true}).or(page.getByText('境界線画像の読込完了', {exact: true})).first().waitFor({timeout: 120000});
+  if (Number(process.env.DEVICE_SCALE_FACTOR || 1) >= 2) {
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/6_.*_town\.webp/.test(e.name))), 'High-DPI municipality maps must use the fine 8192px/degree boundaries');
+  }
   const bordersBeforeTap = await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.includes('/border_tiles/')).length);
   const tilesBeforeTap = await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.includes('/map_tiles_uniform/')).length);
   await attack.tap();
@@ -99,6 +102,11 @@ let browser;
   const before = await view();
   await page.getByRole('button', {name: '拡大', exact: true}).click();
   await page.waitForFunction(({key, scale}) => JSON.parse(JSON.parse(localStorage.getItem(key))).scale > scale, {key: mapKey, scale: before.scale});
+  await page.waitForTimeout(150);
+  await page.getByLabel('境界線画像の読込完了', {exact: true}).or(page.getByText('境界線画像の読込完了', {exact: true})).first().waitFor({timeout: 120000});
+  if (Number(process.env.DEVICE_SCALE_FACTOR || 1) >= 2) {
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/-1_.*_pref\.webp/.test(e.name))), 'National zoom must select sharper borders without the offscreen six-tile downgrade');
+  }
   await page.screenshot({path: path.join(output, 'national-urban-zoom.png')});
   for (var i = 0; i < 4; i++) { await page.getByRole('button', {name: '拡大', exact: true}).click(); console.log('National zoom step', i + 2); }
   await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /map_tiles_uniform\/[1-4]_/.test(e.name)));

@@ -24,8 +24,8 @@ DATA = ROOT / 'assets/data'
 WORK = ROOT / 'data/raw/border_tiles'
 OUT = DATA / 'border_tiles'
 MIN_LEVEL = -2
-MAX_LEVEL = 6
-LAYER_MAX_LEVELS = {'pref': 6, 'city': 6, 'town': 6}
+MAX_LEVEL = 7
+LAYER_MAX_LEVELS = {'pref': 6, 'city': 6, 'town': 7}
 SIZE = 256
 AA = 4
 PAD = 3
@@ -107,7 +107,9 @@ def build_prefecture(pid):
     folder.mkdir(parents=True, exist_ok=True)
     marker = folder / 'complete.json'
     if marker.exists():
-        return pid, json.loads(marker.read_text())
+        counts = json.loads(marker.read_text())
+        if all(f'{level}_{layer}' in counts for layer, level in LAYER_MAX_LEVELS.items()):
+            return pid, counts
     mapping = json.loads((WORK / 'groups.json').read_text())['sourceToTown']
     county = json.loads((DATA / ('nara.json' if pid == '29' else f'prefectures/{pid}.json')).read_text())
     grouped = defaultdict(list)
@@ -127,7 +129,7 @@ def build_prefecture(pid):
     pref_lines = outlines(joined(pref['polygons']))
     counts = {}
     for layer, lines in [('pref', pref_lines), ('city', city_lines), ('town', town_lines)]:
-        for level in range(MIN_LEVEL, MAX_LEVEL + 1):
+        for level in range(MIN_LEVEL, LAYER_MAX_LEVELS[layer] + 1):
             counts[f'{level}_{layer}'] = raster(lines, layer, level, folder)
     counts['townGroups'] = len(towns)
     marker.write_text(json.dumps(counts))
@@ -143,7 +145,11 @@ def merge_tile(item):
         with Image.open(source) as image:
             region = (offset[0], offset[1], offset[0] + SIZE, offset[1] + SIZE)
             alpha.paste(ImageChops.lighter(alpha.crop(region), image.getchannel('A')), offset)
-    alpha = alpha.point(lambda value: round(value / 17) * 17)
+    # Four coverage levels suffice at the finest 8192px/degree town scale;
+    # retain sixteen at overview scales. This keeps the Pages bundle < 1 GiB
+    # without reducing edge positions or making decoded tiles any larger.
+    alpha_step = 85 if name.startswith('6_') and name.endswith('_town.webp') else 17
+    alpha = alpha.point(lambda value: round(value / alpha_step) * alpha_step)
     image = Image.new('RGBA', (SIZE * 2, SIZE * 2), (255, 255, 255, 0))
     image.putalpha(alpha)
     image.save(OUT / name, lossless=True, method=6)
@@ -168,6 +174,10 @@ def main():
     coverage = {}
     if args.finalize_only:
         coverage = {pid: json.loads((WORK / pid / 'complete.json').read_text()) for pid in ids}
+        for pid, counts in coverage.items():
+            for layer, level in LAYER_MAX_LEVELS.items():
+                if f'{level}_{layer}' not in counts:
+                    parser.error(f'{pid}: missing raw level {level} for {layer}; render before finalizing')
     else:
         with concurrent.futures.ProcessPoolExecutor(max_workers=args.workers) as pool:
             for pid, counts in pool.map(build_prefecture, ids):
