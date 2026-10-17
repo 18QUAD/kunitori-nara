@@ -26665,7 +26665,7 @@ o=A
 n=t.a
 m=B.ad
 s=3
-return A.P(A.wX(p?"assets/data/nara_mountains.json":"assets/data/mountains/"+b+".json"),$async$aa9)
+return A.P(A.wX(p?"assets/data/nara_mountains.json":"assets/data/mountains/"+b+".json","mountains-20261017-v2"),$async$aa9)
 case 3:q=o.aP3(n.a(m.hO(d,null)),a,p)
 s=1
 break
@@ -26706,7 +26706,7 @@ case 3:o=b0.a(b1.hO(b5,null))
 b0=p
 b1=B.ad
 s=4
-return A.P(A.wX("assets/data/japan.json"),$async$Ac)
+return A.P(A.wX("assets/data/japan.json","20261015-v1"),$async$Ac)
 case 4:n=b0.a(b1.hO(b5,null))
 if(!J.e(n.h(0,"censusYear"),2020)||J.bP(t.j.a(n.h(0,"prefectures")))!==47)throw A.j(B.Hb)
 m=t.j
@@ -27269,7 +27269,7 @@ aiD(a,b){var s=0,r=A.N(t.H4),q,p,o
 var $async$aiD=A.O(function(c,d){if(c===1)return A.K(d,r)
 while(true)switch(s){case 0:o=B.ad
 s=3
-return A.P(A.wX("assets/data/map_labels/"+b+".json"),$async$aiD)
+return A.P(A.wX("assets/data/map_labels/"+b+".json","20261015-v1"),$async$aiD)
 case 3:p=o.hO(d,null)
 q=A.aRU(p,a,b!=="29")
 s=1
@@ -28189,12 +28189,12 @@ case 3:case 4:case 5:return A.cx(null,t.H)}},
 aXj(a){return a},
 aXd(a){return new A.rt(a)},
 wQ(){return A.aDc(B.fE,B.fE.iI(0.35),B.ni.iI(0.6),B.ni,B.zR,B.Ak)},
-wX(a){var s=0,r=A.N(t.N),q,p,o
-var $async$wX=A.O(function(b,c){if(b===1)return A.K(c,r)
+wX(a,b){var s=0,r=A.N(t.N),q,p,o
+var $async$wX=A.O(function(c,d){if(c===1)return A.K(d,r)
 while(true)switch(s){case 0:p=$.wK
 s=3
-return A.P(p.eU(a+"?coast=20261015-v1"),$async$wX)
-case 3:o=c
+return A.P(p.eU(a+"?coast="+b),$async$wX)
+case 3:o=d
 q=B.a9.h3(J.hy(B.ax.gco(o),o.byteOffset,o.byteLength))
 s=1
 break
@@ -89887,7 +89887,7 @@ a0=t.a
 b0=a0
 b1=B.ad
 s=7
-return A.P(b2==="29"?$.kq().jZ("assets/data/nara.json",!1):A.wX("assets/data/prefectures/"+b2+".json"),$async$u7)
+return A.P(b2==="29"?$.kq().jZ("assets/data/nara.json",!1):A.wX("assets/data/prefectures/"+b2+".json","20261015-v1"),$async$u7)
 case 7:m=b0.a(b1.hO(b4,null))
 a1=t.N
 a2=t.j1
