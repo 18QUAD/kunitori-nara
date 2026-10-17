@@ -77,6 +77,22 @@ class _TerritoryMapState extends State<TerritoryMap> {
 
   WaterLayer? water;
   bool showGeography = true;
+  final _busyImageLayers = <String>{'background', 'border'};
+  bool get _imagesBusy => _busyImageLayers.isNotEmpty;
+
+  void _imageBusy(String layer, bool busy) {
+    if (busy) {
+      _busyImageLayers.add(layer);
+    } else {
+      _busyImageLayers.remove(layer);
+    }
+    // Child layers can notify during build. Record the lock immediately and
+    // update the button/gesture appearance after the current frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   bool waterFailed = false;
 
   Future<void> _loadWater() async {
@@ -405,6 +421,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
             child: InteractiveViewer(
               transformationController: controller,
               constrained: false,
+              scaleEnabled: !_imagesBusy,
               minScale: 0.08,
               maxScale: 150,
               boundaryMargin: const EdgeInsets.all(2000),
@@ -490,6 +507,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         ),
                       ),
                       GeographyTiles(
+                        onBusyChanged: (busy) => _imageBusy('background', busy),
                         prefectureId: widget.prefectureId,
                         transform: controller,
                         project: project,
@@ -528,6 +546,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       ),
                       // Boundaries top territory colors; labels and attack highlights stay in front.
                       BorderTiles(
+                        onBusyChanged: (busy) => _imageBusy('border', busy),
                         boundaryPaths:
                             widget.cityId == null
                                 ? cityOutlines.values
@@ -635,13 +654,14 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           ),
                           IconButton.filledTonal(
                             tooltip: '拡大',
-                            onPressed: () => _zoom(1.7),
+                            onPressed: _imagesBusy ? null : () => _zoom(1.7),
                             icon: const Icon(Icons.add),
                           ),
                           const SizedBox(height: 2),
                           IconButton.filledTonal(
                             tooltip: '縮小',
-                            onPressed: () => _zoom(1 / 1.7),
+                            onPressed:
+                                _imagesBusy ? null : () => _zoom(1 / 1.7),
                             icon: const Icon(Icons.remove),
                           ),
                           const SizedBox(height: 2),
@@ -682,6 +702,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
     },
   );
   void _zoom(double factor) {
+    if (_imagesBusy) return;
     final size = viewport!;
     final old = controller.value;
     final scale = old.getMaxScaleOnAxis();

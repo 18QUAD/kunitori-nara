@@ -15,11 +15,62 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   // The process-wide manifest future must belong to the real async zone,
   // rather than the fake clock of whichever widget test happens to run first.
-  setUpAll(() => GeographyTileIndex.loadBorders());
+  setUpAll(() async {
+    await GeographyTileIndex.loadBorders();
+    await GeographyTileIndex.load();
+  });
 
   Atlas nara() => Atlas.fromJson(
     jsonDecode(File('assets/data/nara.json').readAsStringSync()),
   );
+
+  testWidgets('zoom stays locked through queued work and image retirement', (
+    tester,
+  ) async {
+    final events = <bool>[];
+    final transform = TransformationController();
+    final clip = Path()..addRect(const Rect.fromLTWH(0, 0, 800, 600));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BorderTiles(
+          transform: transform,
+          project: (p) => Offset(p.x, p.y),
+          viewport: const Size(300, 300),
+          clip: clip,
+          layer: 'town',
+          boundaryPaths: [
+            Path()
+              ..moveTo(100, 0)
+              ..lineTo(100, 600),
+          ],
+          onBusyChanged: events.add,
+        ),
+      ),
+    );
+    for (var i = 0; i < 50 && events.isEmpty; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+    }
+    // Start rasterization, then issue many changes before it can finish.
+    for (var i = 0; i < 30; i++) {
+      transform.value = Matrix4.identity()..scale(1.0 + i / 10);
+    }
+    expect(events, [true]);
+    for (var i = 0; i < 150 && !events.contains(false); i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump();
+    }
+    expect(events, [
+      true,
+      false,
+    ], reason: 'No unlock between stale and latest work');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    transform.dispose();
+  });
 
   test('immutable map state changes only when displayed colors change', () {
     final atlas = nara();

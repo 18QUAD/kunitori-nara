@@ -43,6 +43,22 @@ class _NationalMapState extends State<NationalMap> {
   final labelBounds = <String, Rect>{};
   bool initialized = false;
   bool showGeography = true;
+  final _busyImageLayers = <String>{'background', 'border'};
+  bool get _imagesBusy => _busyImageLayers.isNotEmpty;
+
+  void _imageBusy(String layer, bool busy) {
+    if (busy) {
+      _busyImageLayers.add(layer);
+    } else {
+      _busyImageLayers.remove(layer);
+    }
+    // Child layers can notify during build. Record the lock immediately and
+    // update the button/gesture appearance after the current frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   late final Path land;
 
   final territoryPaths = <String, Path>{};
@@ -131,6 +147,7 @@ class _NationalMapState extends State<NationalMap> {
   }
 
   void _zoom(double factor) {
+    if (_imagesBusy) return;
     final size = viewport!;
     final center = transform.toScene(size.center(Offset.zero));
     final scale = (transform.value.getMaxScaleOnAxis() * factor).clamp(
@@ -210,6 +227,7 @@ class _NationalMapState extends State<NationalMap> {
             Positioned.fill(
               child: InteractiveViewer(
                 transformationController: transform,
+                scaleEnabled: !_imagesBusy,
                 minScale: 0.08,
                 maxScale: 150,
                 constrained: false,
@@ -246,6 +264,8 @@ class _NationalMapState extends State<NationalMap> {
                           ),
                         ),
                         GeographyTiles(
+                          onBusyChanged:
+                              (busy) => _imageBusy('background', busy),
                           nationalOverview: true,
                           transform: transform,
                           project: project,
@@ -272,6 +292,7 @@ class _NationalMapState extends State<NationalMap> {
                         ),
                         // Boundaries top territory colors; labels and attack highlights stay in front.
                         BorderTiles(
+                          onBusyChanged: (busy) => _imageBusy('border', busy),
                           transform: transform,
                           project: project,
                           viewport: size,
@@ -331,12 +352,13 @@ class _NationalMapState extends State<NationalMap> {
                           ),
                           IconButton.filledTonal(
                             tooltip: '拡大',
-                            onPressed: () => _zoom(1.7),
+                            onPressed: _imagesBusy ? null : () => _zoom(1.7),
                             icon: const Icon(Icons.add),
                           ),
                           IconButton.filledTonal(
                             tooltip: '縮小',
-                            onPressed: () => _zoom(1 / 1.7),
+                            onPressed:
+                                _imagesBusy ? null : () => _zoom(1 / 1.7),
                             icon: const Icon(Icons.remove),
                           ),
                           const SizedBox(height: 2),

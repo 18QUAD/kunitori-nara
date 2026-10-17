@@ -57,12 +57,22 @@ let browser;
   await page.screenshot({path: output.replace('.png', '-map.png'), clip: {x: 0, y: 88, width: 375, height: 300}});
   const townRequests = () => page.evaluate(() => performance.getEntriesByType('resource').filter(e => /border_tiles\/.*_town\.webp/.test(e.name)).length);
   const before = await townRequests();
+  await page.evaluate(() => {
+    window.zoomLockSeen = false;
+    new MutationObserver(() => {
+      if ([...document.querySelectorAll('[role="button"]')].some(e =>
+        ['拡大', '縮小'].includes(e.getAttribute('aria-label')) && e.getAttribute('aria-disabled') === 'true')) {
+        window.zoomLockSeen = true;
+      }
+    }).observe(document.body, {subtree: true, attributes: true, attributeFilter: ['aria-disabled']});
+  });
   for (const control of ['拡大', '縮小']) {
     await page.getByRole('button', {name: control, exact: true}).click();
     await page.waitForTimeout(300);
     await page.getByLabel('境界線画像の読込完了', {exact: true}).or(page.getByText('境界線画像の読込完了', {exact: true})).first().waitFor({timeout: 30000});
     assert.equal(await townRequests(), before, 'Zoom must not enlarge offline town images');
   }
+  assert(await page.evaluate(() => window.zoomLockSeen), 'Zoom buttons must disable during image work');
   console.log('PASS: Nabari municipal camera scale', scale, 'center', lon, lat, '; screenshot:', output);
   await browser.close();
 })().catch(async e => {console.error(e); await browser?.close(); process.exitCode = 1;});

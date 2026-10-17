@@ -187,12 +187,14 @@ class GeographyTiles extends StatefulWidget {
     this.nationalOverview = false,
     this.boundaryLayer,
     this.boundaryPaths,
+    this.onBusyChanged,
   });
   final TransformationController transform;
   final Offset Function(math.Point<double>) project;
   final Size viewport;
   final Path clip;
   final bool enabled;
+  final ValueChanged<bool>? onBusyChanged;
   final String? prefectureId;
   final bool nationalOverview;
   final String? boundaryLayer;
@@ -212,6 +214,8 @@ class _GeographyTilesState extends State<GeographyTiles> {
   GeographyTileIndex? index;
   Timer? timer;
   int revision = 0;
+  bool _refreshing = false;
+  bool _refreshPending = false;
   double? refreshedZoom;
   bool failed = false;
   bool loading = true;
@@ -255,7 +259,10 @@ class _GeographyTilesState extends State<GeographyTiles> {
       index = loaded;
       _refresh();
     } catch (_) {
-      if (mounted) setState(() => failed = true);
+      if (mounted) {
+        setState(() => failed = true);
+        widget.onBusyChanged?.call(false);
+      }
     }
   }
 
@@ -306,6 +313,33 @@ class _GeographyTilesState extends State<GeographyTiles> {
   }
 
   Future<void> _refresh() async {
+    if (!mounted || index == null) return;
+    // Invalidate stale results immediately, but let their native work finish
+    // before starting the latest requested view. Keep only one pending request.
+    revision++;
+    _refreshPending = true;
+    if (_refreshing) {
+      if (widget.transform.value.getMaxScaleOnAxis() != refreshedZoom) {
+        setState(() => tiles = []);
+      }
+      return;
+    }
+    _refreshing = true;
+    widget.onBusyChanged?.call(true);
+    try {
+      do {
+        _refreshPending = false;
+        await _refreshOnce();
+        // Retired images are disposed after paint; don't unlock beforehand.
+        await WidgetsBinding.instance.endOfFrame;
+      } while (mounted && _refreshPending);
+    } finally {
+      _refreshing = false;
+      if (mounted) widget.onBusyChanged?.call(false);
+    }
+  }
+
+  Future<void> _refreshOnce() async {
     final manifest = index;
     if (!mounted || manifest == null) return;
     final token = ++revision;
