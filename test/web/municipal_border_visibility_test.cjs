@@ -62,7 +62,7 @@ let browser;
     window.homeLockSeen = false;
     new MutationObserver(() => {
       const home = [...document.querySelectorAll('[role="button"]')].find(e =>
-        ['本拠地へ', '攻略中の町へ'].includes(e.getAttribute('aria-label')));
+        ['本拠地へ', '攻略中の町へ'].includes((e.getAttribute('aria-label') || e.textContent || '').trim()));
       if (home?.getAttribute('aria-disabled') === 'true') window.homeLockSeen = true;
       if ([...document.querySelectorAll('[role="button"]')].some(e =>
         ['拡大', '縮小'].includes(e.getAttribute('aria-label')) && e.getAttribute('aria-disabled') === 'true')) {
