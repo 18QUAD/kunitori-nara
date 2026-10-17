@@ -154,14 +154,10 @@ let browser;
   await search.waitFor();
   // Wait for the sheet transition before sending input to Flutter's editor.
   await page.waitForTimeout(350);
-  await search.click();
-  await page.waitForTimeout(250);
-  await page.keyboard.insertText('沖縄県');
+  await search.fill('沖縄県');
   await page.screenshot({path: path.join(output, 'search-prefecture.png')});
   await page.getByText(/那覇市/).or(page.getByRole('button', {name: /那覇市/})).first().click({timeout:120000});
-  await search.click();
-  await page.waitForTimeout(250);
-  await page.keyboard.insertText('首里');
+  await search.fill('首里');
   await page.screenshot({path: path.join(output, 'national-search.png')});
   await page.getByRole('button', {name: '閉じる', exact: true}).click();
   await toNational();
