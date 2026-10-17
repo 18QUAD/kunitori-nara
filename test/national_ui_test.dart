@@ -12,7 +12,13 @@ import 'package:kunitori/save_store.dart';
 import 'package:kunitori/territory_map.dart';
 import 'package:kunitori/border_tiles.dart';
 
+import 'map_image_wait.dart';
+
 void main() {
+  setUpAll(() async {
+    await GeographyTileIndex.load();
+    await GeographyTileIndex.loadBorders();
+  });
   testWidgets(
     'real national and prefecture maps preserve a saved Nara campaign',
     (tester) async {
@@ -60,10 +66,12 @@ void main() {
       final naraProgress =
           '奈良県 ${number(game.population)} / ${number(nara.totalPopulation)}';
       expect(progressLabel(), naraProgress);
+      await waitForMapImages(tester);
       await tester.tap(find.byKey(const Key('map-up')));
       await tester.pumpAndSettle();
       if (find.byType(NationalMap).evaluate().isEmpty) {
         expect(progressLabel(), naraProgress);
+        await waitForMapImages(tester);
         await tester.tap(find.byKey(const Key('map-up')));
         await tester.pumpAndSettle();
       }
@@ -182,6 +190,7 @@ void main() {
 
       final shaded = await hokkaidoPixel();
       final initialCamera = viewer.transformationController!.value.clone();
+      await waitForMapImages(tester);
       await tester.tap(find.byTooltip('起伏・市街地・川・池・湖を非表示'));
       await tester.pumpAndSettle();
       final flat = await hokkaidoPixel();
@@ -196,6 +205,7 @@ void main() {
         ).loadMapView(national.data.atlas)!.showGeography,
         isFalse,
       );
+      await waitForMapImages(tester);
       await tester.tap(find.byTooltip('起伏・市街地・川・池・湖を表示'));
       await tester.pumpAndSettle();
       expect(
@@ -205,6 +215,7 @@ void main() {
         isTrue,
       );
       final scale = viewer.transformationController!.value.getMaxScaleOnAxis();
+      await waitForMapImages(tester);
       await tester.tap(find.byTooltip('拡大'));
       await tester.pumpAndSettle();
       expect(
@@ -287,11 +298,13 @@ void main() {
       );
       final dynamic tilePainter = tilePaint.painter;
       expect(tilePainter.tiles, isNotEmpty);
+      await waitForMapImages(tester);
       await tester.tap(find.byTooltip('起伏・市街地・山名・川・池・湖を非表示'));
       await tester.pumpAndSettle();
       expect(find.byTooltip('起伏・市街地・山名・川・池・湖を表示'), findsOneWidget);
       expect(prefectureViewer.transformationController!.value, camera);
       expect(detailPainter().mountains, isNull);
+      await waitForMapImages(tester);
       await tester.tap(find.byTooltip('起伏・市街地・山名・川・池・湖を表示'));
       await tester.pumpAndSettle();
       final prefecture = tester.widget<TerritoryMap>(find.byType(TerritoryMap));
@@ -318,6 +331,7 @@ void main() {
         'town',
       );
       expect(detailPainter().mountains, same(mountainLayer));
+      await waitForMapImages(tester);
       await tester.tap(find.byKey(const Key('map-up')));
       await tester.pumpAndSettle();
       expect(
@@ -333,8 +347,10 @@ void main() {
       expect(game.owned, saved.owned);
       expect(game.progress, saved.progress);
       expect(game.totalTaps, saved.totalTaps);
+      await waitForMapImages(tester);
       await tester.tap(find.byKey(const Key('map-up')));
       await tester.pumpAndSettle();
+      await waitForMapImages(tester);
       await tester.tap(find.byKey(const Key('map-home')));
       await waitForMap();
       final map = tester.widget<TerritoryMap>(find.byType(TerritoryMap));

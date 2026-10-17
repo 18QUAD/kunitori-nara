@@ -8,7 +8,13 @@ import 'package:kunitori/game.dart';
 import 'package:kunitori/territory_map.dart';
 import 'package:kunitori/geography_tiles.dart';
 
+import 'map_image_wait.dart';
+
 void main() {
+  setUpAll(() async {
+    await GeographyTileIndex.load();
+    await GeographyTileIndex.loadBorders();
+  });
   setUp(() => rootBundle.clear());
   testWidgets('GSI layers load and toggle together without moving map', (
     tester,
@@ -77,6 +83,7 @@ void main() {
     final originalTransform = Matrix4.copy(
       viewer.transformationController!.value,
     );
+    await waitForMapImages(tester);
     await tester.tap(find.byTooltip('起伏・市街地・山名・川・池・湖を非表示'));
     await tester.pumpAndSettle();
     expect(painter().water, isNull);
@@ -86,6 +93,7 @@ void main() {
     );
     expect(painter().mountains, isNull);
     expect(viewer.transformationController!.value, originalTransform);
+    await waitForMapImages(tester);
     await tester.tap(find.byTooltip('起伏・市街地・山名・川・池・湖を表示'));
     await tester.pumpAndSettle();
     expect(painter().water, same(originalWater));
@@ -118,6 +126,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await waitForMapImages(tester);
     await tester.tap(find.byTooltip('起伏・市街地・山名・川・池・湖を非表示'));
     await tester.pumpAndSettle();
     final viewer = tester.widget<InteractiveViewer>(

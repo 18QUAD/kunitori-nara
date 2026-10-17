@@ -558,6 +558,27 @@ void main() {
       expect(mapPainter(true).shouldRepaint(oldForeground), isFalse);
       expect(viewer.transformationController!.value, camera);
       expect(game.progress[target], 1);
+      // Terrain cannot be toggled until both image workers finish.
+      IconButton terrain() => tester
+          .widgetList<IconButton>(find.byType(IconButton))
+          .firstWhere((button) => button.tooltip == '起伏・市街地・山名・川・池・湖を非表示');
+      for (var i = 0; i < 200 && terrain().onPressed == null; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pumpAndSettle();
+      }
+      expect(
+        terrain().onPressed,
+        isNotNull,
+        reason: tester
+            .stateList(find.byType(GeographyTiles))
+            .map(
+              (dynamic state) =>
+                  '${state.statusLabel}; loading=${state.loading}; cache=${state.cache.length}',
+            )
+            .join(', '),
+      );
       // Borders remain present when the terrain layer is hidden.
       await tester.tap(find.byTooltip('起伏・市街地・山名・川・池・湖を非表示'));
       await tester.pumpAndSettle();

@@ -60,10 +60,18 @@ let browser;
   await page.evaluate(() => {
     window.zoomLockSeen = false;
     window.homeLockSeen = false;
+    window.upLockSeen = false;
+    window.terrainLockSeen = false;
     new MutationObserver(() => {
       const home = [...document.querySelectorAll('[role="button"]')].find(e =>
         ['本拠地へ', '攻略中の町へ'].includes((e.getAttribute('aria-label') || e.textContent || '').trim()));
       if (home?.getAttribute('aria-disabled') === 'true') window.homeLockSeen = true;
+      for (const e of document.querySelectorAll('[role="button"]')) {
+        const label = (e.getAttribute('aria-label') || e.textContent || '').trim();
+        if (e.getAttribute('aria-disabled') !== 'true') continue;
+        if (label === '1段上の地図を表示') window.upLockSeen = true;
+        if (label.startsWith('起伏・市街地')) window.terrainLockSeen = true;
+      }
       if ([...document.querySelectorAll('[role="button"]')].some(e =>
         ['拡大', '縮小'].includes(e.getAttribute('aria-label')) && e.getAttribute('aria-disabled') === 'true')) {
         window.zoomLockSeen = true;
@@ -79,6 +87,16 @@ let browser;
   assert(await page.evaluate(() => window.zoomLockSeen), 'Zoom buttons must disable during image work');
   assert(await page.evaluate(() => window.homeLockSeen), 'Home button must disable during image work');
   assert(await page.getByRole('button', {name: '攻略中の町へ', exact: true}).isEnabled(), 'Home must re-enable after image work');
+  assert(await page.evaluate(() => window.upLockSeen && window.terrainLockSeen), 'Up-map and terrain controls must disable during image work');
+  assert(await page.getByRole('button', {name: '1段上の地図を表示', exact: true}).isEnabled());
+  assert(await page.getByRole('button', {name: '起伏・市街地・山名・川・池・湖を非表示', exact: true}).isEnabled());
+  const mapView = () => page.evaluate(() => JSON.parse(JSON.parse(localStorage.getItem('flutter.kunitori.nara.mapView.v1'))));
+  await page.getByRole('button', {name: '起伏・市街地・山名・川・池・湖を非表示', exact: true}).click();
+  assert.equal((await mapView()).showGeography, false);
+  await page.getByRole('button', {name: '起伏・市街地・山名・川・池・湖を表示', exact: true}).click();
+  assert.equal((await mapView()).showGeography, true);
+  await page.getByRole('button', {name: '1段上の地図を表示', exact: true}).click();
+  await page.waitForFunction(() => JSON.parse(JSON.parse(localStorage.getItem('flutter.kunitori.nara.mapView.v1'))).cityId === null);
   console.log('PASS: Nabari municipal camera scale', scale, 'center', lon, lat, '; screenshot:', output);
   await browser.close();
 })().catch(async e => {console.error(e); await browser?.close(); process.exitCode = 1;});

@@ -58,6 +58,9 @@ class _NationalMapState extends State<NationalMap> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() {});
     });
+    // A completion can arrive while no frame is scheduled. Ensure the deferred
+    // button update runs even after all map animations have stopped.
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   late final Path land;
@@ -350,7 +353,10 @@ class _NationalMapState extends State<NationalMap> {
                         children: [
                           ...widget.controls.expand(
                             (control) => [
-                              lockMapHomeControl(control, () => _imagesBusy),
+                              lockMapNavigationControl(
+                                control,
+                                () => _imagesBusy,
+                              ),
                               const SizedBox(height: 2),
                             ],
                           ),
@@ -372,10 +378,16 @@ class _NationalMapState extends State<NationalMap> {
                                     ? '起伏・市街地・川・池・湖を非表示'
                                     : '起伏・市街地・川・池・湖を表示',
                             isSelected: showGeography,
-                            onPressed: () {
-                              setState(() => showGeography = !showGeography);
-                              _publishView();
-                            },
+                            onPressed:
+                                _imagesBusy
+                                    ? null
+                                    : () {
+                                      if (_imagesBusy) return;
+                                      setState(
+                                        () => showGeography = !showGeography,
+                                      );
+                                      _publishView();
+                                    },
                             icon: const Icon(Icons.terrain_outlined),
                             selectedIcon: const Icon(Icons.terrain),
                           ),

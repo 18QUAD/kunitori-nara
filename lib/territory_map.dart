@@ -92,6 +92,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() {});
     });
+    // A completion can arrive while no frame is scheduled. Ensure the deferred
+    // button update runs even after all map animations have stopped.
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   bool waterFailed = false;
@@ -652,7 +655,10 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         children: [
                           ...widget.controls.expand(
                             (control) => [
-                              lockMapHomeControl(control, () => _imagesBusy),
+                              lockMapNavigationControl(
+                                control,
+                                () => _imagesBusy,
+                              ),
                               const SizedBox(height: 2),
                             ],
                           ),
@@ -670,7 +676,13 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           ),
                           const SizedBox(height: 2),
                           ...widget.secondaryControls.expand(
-                            (control) => [control, const SizedBox(height: 2)],
+                            (control) => [
+                              lockMapNavigationControl(
+                                control,
+                                () => _imagesBusy,
+                              ),
+                              const SizedBox(height: 2),
+                            ],
                           ),
                           IconButton.filledTonal(
                             tooltip:
@@ -678,19 +690,25 @@ class _TerritoryMapState extends State<TerritoryMap> {
                                     ? '起伏・市街地・山名・川・池・湖を非表示'
                                     : '起伏・市街地・山名・川・池・湖を表示',
                             isSelected: showGeography,
-                            onPressed: () {
-                              setState(() => showGeography = !showGeography);
-                              // Retry failed layers when the shared overlay is enabled.
-                              _publishView();
-                              if (showGeography && mountainsFailed) {
-                                setState(() => mountainsFailed = false);
-                                _loadMountains();
-                              }
-                              if (showGeography && waterFailed) {
-                                setState(() => waterFailed = false);
-                                _loadWater();
-                              }
-                            },
+                            onPressed:
+                                _imagesBusy
+                                    ? null
+                                    : () {
+                                      if (_imagesBusy) return;
+                                      setState(
+                                        () => showGeography = !showGeography,
+                                      );
+                                      // Retry failed layers when the shared overlay is enabled.
+                                      _publishView();
+                                      if (showGeography && mountainsFailed) {
+                                        setState(() => mountainsFailed = false);
+                                        _loadMountains();
+                                      }
+                                      if (showGeography && waterFailed) {
+                                        setState(() => waterFailed = false);
+                                        _loadWater();
+                                      }
+                                    },
                             icon: const Icon(Icons.terrain_outlined),
                             selectedIcon: const Icon(Icons.terrain),
                           ),

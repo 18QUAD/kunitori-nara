@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// The campaign home control shares the map image worker's operation lock.
-Widget lockMapHomeControl(Widget control, bool Function() isBusy) {
-  if (control is! IconButton || control.key != const Key('map-home')) {
+/// Map navigation shares the map image worker's operation lock.
+Widget lockMapNavigationControl(Widget control, bool Function() isBusy) {
+  if (control is! IconButton ||
+      (control.key != const Key('map-home') &&
+          control.key != const Key('map-up'))) {
     return control;
   }
   return IconButton.filledTonal(
