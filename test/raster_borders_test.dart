@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/border_tiles.dart';
 import 'package:kunitori/game.dart';
@@ -50,13 +52,16 @@ void main() {
   test('baked boundaries cover every prefecture and all three map scopes', () {
     final data =
         jsonDecode(
-              File('assets/data/border_tiles/index.json').readAsStringSync(),
+              File(
+                'assets/data/border_tiles/index-contrast.json',
+              ).readAsStringSync(),
             )
             as Map<String, dynamic>;
     final index = GeographyTileIndex.fromJson(data);
     expect(index.minLevel, -3);
     expect(index.basePixelsPerDegree * (1 << index.maxLevel), 8192);
     expect((data['prefectureCoverage'] as Map).length, 47);
+    expect(data['filenamePrefix'], GeographyImageCache.borders.filenamePrefix);
     for (final layer in ['pref', 'city', 'town']) {
       expect(index.available.any((key) => key.endsWith('_$layer')), isTrue);
       expect(index.layerLevel(6, layer), layer == 'town' ? 6 : 5);
@@ -72,6 +77,39 @@ void main() {
     expect(index.levelFor(20), -2);
     expect(index.levelFor(60000, prefectureId: '29'), 6);
   });
+
+  test(
+    'real prefecture border image has opaque white core and dark casing',
+    () async {
+      final bytes =
+          File(
+            'assets/data/border_tiles/contrast_3_31_26_pref.webp',
+          ).readAsBytesSync();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final image = (await codec.getNextFrame()).image;
+      final pixels =
+          (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      var white = 0, dark = 0;
+      for (var i = 0; i < pixels.lengthInBytes; i += 4) {
+        if (pixels.getUint8(i + 3) != 255) continue;
+        if (pixels.getUint8(i) == 255 &&
+            pixels.getUint8(i + 1) == 255 &&
+            pixels.getUint8(i + 2) == 255) {
+          white++;
+        }
+        if (pixels.getUint8(i) == 12 &&
+            pixels.getUint8(i + 1) == 27 &&
+            pixels.getUint8(i + 2) == 39) {
+          dark++;
+        }
+      }
+      expect(white, greaterThan(100));
+      expect(dark, greaterThan(100));
+      expect(image.width, 512);
+      image.dispose();
+      codec.dispose();
+    },
+  );
 
   testWidgets(
     'phone boundaries keep physical resolution without offscreen tiles',
@@ -175,14 +213,17 @@ void main() {
             ..setHome(home.id)
             ..selectAttackTarget(target);
       Widget screen() => MaterialApp(
-        home: TerritoryMap(
-          atlas: atlas,
-          game: game,
-          selected: target,
-          cityId: home.cityId,
-          focusVersion: 0,
-          onSelected: (_) {},
-          onCitySelected: (_) {},
+        home: RepaintBoundary(
+          key: const Key('whole-map'),
+          child: TerritoryMap(
+            atlas: atlas,
+            game: game,
+            selected: target,
+            cityId: home.cityId,
+            focusVersion: 0,
+            onSelected: (_) {},
+            onCitySelected: (_) {},
+          ),
         ),
       );
       await tester.pumpWidget(screen());
@@ -212,6 +253,30 @@ void main() {
       );
       final viewer = tester.widget<InteractiveViewer>(
         find.byType(InteractiveViewer),
+      );
+      final wholeMap = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(const Key('whole-map')),
+      );
+      final visibleRed = await tester.runAsync(() async {
+        final image = await wholeMap.toImage(pixelRatio: 1);
+        final data =
+            (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+        var count = 0;
+        for (var i = 0; i < data.lengthInBytes; i += 4) {
+          if (data.getUint8(i) > 220 &&
+              data.getUint8(i + 1) < 110 &&
+              data.getUint8(i + 2) < 100) {
+            count++;
+          }
+        }
+        image.dispose();
+        return count;
+      });
+      expect(
+        visibleRed,
+        greaterThan(20),
+        reason:
+            'The attack outline must remain visible below opaque border images',
       );
       final mapStack =
           (((viewer.child as GestureDetector).child as SizedBox).child

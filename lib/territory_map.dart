@@ -861,7 +861,8 @@ class _MapPainter extends CustomPainter {
         path,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2 / zoom
+          // Leave a visible red halo outside the opaque boundary casing above.
+          ..strokeWidth = 6 / zoom
           ..color = const Color(0xFFFF3B30),
       );
     }

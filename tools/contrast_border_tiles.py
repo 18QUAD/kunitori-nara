@@ -83,14 +83,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--workers', type=int, default=4)
     args = parser.parse_args()
-    if not (SOURCE / 'index.json').exists():
-        if not (OUT / 'index.json').exists():
-            parser.error('Original centerlines are missing; run build_border_tiles.py first')
+    if (OUT / 'index.json').exists():
         original = json.loads((OUT / 'index.json').read_text())
         SOURCE.mkdir(parents=True, exist_ok=True)
         for key in original['tiles']:
             shutil.copyfile(OUT / f'{key}.webp', SOURCE / f'{key}.webp')
         shutil.copyfile(OUT / 'index.json', SOURCE / 'index.json')
+    elif not (SOURCE / 'index.json').exists():
+        parser.error('Original centerlines are missing; run build_border_tiles.py first')
     original = json.loads((SOURCE / 'index.json').read_text())
     jobs = candidates(original['tiles'])
     for old in OUT.glob(f'{PREFIX}*.webp'):

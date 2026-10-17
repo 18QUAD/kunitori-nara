@@ -38,7 +38,10 @@ class GeographyTileIndex {
   static Future<GeographyTileIndex> loadBorders() async {
     try {
       return await (_borderPending ??= rootBundle
-          .loadString('assets/data/border_tiles/index.json', cache: false)
+          .loadString(
+            'assets/data/border_tiles/index-contrast.json',
+            cache: false,
+          )
           .then((s) => GeographyTileIndex.fromJson(jsonDecode(s))));
     } catch (_) {
       _borderPending = null;
@@ -77,14 +80,16 @@ class GeographyImageCache {
   GeographyImageCache({
     this.capacity = 48,
     this.assetDirectory = 'assets/data/map_tiles_uniform',
+    this.filenamePrefix = '',
   });
   static final shared = GeographyImageCache();
   static final borders = GeographyImageCache(
     capacity: 8,
     assetDirectory: 'assets/data/border_tiles',
+    filenamePrefix: 'contrast_',
   );
   final int capacity;
-  final String assetDirectory;
+  final String assetDirectory, filenamePrefix;
   final _images = <String, ui.Image>{};
   final _pending = <String, Future<ui.Image>>{};
   final _pins = <Object, Set<String>>{};
@@ -143,7 +148,9 @@ class GeographyImageCache {
     return _pending.putIfAbsent(key, () async {
       await _acquire();
       try {
-        final bytes = await rootBundle.load('$assetDirectory/$key.webp');
+        final bytes = await rootBundle.load(
+          '$assetDirectory/$filenamePrefix$key.webp',
+        );
         final codec = await ui.instantiateImageCodec(
           bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
         );
