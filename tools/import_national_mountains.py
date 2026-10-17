@@ -6,6 +6,8 @@ Positions are cartographic annotations, never inferred summit coordinates.
 """
 import hashlib
 import json
+import re
+import urllib.request
 
 import mapbox_vector_tile
 from mapbox_vector_tile.Mapbox import vector_tile_pb2
@@ -14,6 +16,8 @@ from shapely.geometry import Point, Polygon
 from shapely.ops import unary_union
 
 from import_national_water import CACHE, DATA, SOURCE, SPEC, ZOOM, coordinate
+
+SUMMIT_SOURCE = 'https://maps.gsi.go.jp/overlay/mount1003/mount1003.geojson'
 
 
 def extract(raw):
@@ -41,6 +45,17 @@ def extract(raw):
 
 
 def main():
+    summit_file = DATA.parents[1] / 'data/raw/national_mountains/mount1003.geojson'
+    if not summit_file.exists():
+        summit_file.parent.mkdir(parents=True, exist_ok=True)
+        with urllib.request.urlopen(SUMMIT_SOURCE, timeout=60) as response:
+            summit_file.write_bytes(response.read())
+    summit_raw = summit_file.read_bytes()
+    major_names = set()
+    for feature in json.loads(summit_raw)['features']:
+        for key in ['山名', '山頂名']:
+            value = feature['properties'].get(key, '')
+            major_names.update(name for name in re.split(r'[（）()〈〉]+', value) if name)
     prefectures = json.loads((DATA / 'japan.json').read_text())['prefectures']
     shapes = [
         unary_union([make_valid(Polygon(p[0], p[1:])) for p in pref['polygons']])
@@ -79,6 +94,10 @@ def main():
             continue
         values = [labels[key] for key in sorted(labels)]
         assert values, f'No mountain annotations for {pref}'
+        for label in values:
+            label['overview'] = label['name'] in major_names
+        if not any(label['overview'] for label in values):
+            values[0]['overview'] = True
         document = dict(labels=values)
         (folder / f'{pref}.json').write_text(
             json.dumps(document, ensure_ascii=False, separators=(',', ':')) + '\n'
@@ -88,8 +107,11 @@ def main():
         source=SOURCE, specification=SPEC, zoom=ZOOM,
         attribution='国土地理院ベクトルタイル提供実験を加工して作成',
         tiles=water['tiles'], prefectures=counts,
+        overviewSource=SUMMIT_SOURCE,
+        overviewSha256=hashlib.sha256(summit_raw).hexdigest(),
         processing='山名注記(annoCtg=312)の元座標を県境内で抽出し重複を除去。'
-                   '経緯度小数6桁に丸め。山頂座標ではない。奈良県の既存データは変更しない。',
+                   '経緯度小数6桁に丸め。山頂座標ではない。奈良県の既存データは変更しない。'
+                   '県全体では国土地理院「日本の主な山岳」と同名の注記を優先。該当なしの場合は先頭の注記を使用。',
     )
     (folder / 'index.json').write_text(
         json.dumps(metadata, ensure_ascii=False, separators=(',', ':')) + '\n'

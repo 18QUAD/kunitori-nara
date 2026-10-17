@@ -15,6 +15,9 @@ void main() {
       );
       expect(layer.labels, isNotEmpty, reason: id);
       expect(layer.naraOverview, id == '29');
+      if (id != '29') {
+        expect(layer.labels.any((label) => label.overview == true), isTrue);
+      }
       if (id == '19') {
         expect(layer.labels.any((label) => label.name == '富士山'), isTrue);
         expect(layer.labels.any((label) => label.name == '若草山'), isFalse);
@@ -24,7 +27,8 @@ void main() {
 
   test('other prefectures show mountain names at prefecture scale', () {
     final layer = MountainLayer([
-      MountainLabel('富士山', const Offset(500, 500)),
+      MountainLabel('富士山', const Offset(500, 500), overview: true),
+      MountainLabel('詳細の山名', const Offset(700, 500), overview: false),
     ], naraOverview: false);
     final recorder = ui.PictureRecorder();
     final occupied = <Rect>[];
@@ -35,6 +39,41 @@ void main() {
       occupied,
     );
     expect(occupied, hasLength(1));
+    recorder.endRecording().dispose();
+  });
+
+  test('offscreen mountain annotations do not occupy visible labels', () {
+    final layer = MountainLayer([
+      MountainLabel('画面外', const Offset(1000, 1000)),
+      MountainLabel('画面内', const Offset(50, 50)),
+    ], naraOverview: false);
+    final recorder = ui.PictureRecorder();
+    final occupied = <Rect>[];
+    layer.paintLabels(
+      Canvas(recorder),
+      Path()..addRect(const Rect.fromLTWH(0, 0, 2000, 2000)),
+      1,
+      occupied,
+      viewport: const Rect.fromLTWH(0, 0, 100, 100),
+    );
+    expect(occupied, hasLength(1));
+    expect(occupied.single.center, const Offset(50, 50));
+    recorder.endRecording().dispose();
+  });
+
+  test('prefecture annotations are still clipped to municipality holes', () {
+    final layer = MountainLayer([
+      MountainLabel('市外の山', const Offset(50, 50)),
+    ], naraOverview: false);
+    final clip =
+        Path()
+          ..fillType = ui.PathFillType.evenOdd
+          ..addRect(const Rect.fromLTWH(0, 0, 200, 200))
+          ..addRect(const Rect.fromLTWH(40, 40, 20, 20));
+    final recorder = ui.PictureRecorder();
+    final occupied = <Rect>[];
+    layer.paintLabels(Canvas(recorder), clip, 1, occupied, municipal: true);
+    expect(occupied, isEmpty);
     recorder.endRecording().dispose();
   });
 

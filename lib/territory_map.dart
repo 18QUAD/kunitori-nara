@@ -808,7 +808,17 @@ class _MapPainter extends CustomPainter {
         transform.toScene(viewportSize.bottomRight(Offset.zero)),
       ),
     );
-    mountains?.paintLabels(canvas, reliefClip, zoom, occupiedLabels);
+    mountains?.paintLabels(
+      canvas,
+      reliefClip,
+      zoom,
+      occupiedLabels,
+      municipal: !overview,
+      viewport: Rect.fromPoints(
+        transform.toScene(Offset.zero),
+        transform.toScene(viewportSize.bottomRight(Offset.zero)),
+      ),
+    );
     if (game.home != null) {
       final town = atlas.towns[game.home]!;
       if ((overview || town.cityId == cityId) &&
