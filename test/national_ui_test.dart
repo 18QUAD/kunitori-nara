@@ -10,6 +10,7 @@ import 'package:kunitori/main.dart';
 import 'package:kunitori/national_map.dart';
 import 'package:kunitori/save_store.dart';
 import 'package:kunitori/territory_map.dart';
+import 'package:kunitori/border_tiles.dart';
 
 void main() {
   testWidgets(
@@ -67,6 +68,10 @@ void main() {
         await tester.pumpAndSettle();
       }
       final national = tester.widget<NationalMap>(find.byType(NationalMap));
+      expect(
+        tester.widget<BorderTiles>(find.byType(BorderTiles)).boundaryLayer,
+        'pref',
+      );
       expect(
         progressLabel(),
         '全国 ${number(game.population)} / ${number(national.data.atlas.totalPopulation)}',
@@ -219,6 +224,10 @@ void main() {
         '沖縄県 0 / ${number(national.data.atlas.prefecturePopulations['47']!)}',
       );
       expect(find.byIcon(Icons.terrain), findsOneWidget);
+      expect(
+        tester.widget<BorderTiles>(find.byType(BorderTiles)).boundaryLayer,
+        'city',
+      );
       expect(find.byIcon(Icons.terrain_outlined), findsNothing);
       for (var attempt = 0; attempt < 100; attempt++) {
         if (find.text('起伏を読み込み中…').evaluate().isEmpty &&
@@ -290,6 +299,10 @@ void main() {
       expect(
         tester.widget<TerritoryMap>(find.byType(TerritoryMap)).cityId,
         city,
+      );
+      expect(
+        tester.widget<BorderTiles>(find.byType(BorderTiles)).boundaryLayer,
+        'town',
       );
       expect(detailPainter().mountains, same(mountainLayer));
       await tester.tap(find.byKey(const Key('map-up')));

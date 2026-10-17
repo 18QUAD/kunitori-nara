@@ -10,6 +10,8 @@ import 'map_outline.dart';
 import 'map_label.dart';
 import 'office_symbols.dart';
 import 'map_compass.dart';
+import 'border_tiles.dart';
+import 'map_paint_snapshot.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -464,7 +466,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                     children: [
                       RepaintBoundary(
                         child: CustomPaint(
-                          willChange: true,
+                          isComplex: true,
                           painter: _MapPainter(
                             widget.cityId == null ? cityPaths : paths,
                             widget.cityId == null ? cityOutlines : townOutlines,
@@ -497,6 +499,17 @@ class _TerritoryMapState extends State<TerritoryMap> {
                                 ? prefecturePath
                                 : cityPaths[widget.cityId]!,
                         enabled: showGeography,
+                      ),
+                      BorderTiles(
+                        transform: controller,
+                        project: project,
+                        viewport: size,
+                        clip:
+                            widget.cityId == null
+                                ? prefecturePath
+                                : cityPaths[widget.cityId]!,
+                        prefectureId: widget.prefectureId,
+                        layer: widget.cityId == null ? 'city' : 'town',
                       ),
                       RepaintBoundary(
                         child: CustomPaint(
@@ -678,7 +691,9 @@ class _MapPainter extends CustomPainter {
     this.viewportSize,
     this.townPaths, {
     this.foreground = false,
-  }) : super(repaint: foreground ? transform : null);
+  }) : snapshot = MapPaintSnapshot(game),
+       super(repaint: foreground ? transform : null);
+  final MapPaintSnapshot snapshot;
   final bool foreground;
   final TransformationController transform;
   final Map<String, Path> paths;
@@ -698,11 +713,6 @@ class _MapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final zoom = transform.value.getMaxScaleOnAxis();
     final overview = cityId == null;
-    final stroke =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..color = Colors.white
-          ..strokeWidth = 0.5 / zoom;
     if (!foreground) {
       for (final e in paths.entries) {
         if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
@@ -744,7 +754,7 @@ class _MapPainter extends CustomPainter {
     // Borders, labels and selection remain above the terrain and water.
     for (final e in paths.entries) {
       if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
-      canvas.drawPath(outlines[e.key]!, stroke);
+      // Static city/town outlines are supplied by BorderTiles.
       if (!overview && e.key == selected) {
         canvas.drawPath(
           e.value,
@@ -906,5 +916,17 @@ class _MapPainter extends CustomPainter {
   bool shouldRebuildSemantics(covariant _MapPainter oldDelegate) => true;
 
   @override
-  bool shouldRepaint(covariant _MapPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _MapPainter old) =>
+      foreground != old.foreground ||
+      paths != old.paths ||
+      cityId != old.cityId ||
+      atlas != old.atlas ||
+      (foreground
+          ? selected != old.selected ||
+              water != old.water ||
+              mountains != old.mountains ||
+              viewportSize != old.viewportSize ||
+              reliefClip != old.reliefClip ||
+              !snapshot.sameForeground(old.snapshot)
+          : !snapshot.sameColors(old.snapshot));
 }

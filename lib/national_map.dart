@@ -7,6 +7,8 @@ import 'territory_map.dart';
 import 'map_view.dart';
 import 'geography_tiles.dart';
 import 'map_compass.dart';
+import 'border_tiles.dart';
+import 'map_paint_snapshot.dart';
 
 class NationalMap extends StatefulWidget {
   const NationalMap({
@@ -228,7 +230,7 @@ class _NationalMapState extends State<NationalMap> {
                       children: [
                         RepaintBoundary(
                           child: CustomPaint(
-                            willChange: true,
+                            isComplex: true,
                             painter: _NationalPainter(
                               paths,
                               labelBounds,
@@ -249,6 +251,13 @@ class _NationalMapState extends State<NationalMap> {
                           viewport: size,
                           clip: land,
                           enabled: showGeography,
+                        ),
+                        BorderTiles(
+                          transform: transform,
+                          project: project,
+                          viewport: size,
+                          clip: land,
+                          layer: 'pref',
                         ),
                         RepaintBoundary(
                           child: CustomPaint(
@@ -272,11 +281,7 @@ class _NationalMapState extends State<NationalMap> {
                 ),
               ),
             ),
-            const Positioned(
-              left: 8,
-              top: 8,
-              child: MapCompass(),
-            ),
+            const Positioned(left: 8, top: 8, child: MapCompass()),
             Positioned(
               right: 12,
               top: 4,
@@ -361,7 +366,11 @@ class _NationalPainter extends CustomPainter {
     this.transform,
     this.onPrefectureSelected, {
     this.foreground = false,
-  }) : super(repaint: foreground ? transform : null);
+  }) : snapshot = MapPaintSnapshot(game),
+       territoryCount = territory.length,
+       super(repaint: foreground ? transform : null);
+  final MapPaintSnapshot snapshot;
+  final int territoryCount;
   final bool foreground;
   final Map<String, Path> paths, territory;
   final Map<String, Rect> labelBounds;
@@ -416,14 +425,7 @@ class _NationalPainter extends CustomPainter {
     }
     // Keep prefecture borders and labels above the geography layers.
     for (final e in paths.entries) {
-      canvas.drawPath(
-        e.value,
-        Paint()
-          ..style = PaintingStyle.stroke
-          // Thin borders on zoom-out while retaining a readable minimum.
-          ..strokeWidth = (0.7 * math.sqrt(zoom)).clamp(0.2, 0.7) / zoom
-          ..color = Colors.white,
-      );
+      // Static prefecture outlines are supplied by BorderTiles.
       final bounds = labelBounds[e.key]!;
       final label = TextPainter(
         text: TextSpan(
@@ -447,5 +449,12 @@ class _NationalPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_NationalPainter old) => true;
+  bool shouldRepaint(_NationalPainter old) =>
+      foreground != old.foreground ||
+      paths != old.paths ||
+      labelBounds != old.labelBounds ||
+      territoryCount != old.territoryCount ||
+      (foreground
+          ? !snapshot.sameForeground(old.snapshot)
+          : !snapshot.sameColors(old.snapshot));
 }

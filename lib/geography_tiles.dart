@@ -12,11 +12,15 @@ class GeographyTileIndex {
           .map((key, value) => MapEntry(key, value as int)),
       available = (json['tiles'] as Map).keys.cast<String>().toSet(),
       maxLevel = json['maxLevel'] as int,
+      minLevel = json['minLevel'] as int? ?? 0,
+      basePixelsPerDegree = json['basePixelsPerDegree'] as int? ?? 64,
       detailLevels = (json['detailLevels'] as Map<String, dynamic>? ?? {}).map(
         (key, value) => MapEntry(key, value as int),
       );
   final Set<String> available;
   final int maxLevel;
+  final int minLevel;
+  final int basePixelsPerDegree;
   final Map<String, int> detailLevels;
   final Map<String, int> layerMaxLevels;
 
@@ -30,6 +34,18 @@ class GeographyTileIndex {
   }
 
   static Future<GeographyTileIndex>? _pending;
+  static Future<GeographyTileIndex>? _borderPending;
+  static Future<GeographyTileIndex> loadBorders() async {
+    try {
+      return await (_borderPending ??= rootBundle
+          .loadString('assets/data/border_tiles/index.json', cache: false)
+          .then((s) => GeographyTileIndex.fromJson(jsonDecode(s))));
+    } catch (_) {
+      _borderPending = null;
+      rethrow;
+    }
+  }
+
   static Future<GeographyTileIndex> load() async {
     try {
       return await (_pending ??= rootBundle
@@ -50,17 +66,25 @@ class GeographyTileIndex {
   /// Use image resolution near the device's physical pixel density; overzoom the
   /// finest source instead of synthesizing geography during a gesture.
   int levelFor(double pixelsPerDegree, {String? prefectureId}) =>
-      (math.log(pixelsPerDegree / 64) / math.ln2).ceil().clamp(
-        0,
+      (math.log(pixelsPerDegree / basePixelsPerDegree) / math.ln2).ceil().clamp(
+        minLevel,
         detailLevels[prefectureId] ?? maxLevel,
       );
 }
 
 /// Shared bounded LRU. Active map tiles are pinned; in-flight decodes deduplicate.
 class GeographyImageCache {
-  GeographyImageCache({this.capacity = 48});
+  GeographyImageCache({
+    this.capacity = 48,
+    this.assetDirectory = 'assets/data/map_tiles_uniform',
+  });
   static final shared = GeographyImageCache();
+  static final borders = GeographyImageCache(
+    capacity: 8,
+    assetDirectory: 'assets/data/border_tiles',
+  );
   final int capacity;
+  final String assetDirectory;
   final _images = <String, ui.Image>{};
   final _pending = <String, Future<ui.Image>>{};
   final _pins = <Object, Set<String>>{};
@@ -119,9 +143,7 @@ class GeographyImageCache {
     return _pending.putIfAbsent(key, () async {
       await _acquire();
       try {
-        final bytes = await rootBundle.load(
-          'assets/data/map_tiles_uniform/$key.webp',
-        );
+        final bytes = await rootBundle.load('$assetDirectory/$key.webp');
         final codec = await ui.instantiateImageCodec(
           bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
         );
@@ -150,6 +172,7 @@ class GeographyTiles extends StatefulWidget {
     required this.enabled,
     this.prefectureId,
     this.nationalOverview = false,
+    this.boundaryLayer,
   });
   final TransformationController transform;
   final Offset Function(math.Point<double>) project;
@@ -158,12 +181,16 @@ class GeographyTiles extends StatefulWidget {
   final bool enabled;
   final String? prefectureId;
   final bool nationalOverview;
+  final String? boundaryLayer;
   @override
   State<GeographyTiles> createState() => _GeographyTilesState();
 }
 
 class _GeographyTilesState extends State<GeographyTiles> {
-  final cache = GeographyImageCache.shared;
+  late final cache =
+      widget.boundaryLayer == null
+          ? GeographyImageCache.shared
+          : GeographyImageCache.borders;
   GeographyTileIndex? index;
   Timer? timer;
   int revision = 0;
@@ -179,7 +206,10 @@ class _GeographyTilesState extends State<GeographyTiles> {
 
   Future<void> _loadIndex() async {
     try {
-      final loaded = await GeographyTileIndex.load();
+      final loaded =
+          await (widget.boundaryLayer == null
+              ? GeographyTileIndex.load()
+              : GeographyTileIndex.loadBorders());
       if (!mounted) return;
       index = loaded;
       _refresh();
@@ -201,7 +231,8 @@ class _GeographyTilesState extends State<GeographyTiles> {
         old.clip != widget.clip ||
         old.enabled != widget.enabled ||
         old.prefectureId != widget.prefectureId ||
-        old.nationalOverview != widget.nationalOverview) {
+        old.nationalOverview != widget.nationalOverview ||
+        old.boundaryLayer != widget.boundaryLayer) {
       _schedule();
     }
   }
@@ -246,6 +277,10 @@ class _GeographyTilesState extends State<GeographyTiles> {
       widget.transform.toScene(widget.viewport.bottomRight(Offset.zero)),
     );
     final detailLayer = widget.nationalOverview ? 'overview' : 'detail';
+    final layers =
+        widget.boundaryLayer == null
+            ? ['shade', detailLayer]
+            : [widget.boundaryLayer!];
     List<(int, int)> visible(int lod) {
       final span = GeographyTileIndex.span(lod);
       final margin = span * math.max(unit.dx.abs(), unit.dy.abs());
@@ -258,26 +293,30 @@ class _GeographyTilesState extends State<GeographyTiles> {
       return [
         for (var x = xmin; x <= xmax; x++)
           for (var y = ymin; y <= ymax; y++)
-            if (manifest.hasTile(lod, x, y, 'shade') ||
-                manifest.hasTile(lod, x, y, detailLayer))
+            if (layers.any((layer) => manifest.hasTile(lod, x, y, layer)))
               (x, y),
       ];
     }
 
     var cells = visible(level);
     // Keep requests/memory bounded even on a very large or high-DPI viewport.
-    while (cells.length > 12 && level > 0) {
+    final cellLimit = widget.boundaryLayer == null ? 12 : 6;
+    while (cells.length > cellLimit && level > manifest.minLevel) {
       cells = visible(--level);
     }
     final wanted = <String>{};
     final descriptors = <(String, Rect, String, Rect)>[];
     for (final (x, y) in cells) {
       final target = _sceneRect(level, x, y);
-      for (final layer in ['shade', detailLayer]) {
+      for (final layer in layers) {
         final sourceLevel = manifest.layerLevel(level, layer);
         if (!manifest.hasTile(level, x, y, layer)) continue;
         // Parent images fill the target until its sharper tile arrives.
-        for (final lod in [sourceLevel, if (sourceLevel > 0) 0]) {
+        final fallback =
+            widget.boundaryLayer == null
+                ? manifest.minLevel
+                : math.max(manifest.minLevel, sourceLevel - 2);
+        for (final lod in [sourceLevel, if (sourceLevel > fallback) fallback]) {
           final divisor = 1 << (level - lod);
           final parent = '${lod}_${x ~/ divisor}_${y ~/ divisor}_$layer';
           if (!manifest.available.contains(parent)) continue;
@@ -346,8 +385,15 @@ class _GeographyTilesState extends State<GeographyTiles> {
 
   @override
   Widget build(BuildContext context) => Semantics(
+    container: true,
     label:
-        !widget.enabled
+        widget.boundaryLayer != null
+            ? (failed
+                ? '境界線画像の読込失敗'
+                : loading
+                ? '境界線画像を読み込み中'
+                : '境界線画像の読込完了')
+            : !widget.enabled
             ? '背景地図は非表示'
             : failed
             ? '背景地図の読込失敗'
@@ -393,7 +439,11 @@ class _GeographyTilesState extends State<GeographyTiles> {
                               failed = false;
                               index == null ? _loadIndex() : _refresh();
                             },
-                            child: const Text('背景地図の読込を再試行'),
+                            child: Text(
+                              widget.boundaryLayer == null
+                                  ? '背景地図の読込を再試行'
+                                  : '境界線の読込を再試行',
+                            ),
                           ),
                         ),
                       ),
@@ -429,7 +479,14 @@ class _GeographyPainter extends CustomPainter {
     canvas.clipRect(Offset.zero & size);
     canvas.translate(-origin.dx, -origin.dy);
     canvas.clipPath(clip);
-    for (final layer in ['shade', 'detail', 'overview']) {
+    for (final layer in [
+      'shade',
+      'detail',
+      'overview',
+      'pref',
+      'city',
+      'town',
+    ]) {
       for (final tile in tiles.where((t) => t.layer == layer)) {
         canvas.save();
         canvas.clipRect(tile.target);

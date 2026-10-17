@@ -258,11 +258,10 @@ void main() {
           expect(bytes.getUint8(pixel + 1), lessThan(90));
           expect(bytes.getUint8(pixel + 2), lessThan(90));
         }
-        // A neutral town keeps its white boundary.
+        // Neutral white boundaries are supplied by the raster layer, never
+        // stroked again by the dynamic selection/label painter.
         final pixel = (40 * 1200 + 1199) * 4;
-        for (var channel = 0; channel < 3; channel++) {
-          expect(bytes.getUint8(pixel + channel), greaterThanOrEqualTo(245));
-        }
+        expect(bytes.getUint8(pixel + 3), 0);
         image.dispose();
       });
       picture.dispose();
