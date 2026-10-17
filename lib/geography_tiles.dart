@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'prefecture_border_mesh.dart';
 
 /// Offline-rendered GIS pyramid. No water geometry or DEM processing at runtime.
 class GeographyTileIndex {
@@ -193,8 +194,8 @@ class GeographyTiles extends StatefulWidget {
   final bool nationalOverview;
   final String? boundaryLayer;
 
-  /// Detailed outlines already resident for the visible prefecture. Used only
-  /// to cache sharp images when zoom exceeds the offline image pyramid.
+  /// Detailed outlines already resident for the visible prefecture. Cached as
+  /// images with the same screen stroke width at every scale.
   final Iterable<Path>? boundaryPaths;
   @override
   State<GeographyTiles> createState() => _GeographyTilesState();
@@ -213,6 +214,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
   bool loading = true;
   List<_Tile> tiles = [];
   final _detailImages = <String, ui.Image>{};
+  Future<PrefectureBorderMesh>? _mesh;
 
   void _disposeImages(Iterable<ui.Image> images) {
     final retired = images.toList();
@@ -228,6 +230,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     tiles = [];
     _disposeImages(_detailImages.values);
     _detailImages.clear();
+    _mesh = null;
   }
 
   @override
@@ -314,17 +317,18 @@ class _GeographyTilesState extends State<GeographyTiles> {
     final borders = widget.boundaryLayer != null;
     refreshedZoom = zoom;
     final pixelRatio = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
-    final nativePpd =
-        manifest.basePixelsPerDegree *
-        math.pow(
-          2,
-          manifest.layerLevel(manifest.maxLevel, widget.boundaryLayer ?? ''),
-        );
     if (borders &&
-        widget.boundaryPaths != null &&
-        math.max(unit.dx.abs(), unit.dy.abs()) * zoom * pixelRatio >
-            nativePpd) {
-      await _refreshDetailImages(token, zoom, pixelRatio);
+        (widget.boundaryPaths != null || widget.boundaryLayer == 'pref')) {
+      try {
+        await _refreshDetailImages(token, zoom, pixelRatio);
+      } catch (_) {
+        if (mounted && token == revision) {
+          setState(() {
+            failed = true;
+            loading = false;
+          });
+        }
+      }
       return;
     }
     var level = manifest.levelFor(
@@ -446,7 +450,10 @@ class _GeographyTilesState extends State<GeographyTiles> {
   // stroke at deep zoom. No casing, terrain or gameplay colors are baked here.
   Future<void> _refreshDetailImages(int token, double zoom, double dpr) async {
     cache.pin(this, {});
-    var exponent = (math.log(zoom * dpr) / math.ln2).ceil();
+    // Sixteen image scales per doubling keep the apparent line within 4.3%
+    // of 0.65 logical pixels, including between the +/- button scales.
+    final exponent = (math.log(zoom) / math.ln2 * 16).ceil();
+    final renderZoom = math.pow(2, exponent / 16).toDouble();
     Rect scene = Rect.fromPoints(
       widget.transform.toScene(Offset.zero),
       widget.transform.toScene(widget.viewport.bottomRight(Offset.zero)),
@@ -465,14 +472,17 @@ class _GeographyTilesState extends State<GeographyTiles> {
             y <= (scene.bottom / side).floor();
             y++
           )
-            ('$exponent:$x:$y', Rect.fromLTWH(x * side, y * side, side, side)),
+            (
+              '$exponent@$density:$x:$y',
+              Rect.fromLTWH(x * side, y * side, side, side),
+            ),
       ];
     }
 
-    var density = math.pow(2, exponent).toDouble();
+    var density = renderZoom * dpr;
     var wanted = cells(density);
     while (wanted.length > 24) {
-      density = math.pow(2, --exponent).toDouble();
+      density /= 2;
       wanted = cells(density);
     }
     final keep = wanted.map((cell) => cell.$1).toSet();
@@ -481,7 +491,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     final retired = <ui.Image>[];
     for (final key in _detailImages.keys.toList()) {
       if (!keep.contains(key) &&
-          ((int.parse(key.split(':').first) - exponent).abs() > 1 ||
+          ((int.parse(key.split('@').first) - exponent).abs() > 1 ||
               _detailImages.length > 24 - wanted.length)) {
         retired.add(_detailImages.remove(key)!);
       }
@@ -503,8 +513,13 @@ class _GeographyTilesState extends State<GeographyTiles> {
     publish();
     _disposeImages(retired);
     final outlines = [
-      for (final path in widget.boundaryPaths!) (path, path.getBounds()),
+      for (final path in widget.boundaryPaths ?? const <Path>[])
+        (path, path.getBounds()),
     ];
+    final mesh =
+        widget.boundaryPaths == null
+            ? await (_mesh ??= PrefectureBorderMesh.load(widget.project))
+            : null;
     for (final (key, rect) in wanted) {
       if (!mounted || token != revision) return;
       if (_detailImages.containsKey(key)) continue;
@@ -512,7 +527,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
       final canvas = Canvas(recorder);
       canvas.scale(density);
       canvas.translate(-rect.left, -rect.top);
-      final combined = Path();
+      final combined = mesh?.path(rect, density) ?? Path();
       for (final (path, bounds) in outlines) {
         if (bounds.overlaps(rect.inflate(2 / density))) {
           combined.addPath(path, Offset.zero);
@@ -523,7 +538,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
         Paint()
           ..style = PaintingStyle.stroke
           ..color = Colors.white
-          ..strokeWidth = 1.25 / density,
+          ..strokeWidth = 0.65 / renderZoom,
       );
       final picture = recorder.endRecording();
       final image = await picture.toImage(512, 512);

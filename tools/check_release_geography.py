@@ -10,6 +10,8 @@ for folder in ['water','urban','relief','map_tiles','map_tiles_v2']:
 assert 'assets/data/map_tiles_uniform/' in compiled
 assert 'assets/data/map_labels/' in compiled
 assert 'assets/data/border_tiles/' in compiled
+assert 'assets/data/prefecture_border_mesh.bin' in compiled
+assert (root/'assets/assets/data/prefecture_border_mesh.bin').is_file()
 assert (root/'assets/assets/data/border_tiles/index-slim.json').is_file()
 assert all(p.name.startswith(('slim_', 'slimshared_')) for p in (root/'assets/assets/data/border_tiles').glob('*.webp')), 'Outdated border style was bundled'
 size = sum(p.stat().st_size for p in root.rglob('*') if p.is_file())

@@ -40,7 +40,7 @@ let browser;
   assert.equal(saved.scale, scale);
   assert.equal(saved.nationalView, true);
   if (process.env.EXPECT_PLAIN !== '0') {
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/slimshared_.*_pref\.webp/.test(e.name))));
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('prefecture_border_mesh.bin'))));
     assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/index-slim\.json/.test(e.name))));
     assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/\d_/.test(e.name)))));
   }

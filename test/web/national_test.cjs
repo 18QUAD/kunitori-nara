@@ -87,7 +87,7 @@ let browser;
   assert.equal(await page.getByText('川・湖を読み込めませんでした · 再試行', {exact: true}).count(), 0);
   assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('map_labels/national.json')))), 'National map must not request water names');
   await page.getByLabel('境界線画像の読込完了', {exact: true}).or(page.getByText('境界線画像の読込完了', {exact: true})).first().waitFor({timeout: 120000});
-  assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('/border_tiles/') && e.name.includes('_pref.webp'))));
+  assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('prefecture_border_mesh.bin'))));
   const nationalCamera = await view();
   await page.getByRole('button', {name: '起伏・市街地・川・池・湖を非表示', exact: true}).click();
   await page.waitForFunction(key => !JSON.parse(JSON.parse(localStorage.getItem(key))).showGeography, mapKey);
@@ -103,11 +103,6 @@ let browser;
   await page.waitForFunction(({key, scale}) => JSON.parse(JSON.parse(localStorage.getItem(key))).scale > scale, {key: mapKey, scale: before.scale});
   await page.waitForTimeout(150);
   await page.getByLabel('境界線画像の読込完了', {exact: true}).or(page.getByText('境界線画像の読込完了', {exact: true})).first().waitFor({timeout: 120000});
-  if (Number(process.env.DEVICE_SCALE_FACTOR || 1) >= 2) {
-    // Zoom refresh is debounced; the preceding ready label may still describe
-    // the old scale. Wait for the actual sharper image instead of racing it.
-    await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /border_tiles\/slimshared_-1_.*_pref\.webp/.test(e.name)), null, {timeout: 30000});
-  }
   await page.screenshot({path: path.join(output, 'national-urban-zoom.png')});
   for (var i = 0; i < 4; i++) { await page.getByRole('button', {name: '拡大', exact: true}).click(); console.log('National zoom step', i + 2); }
   await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /map_tiles_uniform\/[1-4]_/.test(e.name)));
@@ -128,7 +123,7 @@ let browser;
   assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('mountains/01.json'))));
   assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('mountains/19.json')))), 'Unseen prefecture mountain data must stay unloaded');
   await page.getByLabel('境界線画像の読込完了', {exact: true}).or(page.getByText('境界線画像の読込完了', {exact: true})).first().waitFor({timeout: 120000});
-  assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('/border_tiles/') && e.name.includes('_city.webp'))));
+  assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/.*_(pref|city|town)\.webp/.test(e.name)))), 'Every production map scale uses cached constant-width images');
   const terrain = page.getByRole('button', {name: '起伏・市街地・山名・川・池・湖を非表示', exact: true});
   await terrain.waitFor();
   await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /map_tiles_uniform\/.*_shade\.webp/.test(e.name)));
