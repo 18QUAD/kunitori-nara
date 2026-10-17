@@ -119,6 +119,8 @@ void main() {
           await tester.pump();
         }
         expect(ready, findsOneWidget);
+        expect(tester.getRect(ready).width, lessThanOrEqualTo(1));
+        expect(tester.getRect(ready).height, lessThanOrEqualTo(1));
         final dynamic painter =
             tester
                 .widget<CustomPaint>(

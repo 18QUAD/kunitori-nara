@@ -390,78 +390,90 @@ class _GeographyTilesState extends State<GeographyTiles> {
     super.dispose();
   }
 
+  String get statusLabel =>
+      widget.boundaryLayer != null
+          ? (failed
+              ? '境界線画像の読込失敗'
+              : loading
+              ? '境界線画像を読み込み中'
+              : '境界線画像の読込完了')
+          : !widget.enabled
+          ? '背景地図は非表示'
+          : failed
+          ? '背景地図の読込失敗'
+          : loading
+          ? '背景地図を読み込み中'
+          : '背景地図の読込完了';
+
   @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    label:
-        widget.boundaryLayer != null
-            ? (failed
-                ? '境界線画像の読込失敗'
-                : loading
-                ? '境界線画像を読み込み中'
-                : '境界線画像の読込完了')
-            : !widget.enabled
-            ? '背景地図は非表示'
-            : failed
-            ? '背景地図の読込失敗'
-            : loading
-            ? '背景地図を読み込み中'
-            : '背景地図の読込完了',
-    child: AnimatedBuilder(
-      animation: widget.transform,
-      builder:
-          (context, _) => LayoutBuilder(
-            builder: (context, constraints) {
-              final visible = Rect.fromPoints(
-                widget.transform.toScene(Offset.zero),
-                widget.transform.toScene(
-                  widget.viewport.bottomRight(Offset.zero),
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: widget.transform,
+    builder:
+        (context, _) => LayoutBuilder(
+          builder: (context, constraints) {
+            final visible = Rect.fromPoints(
+              widget.transform.toScene(Offset.zero),
+              widget.transform.toScene(
+                widget.viewport.bottomRight(Offset.zero),
+              ),
+            ).intersect(Offset.zero & constraints.biggest);
+            if (visible.isEmpty) return const SizedBox();
+            return Stack(
+              children: [
+                // A full-map leaf semantics node receives browser pointer
+                // events even when the painted image uses IgnorePointer.
+                // Keep the status accessible in a one-screen-pixel corner.
+                Positioned(
+                  left: visible.left,
+                  top: visible.top,
+                  width: 1 / widget.transform.value.getMaxScaleOnAxis(),
+                  height: 1 / widget.transform.value.getMaxScaleOnAxis(),
+                  child: Semantics(
+                    container: true,
+                    label: statusLabel,
+                    child: const SizedBox.expand(),
+                  ),
                 ),
-              ).intersect(Offset.zero & constraints.biggest);
-              if (visible.isEmpty) return const SizedBox();
-              return Stack(
-                children: [
+                Positioned.fromRect(
+                  rect: visible,
+                  child: RepaintBoundary(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: _GeographyPainter(
+                          widget.enabled ? tiles : [],
+                          widget.clip,
+                          visible.topLeft,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                if (failed)
                   Positioned.fromRect(
                     rect: visible,
-                    child: RepaintBoundary(
-                      child: IgnorePointer(
-                        child: CustomPaint(
-                          painter: _GeographyPainter(
-                            widget.enabled ? tiles : [],
-                            widget.clip,
-                            visible.topLeft,
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Transform.scale(
+                        alignment: Alignment.topLeft,
+                        scale: 1 / widget.transform.value.getMaxScaleOnAxis(),
+                        child: TextButton(
+                          onPressed: () {
+                            failed = false;
+                            index == null ? _loadIndex() : _refresh();
+                          },
+                          child: Text(
+                            widget.boundaryLayer == null
+                                ? '背景地図の読込を再試行'
+                                : '境界線の読込を再試行',
                           ),
                         ),
                       ),
                     ),
                   ),
-                  if (failed)
-                    Positioned.fromRect(
-                      rect: visible,
-                      child: Align(
-                        alignment: Alignment.topLeft,
-                        child: Transform.scale(
-                          alignment: Alignment.topLeft,
-                          scale: 1 / widget.transform.value.getMaxScaleOnAxis(),
-                          child: TextButton(
-                            onPressed: () {
-                              failed = false;
-                              index == null ? _loadIndex() : _refresh();
-                            },
-                            child: Text(
-                              widget.boundaryLayer == null
-                                  ? '背景地図の読込を再試行'
-                                  : '境界線の読込を再試行',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-    ),
+              ],
+            );
+          },
+        ),
   );
 }
 
