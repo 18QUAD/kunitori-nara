@@ -41,6 +41,7 @@ class MountainLayer {
                 prefectureId == '29'
                     ? 'assets/data/nara_mountains.json'
                     : 'assets/data/mountains/$prefectureId.json',
+                version: 'mountains-20261017-v2',
               ),
             )
             as Map<String, dynamic>;
