@@ -258,6 +258,109 @@ void main() {
     },
   );
 
+  testWidgets(
+    'deep town zoom caches sharp images instead of stretching the last LOD',
+    (tester) async {
+      tester.view.devicePixelRatio = 2;
+      tester.view.physicalSize = const Size(750, 900);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final semantics = tester.ensureSemantics();
+      final transform =
+          TransformationController()..value = (Matrix4.identity()..scale(24.0));
+      final clip = Path()..addRect(const Rect.fromLTWH(0, 0, 1100, 1500));
+      final outline =
+          Path()
+            ..moveTo(3, 0)
+            ..lineTo(3, 100);
+      Offset project(math.Point<double> p) => Offset(p.x * 600, p.y * 600);
+      Widget map() => MaterialApp(
+        home: OverflowBox(
+          alignment: Alignment.topLeft,
+          maxWidth: 1100,
+          maxHeight: 1500,
+          child: SizedBox(
+            width: 1100,
+            height: 1500,
+            child: BorderTiles(
+              transform: transform,
+              project: project,
+              viewport: const Size(375, 450),
+              clip: clip,
+              layer: 'town',
+              boundaryPaths: [outline],
+            ),
+          ),
+        ),
+      );
+      List<dynamic> images() {
+        final dynamic painter =
+            tester
+                .widget<CustomPaint>(
+                  find
+                      .descendant(
+                        of: find.byType(BorderTiles),
+                        matching: find.byType(CustomPaint),
+                      )
+                      .first,
+                )
+                .painter;
+        return (painter.tiles as Iterable).toList();
+      }
+
+      final ready = find.bySemanticsLabel('境界線画像の読込完了');
+      try {
+        await tester.pumpWidget(map());
+        for (final zoom in [24.0, 48.0, 150.0, 24.0]) {
+          transform.value = Matrix4.identity()..scale(zoom);
+          for (var frame = 0; frame < 100; frame++) {
+            await tester.pump();
+            for (final tile in images()) {
+              expect(
+                tile.image.width / (tile.rect.width * zoom),
+                greaterThanOrEqualTo(2),
+                reason:
+                    'Even the first deep-zoom frame must not enlarge a coarse image',
+              );
+            }
+            if (ready.evaluate().isNotEmpty) break;
+            await tester.runAsync(
+              () => Future<void>.delayed(const Duration(milliseconds: 20)),
+            );
+          }
+          expect(ready, findsOneWidget);
+          expect(images(), isNotEmpty);
+          expect(images().length, lessThanOrEqualTo(24));
+        }
+        // A rebuild such as a gameplay tap reuses native images unchanged.
+        final before = images().map((tile) => tile.image).toList();
+        await tester.pumpWidget(map());
+        expect(images().map((tile) => tile.image).toList(), before);
+        // Verify the actual rasterized white stroke, not just the image dimensions.
+        final image = images().first.image as ui.Image;
+        final bytes = await tester.runAsync(
+          () => image.toByteData(format: ui.ImageByteFormat.rawStraightRgba),
+        );
+        var alpha = 0;
+        for (var x = 0; x < 512; x++) {
+          final i = (100 * 512 + x) * 4;
+          alpha += bytes!.getUint8(i + 3);
+          if (bytes.getUint8(i + 3) > 0) {
+            expect(bytes.getUint8(i), 255);
+            expect(bytes.getUint8(i + 1), 255);
+            expect(bytes.getUint8(i + 2), 255);
+          }
+        }
+        expect(alpha / 255, inInclusiveRange(1.0, 1.5));
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      } finally {
+        semantics.dispose();
+        transform.dispose();
+      }
+    },
+  );
+
   testWidgets('tap reuses boundary images and skips unchanged map paints', (
     tester,
   ) async {

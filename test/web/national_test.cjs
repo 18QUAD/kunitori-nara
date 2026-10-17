@@ -58,9 +58,9 @@ let browser;
   assert.deepEqual((await game()).progress, fixture.progress);
   await page.getByLabel('背景地図の読込完了', {exact: true}).or(page.getByText('背景地図の読込完了', {exact: true})).first().waitFor({timeout: 30000});
   await page.getByLabel('境界線画像の読込完了', {exact: true}).or(page.getByText('境界線画像の読込完了', {exact: true})).first().waitFor({timeout: 120000});
-  if (Number(process.env.DEVICE_SCALE_FACTOR || 1) >= 2) {
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/slim_6_.*_town\.webp/.test(e.name))), 'High-DPI municipality maps must use the fine 8192px/degree boundaries');
-  }
+  // Deep zoom uses cached native images; the raster unit test checks their
+  // physical resolution and stroke width. Both modes share this manifest.
+  assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/index-slim\.json/.test(e.name))));
   const bordersBeforeTap = await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.includes('/border_tiles/')).length);
   const tilesBeforeTap = await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.includes('/map_tiles_uniform/')).length);
   await attack.tap();
@@ -68,7 +68,6 @@ let browser;
   await page.waitForTimeout(200);
   assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.includes('/map_tiles_uniform/')).length), tilesBeforeTap);
   assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.includes('/border_tiles/')).length), bordersBeforeTap, 'A campaign tap must reuse boundary images');
-  assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('/border_tiles/') && e.name.includes('_town.webp'))));
   assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /map_tiles_uniform\/[56]_/.test(e.name))), 'Nara must use the shared fine water-stroke tiles');
   assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /\/map_tiles\//.test(e.name)))), 'Current build must not load legacy tiles');
   await page.screenshot({path: path.join(output, 'nara-saved-campaign.png')});
@@ -155,11 +154,13 @@ let browser;
   await search.waitFor();
   // Wait for the sheet transition before sending input to Flutter's editor.
   await page.waitForTimeout(350);
-  await search.evaluate(e => { e.focus(); e.click(); });
+  await search.click();
+  await page.waitForTimeout(250);
   await page.keyboard.insertText('沖縄県');
   await page.screenshot({path: path.join(output, 'search-prefecture.png')});
   await page.getByText(/那覇市/).or(page.getByRole('button', {name: /那覇市/})).first().click({timeout:120000});
-  await search.evaluate(e => { e.focus(); e.click(); });
+  await search.click();
+  await page.waitForTimeout(250);
   await page.keyboard.insertText('首里');
   await page.screenshot({path: path.join(output, 'national-search.png')});
   await page.getByRole('button', {name: '閉じる', exact: true}).click();

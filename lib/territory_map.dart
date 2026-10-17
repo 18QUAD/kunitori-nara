@@ -528,6 +528,12 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       ),
                       // Boundaries top territory colors; labels and attack highlights stay in front.
                       BorderTiles(
+                        boundaryPaths:
+                            widget.cityId == null
+                                ? cityOutlines.values
+                                : widget.atlas.byCity[widget.cityId]!.map(
+                                  (town) => townOutlines[town.id]!,
+                                ),
                         transform: controller,
                         project: project,
                         viewport: size,

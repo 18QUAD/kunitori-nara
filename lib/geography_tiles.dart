@@ -182,6 +182,7 @@ class GeographyTiles extends StatefulWidget {
     this.prefectureId,
     this.nationalOverview = false,
     this.boundaryLayer,
+    this.boundaryPaths,
   });
   final TransformationController transform;
   final Offset Function(math.Point<double>) project;
@@ -191,6 +192,10 @@ class GeographyTiles extends StatefulWidget {
   final String? prefectureId;
   final bool nationalOverview;
   final String? boundaryLayer;
+
+  /// Detailed outlines already resident for the visible prefecture. Used only
+  /// to cache sharp images when zoom exceeds the offline image pyramid.
+  final Iterable<Path>? boundaryPaths;
   @override
   State<GeographyTiles> createState() => _GeographyTilesState();
 }
@@ -207,6 +212,24 @@ class _GeographyTilesState extends State<GeographyTiles> {
   bool failed = false;
   bool loading = true;
   List<_Tile> tiles = [];
+  final _detailImages = <String, ui.Image>{};
+
+  void _disposeImages(Iterable<ui.Image> images) {
+    final retired = images.toList();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final image in retired) {
+        image.dispose();
+      }
+    });
+  }
+
+  void _clearDetailImages() {
+    revision++;
+    tiles = [];
+    _disposeImages(_detailImages.values);
+    _detailImages.clear();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -231,6 +254,11 @@ class _GeographyTilesState extends State<GeographyTiles> {
   @override
   void didUpdateWidget(GeographyTiles old) {
     super.didUpdateWidget(old);
+    if (old.clip != widget.clip ||
+        old.project != widget.project ||
+        old.boundaryLayer != widget.boundaryLayer) {
+      _clearDetailImages();
+    }
     if (old.transform != widget.transform) {
       old.transform.removeListener(_schedule);
       widget.transform.addListener(_schedule);
@@ -285,6 +313,20 @@ class _GeographyTilesState extends State<GeographyTiles> {
     final zoom = widget.transform.value.getMaxScaleOnAxis();
     final borders = widget.boundaryLayer != null;
     refreshedZoom = zoom;
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
+    final nativePpd =
+        manifest.basePixelsPerDegree *
+        math.pow(
+          2,
+          manifest.layerLevel(manifest.maxLevel, widget.boundaryLayer ?? ''),
+        );
+    if (borders &&
+        widget.boundaryPaths != null &&
+        math.max(unit.dx.abs(), unit.dy.abs()) * zoom * pixelRatio >
+            nativePpd) {
+      await _refreshDetailImages(token, zoom, pixelRatio);
+      return;
+    }
     var level = manifest.levelFor(
       math.max(unit.dx.abs(), unit.dy.abs()) *
           zoom *
@@ -398,12 +440,110 @@ class _GeographyTilesState extends State<GeographyTiles> {
     if (mounted && token == revision) setState(() => loading = false);
   }
 
+  // Rasterize only on a cache miss, never in paint() or on a game tap. Fixed
+  // 512px cells and quantized scale keep both the work and native memory bounded.
+  // Unlike magnifying the last offline LOD, these images retain a subpixel white
+  // stroke at deep zoom. No casing, terrain or gameplay colors are baked here.
+  Future<void> _refreshDetailImages(int token, double zoom, double dpr) async {
+    cache.pin(this, {});
+    var exponent = (math.log(zoom * dpr) / math.ln2).ceil();
+    Rect scene = Rect.fromPoints(
+      widget.transform.toScene(Offset.zero),
+      widget.transform.toScene(widget.viewport.bottomRight(Offset.zero)),
+    ).intersect(widget.clip.getBounds());
+    List<(String, Rect)> cells(double density) {
+      if (scene.isEmpty) return [];
+      final side = 512 / density;
+      return [
+        for (
+          var x = (scene.left / side).floor();
+          x <= (scene.right / side).floor();
+          x++
+        )
+          for (
+            var y = (scene.top / side).floor();
+            y <= (scene.bottom / side).floor();
+            y++
+          )
+            ('$exponent:$x:$y', Rect.fromLTWH(x * side, y * side, side, side)),
+      ];
+    }
+
+    var density = math.pow(2, exponent).toDouble();
+    var wanted = cells(density);
+    while (wanted.length > 24) {
+      density = math.pow(2, --exponent).toDouble();
+      wanted = cells(density);
+    }
+    final keep = wanted.map((cell) => cell.$1).toSet();
+    // Retain up to one adjacent scale if space permits. Images from other
+    // prefectures/scopes are cleared by didUpdateWidget or dispose.
+    final retired = <ui.Image>[];
+    for (final key in _detailImages.keys.toList()) {
+      if (!keep.contains(key) &&
+          ((int.parse(key.split(':').first) - exponent).abs() > 1 ||
+              _detailImages.length > 24 - wanted.length)) {
+        retired.add(_detailImages.remove(key)!);
+      }
+    }
+    void publish() {
+      if (!mounted || token != revision) return;
+      setState(() {
+        tiles = [
+          for (final (key, rect) in wanted)
+            if (_detailImages[key] case final image?)
+              _Tile(image, rect, rect, widget.boundaryLayer!),
+        ];
+        loading = tiles.length != wanted.length;
+      });
+    }
+
+    // Hide the enlarged offline/previous-scale image synchronously. A cold
+    // scale must never flash a thick border while its sharp image is prepared.
+    publish();
+    _disposeImages(retired);
+    final outlines = [
+      for (final path in widget.boundaryPaths!) (path, path.getBounds()),
+    ];
+    for (final (key, rect) in wanted) {
+      if (!mounted || token != revision) return;
+      if (_detailImages.containsKey(key)) continue;
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      canvas.scale(density);
+      canvas.translate(-rect.left, -rect.top);
+      final combined = Path();
+      for (final (path, bounds) in outlines) {
+        if (bounds.overlaps(rect.inflate(2 / density))) {
+          combined.addPath(path, Offset.zero);
+        }
+      }
+      canvas.drawPath(
+        combined,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..color = Colors.white
+          ..strokeWidth = 1.25 / density,
+      );
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(512, 512);
+      picture.dispose();
+      if (!mounted || token != revision) {
+        image.dispose();
+        return;
+      }
+      _detailImages[key] = image;
+      publish();
+    }
+  }
+
   @override
   void dispose() {
     revision++;
     timer?.cancel();
     widget.transform.removeListener(_schedule);
     cache.release(this);
+    _clearDetailImages();
     super.dispose();
   }
 
