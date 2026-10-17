@@ -26325,7 +26325,7 @@ var $async$a4P=A.O(function(a,b){if(a===1){o.push(b)
 s=p}while(true)switch(s){case 0:p=4
 n=$.ayw
 s=7
-return A.P(n==null?$.ayw=$.jo().jl("assets/data/border_tiles/index-shared.json",!1).bN(new A.a4Q(),t.Q9):n,$async$a4P)
+return A.P(n==null?$.ayw=$.jo().jl("assets/data/border_tiles/index-slim.json",!1).bN(new A.a4Q(),t.Q9):n,$async$a4P)
 case 7:n=b
 q=n
 s=1
@@ -90309,15 +90309,15 @@ l===$&&A.b()
 k=a.y
 k===$&&A.b()
 j=a.x
-i=A.aBW(a.d,"pref",e,l,d,b)
-h=a.a
-g=h.c
-f=h.d
-h=h.e
-h=A.dZ(e,e,!0,e,A.azX(c,r,m,g,f,n,d,h,j?0.55:1,!0,!1),B.v,!1)
+i=a.a
+h=i.c
+g=i.d
+i=i.e
+i=A.dZ(e,e,!0,e,A.azX(c,r,m,h,g,n,d,i,j?0.55:1,!0,!1),B.v,!1)
+h=A.aBW(a.d,"pref",e,l,d,b)
 g=a.a
 f=t.p
-d=A.u7(0,A.aDN(B.nH,A.hL(e,new A.b2(1440,1360,A.e3(B.aG,A.c([new A.e2(o,e),new A.p_(d,l,b,k,j,e,!0,e,e),i,new A.e2(h,e),new A.e2(A.dZ(e,e,!1,e,A.azX(c,r,m,g.c,g.d,n,d,g.e,1,!1,!0),B.v,!0),e)],f),B.C,B.dX,e),e),B.a7,!1,e,e,e,e,e,e,e,e,e,e,e,e,e,e,e,e,e,e,e,new A.aqc(a),e,e,e,!1,B.bn),!1,150,0.08,d))
+d=A.u7(0,A.aDN(B.nH,A.hL(e,new A.b2(1440,1360,A.e3(B.aG,A.c([new A.e2(o,e),new A.p_(d,l,b,k,j,e,!0,e,e),new A.e2(i,e),h,new A.e2(A.dZ(e,e,!1,e,A.azX(c,r,m,g.c,g.d,n,d,g.e,1,!1,!0),B.v,!0),e)],f),B.C,B.dX,e),e),B.a7,!1,e,e,e,e,e,e,e,e,e,e,e,e,e,e,e,e,e,e,e,new A.aqc(a),e,e,e,!1,B.bn),!1,150,0.08,d))
 g=a.a.y
 r=A.p8(e,B.k,B.fH,B.ji,e,e,e,e,B.j8,e,e,e,e,e,e,e)
 c=a.a.f
@@ -91152,58 +91152,57 @@ q===$&&A.b()}else{p=a5.w
 p===$&&A.b()
 q=p.h(0,q)
 q.toString}p=a5.CW
-o=a5.cy
-n=a5.a.x
-if(n==null){n=a5.db
-n===$&&A.b()}else{m=a5.w
+o=a5.a
+n=o.x
+m=n==null
+if(m){l=a5.w
+l===$&&A.b()}else l=a5.e
+if(m){k=a5.x
+k===$&&A.b()}else{k=a5.f
+k===$&&A.b()}if(m){j=a5.y
+j===$&&A.b()}else{j=a5.r
+j===$&&A.b()}i=o.f
+d=o.r
+o=o.w
+c=a5.at
+b=p?a5.ch:a3
+a=p?a5.ax:a3
+if(m){m=a5.db
+m===$&&A.b()}else{m=a5.w
 m===$&&A.b()
-n=m.h(0,n)
-n.toString}m=a5.a
-l=m.c
-k=m.x
-j=k==null
-o=A.aBW(n,j?"city":"town",l,o,r,a4)
-if(j){n=a5.w
-n===$&&A.b()}else n=a5.e
-if(j){l=a5.x
-l===$&&A.b()}else{l=a5.f
-l===$&&A.b()}if(j){i=a5.y
-i===$&&A.b()}else{i=a5.r
-i===$&&A.b()}d=m.f
-c=m.r
-m=m.w
-b=a5.at
-a=a5.CW
-a0=a?a5.ch:a3
-a=a?a5.ax:a3
-if(j){j=a5.db
-j===$&&A.b()}else{j=a5.w
-j===$&&A.b()
-j=j.h(0,k)
-j.toString}a1=a5.e
-n=A.dZ(a3,a3,!0,a3,A.azV(n,l,i,d,c,m,r,k,b,h,a0,a,j,a4,a1,a5.CW?0.55:1,!0,!1),B.v,!1)
-m=a5.a
-l=m.x
-k=l==null
-if(k){j=a5.w
-j===$&&A.b()}else j=a5.e
-if(k){i=a5.x
-i===$&&A.b()}else{i=a5.f
-i===$&&A.b()}if(k){d=a5.y
+m=m.h(0,n)
+m.toString}a0=a5.e
+o=A.dZ(a3,a3,!0,a3,A.azV(l,k,j,i,d,o,r,n,c,h,b,a,m,a4,a0,a5.CW?0.55:1,!0,!1),B.v,!1)
+n=a5.cy
+m=a5.a.x
+if(m==null){m=a5.db
+m===$&&A.b()}else{l=a5.w
+l===$&&A.b()
+m=l.h(0,m)
+m.toString}l=a5.a
+k=l.c
+j=l.x
+i=j==null
+n=A.aBW(m,i?"city":"town",k,n,r,a4)
+if(i){m=a5.w
+m===$&&A.b()}else m=a5.e
+if(i){k=a5.x
+k===$&&A.b()}else{k=a5.f
+k===$&&A.b()}if(i){d=a5.y
 d===$&&A.b()}else{d=a5.r
-d===$&&A.b()}c=m.f
-b=m.r
-m=m.w
+d===$&&A.b()}c=l.f
+b=l.r
+l=l.w
 a=a5.at
 a0=a5.CW
 a1=a0?a5.ch:a3
 a0=a0?a5.ax:a3
-if(k){k=a5.db
-k===$&&A.b()}else{k=a5.w
-k===$&&A.b()
-k=k.h(0,l)
-k.toString}a2=t.p
-r=A.c([A.u7(0,A.aDN(B.nH,A.hL(B.aq,new A.b2(1100,1500,A.e3(B.aG,A.c([new A.e2(e,a3),new A.p_(r,f,a4,q,p,g,!1,a3,a3),o,new A.e2(n,a3),new A.e2(A.dZ(a3,a3,!1,a3,A.azV(j,i,d,c,b,m,r,l,a,h,a1,a0,k,a4,a5.e,1,!1,!0),B.v,!0),a3)],a2),B.C,B.dX,a3),a3),B.a7,!1,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,new A.atS(a5),a3,a3,a3,!1,B.bn),!1,150,0.08,r))],a2)
+if(i){i=a5.db
+i===$&&A.b()}else{i=a5.w
+i===$&&A.b()
+i=i.h(0,j)
+i.toString}a2=t.p
+r=A.c([A.u7(0,A.aDN(B.nH,A.hL(B.aq,new A.b2(1100,1500,A.e3(B.aG,A.c([new A.e2(e,a3),new A.p_(r,f,a4,q,p,g,!1,a3,a3),new A.e2(o,a3),n,new A.e2(A.dZ(a3,a3,!1,a3,A.azV(m,k,d,c,b,l,r,j,a,h,a1,a0,i,a4,a5.e,1,!1,!0),B.v,!0),a3)],a2),B.C,B.dX,a3),a3),B.a7,!1,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,a3,new A.atS(a5),a3,a3,a3,!1,B.bn),!1,150,0.08,r))],a2)
 if(a5.CW){q=A.c([],a2)
 p=a5.ay
 if(p||a5.ax==null)q.push(A.bG(p?"\u5c71\u540d\u3092\u8aad\u307f\u8fbc\u3081\u307e\u305b\u3093\u3067\u3057\u305f":"\u5c71\u540d\u3092\u8aad\u307f\u8fbc\u307f\u4e2d\u2026",a3,a3,a3,a3,B.acd,a3,a3))
@@ -98719,7 +98718,7 @@ B.a8i=new A.el(B.c6,B.i0)
 B.kR=new A.el(B.a3,B.eZ)
 B.a4h=new A.dd([B.i4,B.D_,B.i5,B.mp,B.a9N,B.mp,B.zK,B.mr,B.zL,B.mw,B.zw,B.mz,B.fa,B.a8h,B.fb,B.a8g,B.ia,B.a8j,B.ib,B.a8i,B.f8,B.kR,B.f9,B.i1],t.Fp)
 B.a5F={pref:0}
-B.a4i=new A.a(B.a5F,["shared_"],t.w)
+B.a4i=new A.a(B.a5F,["slimshared_"],t.w)
 B.a5y={Abort:0,Again:1,AltLeft:2,AltRight:3,ArrowDown:4,ArrowLeft:5,ArrowRight:6,ArrowUp:7,AudioVolumeDown:8,AudioVolumeMute:9,AudioVolumeUp:10,Backquote:11,Backslash:12,Backspace:13,BracketLeft:14,BracketRight:15,BrightnessDown:16,BrightnessUp:17,BrowserBack:18,BrowserFavorites:19,BrowserForward:20,BrowserHome:21,BrowserRefresh:22,BrowserSearch:23,BrowserStop:24,CapsLock:25,Comma:26,ContextMenu:27,ControlLeft:28,ControlRight:29,Convert:30,Copy:31,Cut:32,Delete:33,Digit0:34,Digit1:35,Digit2:36,Digit3:37,Digit4:38,Digit5:39,Digit6:40,Digit7:41,Digit8:42,Digit9:43,DisplayToggleIntExt:44,Eject:45,End:46,Enter:47,Equal:48,Esc:49,Escape:50,F1:51,F10:52,F11:53,F12:54,F13:55,F14:56,F15:57,F16:58,F17:59,F18:60,F19:61,F2:62,F20:63,F21:64,F22:65,F23:66,F24:67,F3:68,F4:69,F5:70,F6:71,F7:72,F8:73,F9:74,Find:75,Fn:76,FnLock:77,GameButton1:78,GameButton10:79,GameButton11:80,GameButton12:81,GameButton13:82,GameButton14:83,GameButton15:84,GameButton16:85,GameButton2:86,GameButton3:87,GameButton4:88,GameButton5:89,GameButton6:90,GameButton7:91,GameButton8:92,GameButton9:93,GameButtonA:94,GameButtonB:95,GameButtonC:96,GameButtonLeft1:97,GameButtonLeft2:98,GameButtonMode:99,GameButtonRight1:100,GameButtonRight2:101,GameButtonSelect:102,GameButtonStart:103,GameButtonThumbLeft:104,GameButtonThumbRight:105,GameButtonX:106,GameButtonY:107,GameButtonZ:108,Help:109,Home:110,Hyper:111,Insert:112,IntlBackslash:113,IntlRo:114,IntlYen:115,KanaMode:116,KeyA:117,KeyB:118,KeyC:119,KeyD:120,KeyE:121,KeyF:122,KeyG:123,KeyH:124,KeyI:125,KeyJ:126,KeyK:127,KeyL:128,KeyM:129,KeyN:130,KeyO:131,KeyP:132,KeyQ:133,KeyR:134,KeyS:135,KeyT:136,KeyU:137,KeyV:138,KeyW:139,KeyX:140,KeyY:141,KeyZ:142,KeyboardLayoutSelect:143,Lang1:144,Lang2:145,Lang3:146,Lang4:147,Lang5:148,LaunchApp1:149,LaunchApp2:150,LaunchAssistant:151,LaunchControlPanel:152,LaunchMail:153,LaunchScreenSaver:154,MailForward:155,MailReply:156,MailSend:157,MediaFastForward:158,MediaPause:159,MediaPlay:160,MediaPlayPause:161,MediaRecord:162,MediaRewind:163,MediaSelect:164,MediaStop:165,MediaTrackNext:166,MediaTrackPrevious:167,MetaLeft:168,MetaRight:169,MicrophoneMuteToggle:170,Minus:171,NonConvert:172,NumLock:173,Numpad0:174,Numpad1:175,Numpad2:176,Numpad3:177,Numpad4:178,Numpad5:179,Numpad6:180,Numpad7:181,Numpad8:182,Numpad9:183,NumpadAdd:184,NumpadBackspace:185,NumpadClear:186,NumpadClearEntry:187,NumpadComma:188,NumpadDecimal:189,NumpadDivide:190,NumpadEnter:191,NumpadEqual:192,NumpadMemoryAdd:193,NumpadMemoryClear:194,NumpadMemoryRecall:195,NumpadMemoryStore:196,NumpadMemorySubtract:197,NumpadMultiply:198,NumpadParenLeft:199,NumpadParenRight:200,NumpadSubtract:201,Open:202,PageDown:203,PageUp:204,Paste:205,Pause:206,Period:207,Power:208,PrintScreen:209,PrivacyScreenToggle:210,Props:211,Quote:212,Resume:213,ScrollLock:214,Select:215,SelectTask:216,Semicolon:217,ShiftLeft:218,ShiftRight:219,ShowAllWindows:220,Slash:221,Sleep:222,Space:223,Super:224,Suspend:225,Tab:226,Turbo:227,Undo:228,WakeUp:229,ZoomToggle:230}
 B.a4j=new A.a(B.a5y,[458907,458873,458978,458982,458833,458832,458831,458834,458881,458879,458880,458805,458801,458794,458799,458800,786544,786543,786980,786986,786981,786979,786983,786977,786982,458809,458806,458853,458976,458980,458890,458876,458875,458828,458791,458782,458783,458784,458785,458786,458787,458788,458789,458790,65717,786616,458829,458792,458798,458793,458793,458810,458819,458820,458821,458856,458857,458858,458859,458860,458861,458862,458811,458863,458864,458865,458866,458867,458812,458813,458814,458815,458816,458817,458818,458878,18,19,392961,392970,392971,392972,392973,392974,392975,392976,392962,392963,392964,392965,392966,392967,392968,392969,392977,392978,392979,392980,392981,392982,392983,392984,392985,392986,392987,392988,392989,392990,392991,458869,458826,16,458825,458852,458887,458889,458888,458756,458757,458758,458759,458760,458761,458762,458763,458764,458765,458766,458767,458768,458769,458770,458771,458772,458773,458774,458775,458776,458777,458778,458779,458780,458781,787101,458896,458897,458898,458899,458900,786836,786834,786891,786847,786826,786865,787083,787081,787084,786611,786609,786608,786637,786610,786612,786819,786615,786613,786614,458979,458983,24,458797,458891,458835,458850,458841,458842,458843,458844,458845,458846,458847,458848,458849,458839,458939,458968,458969,458885,458851,458836,458840,458855,458963,458962,458961,458960,458964,458837,458934,458935,458838,458868,458830,458827,458877,458824,458807,458854,458822,23,458915,458804,21,458823,458871,786850,458803,458977,458981,787103,458808,65666,458796,17,20,458795,22,458874,65667,786994],t.eL)
 B.a4l=new A.dd([0,"FontWeight.w100",1,"FontWeight.w200",2,"FontWeight.w300",3,"FontWeight.w400",4,"FontWeight.w500",5,"FontWeight.w600",6,"FontWeight.w700",7,"FontWeight.w800",8,"FontWeight.w900"],A.av("dd<m,l>"))
@@ -100861,7 +100860,7 @@ s($,"b1b","aLE",()=>new A.abM(A.u(t.N,A.av("ai<d2?>?(d2?)"))))
 s($,"aXB","aJ1",()=>A.eP("^[\\w!#%&'*+\\-.^`|~]+$",!0,!1))
 s($,"b0J","axz",()=>A.aTS())
 s($,"aY4","aJe",()=>A.aDy("assets/data/map_tiles_uniform",48,"",B.hL))
-s($,"aY3","aJd",()=>A.aDy("assets/data/border_tiles",8,"plain_",B.a4i))
+s($,"aY3","aJd",()=>A.aDy("assets/data/border_tiles",8,"slim_",B.a4i))
 r($,"aYc","aB4",()=>{var q=null
 return A.bz(q,q,!0,"background",new A.a7k(),q,new A.a7l(),q)})
 r($,"aYi","aJl",()=>A.bz(new A.a7C(),A.cg(3,3,4.5,7),!1,"on_background",new A.a7D(),null,new A.a7E(),null))
