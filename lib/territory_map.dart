@@ -12,6 +12,7 @@ import 'office_symbols.dart';
 import 'map_compass.dart';
 import 'border_tiles.dart';
 import 'map_paint_snapshot.dart';
+import 'map_controls.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -650,7 +651,10 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ...widget.controls.expand(
-                            (control) => [control, const SizedBox(height: 2)],
+                            (control) => [
+                              lockMapHomeControl(control, () => _imagesBusy),
+                              const SizedBox(height: 2),
+                            ],
                           ),
                           IconButton.filledTonal(
                             tooltip: '拡大',

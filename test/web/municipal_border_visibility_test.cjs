@@ -59,7 +59,11 @@ let browser;
   const before = await townRequests();
   await page.evaluate(() => {
     window.zoomLockSeen = false;
+    window.homeLockSeen = false;
     new MutationObserver(() => {
+      const home = [...document.querySelectorAll('[role="button"]')].find(e =>
+        ['本拠地へ', '攻略中の町へ'].includes(e.getAttribute('aria-label')));
+      if (home?.getAttribute('aria-disabled') === 'true') window.homeLockSeen = true;
       if ([...document.querySelectorAll('[role="button"]')].some(e =>
         ['拡大', '縮小'].includes(e.getAttribute('aria-label')) && e.getAttribute('aria-disabled') === 'true')) {
         window.zoomLockSeen = true;
@@ -73,6 +77,8 @@ let browser;
     assert.equal(await townRequests(), before, 'Zoom must not enlarge offline town images');
   }
   assert(await page.evaluate(() => window.zoomLockSeen), 'Zoom buttons must disable during image work');
+  assert(await page.evaluate(() => window.homeLockSeen), 'Home button must disable during image work');
+  assert(await page.getByRole('button', {name: '攻略中の町へ', exact: true}).isEnabled(), 'Home must re-enable after image work');
   console.log('PASS: Nabari municipal camera scale', scale, 'center', lon, lat, '; screenshot:', output);
   await browser.close();
 })().catch(async e => {console.error(e); await browser?.close(); process.exitCode = 1;});

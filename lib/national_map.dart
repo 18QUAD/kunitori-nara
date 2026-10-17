@@ -9,6 +9,7 @@ import 'geography_tiles.dart';
 import 'map_compass.dart';
 import 'border_tiles.dart';
 import 'map_paint_snapshot.dart';
+import 'map_controls.dart';
 
 class NationalMap extends StatefulWidget {
   const NationalMap({
@@ -348,7 +349,10 @@ class _NationalMapState extends State<NationalMap> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ...widget.controls.expand(
-                            (control) => [control, const SizedBox(height: 2)],
+                            (control) => [
+                              lockMapHomeControl(control, () => _imagesBusy),
+                              const SizedBox(height: 2),
+                            ],
                           ),
                           IconButton.filledTonal(
                             tooltip: '拡大',
