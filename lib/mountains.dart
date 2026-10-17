@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'coastal_assets.dart';
 import 'map_label.dart';
 
 class MountainLabel {
@@ -12,8 +12,9 @@ class MountainLabel {
 
 /// Mountain annotation positions; only names are displayed.
 class MountainLayer {
-  MountainLayer(this.labels);
+  MountainLayer(this.labels, {this.naraOverview = true});
   final List<MountainLabel> labels;
+  final bool naraOverview;
   static const overviewNames = [
     '八経ヶ岳',
     '大台ヶ原山',
@@ -30,20 +31,30 @@ class MountainLayer {
   ];
 
   static Future<MountainLayer> load(
-    Offset Function(math.Point<double>) project,
-  ) async {
+    Offset Function(math.Point<double>) project, {
+    String prefectureId = '29',
+  }) async {
     final json =
         jsonDecode(
-              await rootBundle.loadString('assets/data/nara_mountains.json'),
+              await loadCoastalAsset(
+                prefectureId == '29'
+                    ? 'assets/data/nara_mountains.json'
+                    : 'assets/data/mountains/$prefectureId.json',
+              ),
             )
             as Map<String, dynamic>;
-    return MountainLayer.fromJson(json, project);
+    return MountainLayer.fromJson(
+      json,
+      project,
+      naraOverview: prefectureId == '29',
+    );
   }
 
   factory MountainLayer.fromJson(
     Map<String, dynamic> json,
-    Offset Function(math.Point<double>) project,
-  ) {
+    Offset Function(math.Point<double>) project, {
+    bool naraOverview = true,
+  }) {
     final labels = [
       for (final l in json['labels'] as List)
         MountainLabel(
@@ -65,12 +76,14 @@ class MountainLayer {
       final order = priority(a).compareTo(priority(b));
       return order == 0 ? a.name.compareTo(b.name) : order;
     });
-    return MountainLayer(labels);
+    return MountainLayer(labels, naraOverview: naraOverview);
   }
 
   void paintLabels(Canvas canvas, Path clip, double zoom, List<Rect> occupied) {
     for (final label in labels) {
-      if (zoom < 0.65 && !overviewNames.contains(label.name)) continue;
+      if (naraOverview && zoom < 0.65 && !overviewNames.contains(label.name)) {
+        continue;
+      }
       if (!clip.contains(label.point)) continue;
       final text = TextPainter(
         text: TextSpan(

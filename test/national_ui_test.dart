@@ -223,7 +223,8 @@ void main() {
       for (var attempt = 0; attempt < 100; attempt++) {
         if (find.text('起伏を読み込み中…').evaluate().isEmpty &&
             find.text('市街地を読み込み中…').evaluate().isEmpty &&
-            find.text('川・湖を読み込み中…').evaluate().isEmpty) {
+            find.text('川・湖を読み込み中…').evaluate().isEmpty &&
+            find.text('山名を読み込み中…').evaluate().isEmpty) {
           break;
         }
         await tester.runAsync(
@@ -237,6 +238,22 @@ void main() {
         find.byType(InteractiveViewer),
       );
       final camera = prefectureViewer.transformationController!.value.clone();
+      dynamic detailPainter() {
+        final current = tester.widget<InteractiveViewer>(
+          find.byType(InteractiveViewer),
+        );
+        final box = (current.child as GestureDetector).child as SizedBox;
+        return (((box.child as Stack).children.last as RepaintBoundary).child
+                as CustomPaint)
+            .painter;
+      }
+
+      final dynamic mountainLayer = detailPainter().mountains;
+      expect(mountainLayer, isNotNull);
+      expect(mountainLayer.labels, isNotEmpty);
+      expect(mountainLayer.naraOverview, isFalse);
+      expect(find.text('山名を読み込めませんでした'), findsNothing);
+
       await waitForTiles();
       final tilePaint = tester.widget<CustomPaint>(
         find
@@ -248,22 +265,33 @@ void main() {
       );
       final dynamic tilePainter = tilePaint.painter;
       expect(tilePainter.tiles, isNotEmpty);
-      await tester.tap(find.byTooltip('起伏・市街地・川・池・湖を非表示'));
+      await tester.tap(find.byTooltip('起伏・市街地・山名・川・池・湖を非表示'));
       await tester.pumpAndSettle();
-      expect(find.byTooltip('起伏・市街地・川・池・湖を表示'), findsOneWidget);
+      expect(find.byTooltip('起伏・市街地・山名・川・池・湖を表示'), findsOneWidget);
       expect(prefectureViewer.transformationController!.value, camera);
-      await tester.tap(find.byTooltip('起伏・市街地・川・池・湖を表示'));
+      expect(detailPainter().mountains, isNull);
+      await tester.tap(find.byTooltip('起伏・市街地・山名・川・池・湖を表示'));
       await tester.pumpAndSettle();
       final prefecture = tester.widget<TerritoryMap>(find.byType(TerritoryMap));
-      final city = prefecture.atlas.cities.keys.firstWhere(
-        (id) => id.startsWith('47'),
-      );
+      expect(detailPainter().mountains, same(mountainLayer));
+      final Map<String, Path> countyPaths = detailPainter().paths;
+      final city =
+          countyPaths.entries
+              .firstWhere(
+                (entry) =>
+                    mountainLayer.labels.any(
+                          (label) => entry.value.contains(label.point),
+                        )
+                        as bool,
+              )
+              .key;
       prefecture.onCitySelected(city);
       await tester.pumpAndSettle();
       expect(
         tester.widget<TerritoryMap>(find.byType(TerritoryMap)).cityId,
         city,
       );
+      expect(detailPainter().mountains, same(mountainLayer));
       await tester.tap(find.byKey(const Key('map-up')));
       await tester.pumpAndSettle();
       expect(

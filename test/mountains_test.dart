@@ -6,6 +6,38 @@ import 'package:kunitori/mountains.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('each prefecture loads its own bundled mountain annotations', () async {
+    for (var i = 1; i <= 47; i++) {
+      final id = i.toString().padLeft(2, '0');
+      final layer = await MountainLayer.load(
+        (p) => Offset(p.x, p.y),
+        prefectureId: id,
+      );
+      expect(layer.labels, isNotEmpty, reason: id);
+      expect(layer.naraOverview, id == '29');
+      if (id == '19') {
+        expect(layer.labels.any((label) => label.name == '富士山'), isTrue);
+        expect(layer.labels.any((label) => label.name == '若草山'), isFalse);
+      }
+    }
+  });
+
+  test('other prefectures show mountain names at prefecture scale', () {
+    final layer = MountainLayer([
+      MountainLabel('富士山', const Offset(500, 500)),
+    ], naraOverview: false);
+    final recorder = ui.PictureRecorder();
+    final occupied = <Rect>[];
+    layer.paintLabels(
+      Canvas(recorder),
+      Path()..addRect(const Rect.fromLTWH(0, 0, 1000, 1000)),
+      0.2,
+      occupied,
+    );
+    expect(occupied, hasLength(1));
+    recorder.endRecording().dispose();
+  });
+
   test('moves mountain names away from occupied labels', () {
     final layer = MountainLayer([MountainLabel('山', const Offset(50, 50))]);
     final recorder = ui.PictureRecorder();

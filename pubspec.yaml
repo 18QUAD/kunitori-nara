@@ -87,6 +87,7 @@ flutter:
     - assets/data/nara_offices.json
     - assets/data/japan_offices.json
     - assets/data/nara_mountains.json
+    - assets/data/mountains/
     - assets/fonts/OFL.txt
   fonts:
     - family: NotoSansJP

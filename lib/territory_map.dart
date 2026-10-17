@@ -63,7 +63,10 @@ class _TerritoryMapState extends State<TerritoryMap> {
 
   Future<void> _loadMountains() async {
     try {
-      final loaded = await MountainLayer.load(project);
+      final loaded = await MountainLayer.load(
+        project,
+        prefectureId: widget.prefectureId,
+      );
       if (mounted) setState(() => mountains = loaded);
     } catch (_) {
       if (mounted) setState(() => mountainsFailed = true);
@@ -105,9 +108,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
         o.id: project(o.point),
     };
     _loadWater();
-    if (widget.prefectureId == '29') {
-      _loadMountains();
-    }
+    _loadMountains();
   }
 
   @override
@@ -537,8 +538,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (widget.prefectureId == '29' &&
-                        (mountainsFailed || mountains == null))
+                    if (mountainsFailed || mountains == null)
                       Text(
                         mountainsFailed ? '山名を読み込めませんでした' : '山名を読み込み中…',
                         style: const TextStyle(
@@ -559,11 +559,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 ),
               ),
             ),
-          const Positioned(
-            left: 8,
-            top: 8,
-            child: MapCompass(),
-          ),
+          const Positioned(left: 8, top: 8, child: MapCompass()),
           if (widget.showControls)
             Positioned(
               right: 12,
@@ -608,11 +604,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           ),
                           IconButton.filledTonal(
                             tooltip:
-                                widget.prefectureId != '29'
-                                    ? (showGeography
-                                        ? '起伏・市街地・川・池・湖を非表示'
-                                        : '起伏・市街地・川・池・湖を表示')
-                                    : showGeography
+                                showGeography
                                     ? '起伏・市街地・山名・川・池・湖を非表示'
                                     : '起伏・市街地・山名・川・池・湖を表示',
                             isSelected: showGeography,
@@ -620,9 +612,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                               setState(() => showGeography = !showGeography);
                               // Retry failed layers when the shared overlay is enabled.
                               _publishView();
-                              if (widget.prefectureId == '29' &&
-                                  showGeography &&
-                                  mountainsFailed) {
+                              if (showGeography && mountainsFailed) {
                                 setState(() => mountainsFailed = false);
                                 _loadMountains();
                               }
