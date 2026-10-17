@@ -9,6 +9,10 @@ for folder in ['water','urban','relief','map_tiles','map_tiles_v2']:
     assert not (root/'assets'/path).exists(), f'Unused source GIS was bundled: {path}'
 assert 'assets/data/map_tiles_uniform/' in compiled
 assert 'assets/data/map_labels/' in compiled
+assert 'assets/data/water_mesh/' in compiled
+assert (root/'assets/assets/data/map_tiles_uniform/index-dry.json').is_file()
+assert len(list((root/'assets/assets/data/water_mesh').glob('*.bin'))) == 48
+assert not list((root/'assets/assets/data/map_tiles_uniform').glob('[0-9]*_detail.webp')), 'Blurred combined water was bundled'
 assert 'assets/data/border_tiles/' in compiled
 assert 'assets/data/prefecture_border_mesh.bin' in compiled
 assert (root/'assets/assets/data/prefecture_border_mesh.bin').is_file()

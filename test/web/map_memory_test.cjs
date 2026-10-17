@@ -43,7 +43,7 @@ let browser;
     await page.waitForTimeout(150);
     await page.getByLabel('背景地図の読込完了',{exact:true}).waitFor({timeout:60000});
     if (name === '大阪府') {
-      assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /map_tiles_uniform\/[56]_.*\.webp/.test(e.name))), name + ' must load fine images');
+      assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /map_tiles_uniform\/(?:dry_)?[56]_.*\.webp/.test(e.name))), name + ' must load fine images');
       if (process.env.SCREENSHOT_DIR && samples.length < 3) {
         require('node:fs').mkdirSync(process.env.SCREENSHOT_DIR, {recursive:true});
         await page.screenshot({path:require('node:path').join(process.env.SCREENSHOT_DIR, name + '-fine.png')});

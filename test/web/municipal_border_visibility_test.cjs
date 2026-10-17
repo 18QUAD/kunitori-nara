@@ -14,17 +14,19 @@ let browser;
   const minX = xs.reduce((a,b)=>Math.min(a,b),Infinity), maxX = xs.reduce((a,b)=>Math.max(a,b),-Infinity), minY = ys.reduce((a,b)=>Math.min(a,b),Infinity), maxY = ys.reduce((a,b)=>Math.max(a,b),-Infinity);
   const ppd = Math.min(1020 / ((maxX-minX)*.826),1420/(maxY-minY));
   const dx=(1100-(maxX-minX)*.826*ppd)/2,dy=(1500-(maxY-minY)*ppd)/2;
-  const town=geo.towns.find(t=>t.id==='242080950');
+  const townId = process.env.TOWN_ID || '242080950';
+  const town=geo.towns.find(t=>t.id===townId);
+  const homeId = townId === '242081650' ? '242081210' : '242080940';
   const ring=town.polygons[0][0];
   const lon=ring.reduce((a,p)=>a+p[0],0)/ring.length,lat=ring.reduce((a,p)=>a+p[1],0)/ring.length;
   const game = {version: 1, quizRule: 'office-five-v1', dataset: 'nara-2020-v1',
     tapRule: 'population-v1', territoryUnit: 'town-v1', difficulty: 'standard',
-    home: '242080940', attackTarget: '242080950', owned: ['242080940'], everOwned: ['242080940'], titles: [],
-    mastered: [], seen: [], progress: {'242080950':88}, totalTaps: 160501,
+    home: homeId, attackTarget: townId, owned: [homeId], everOwned: [homeId], titles: [],
+    mastered: [], seen: [], progress: {[townId]:37}, totalTaps: 160501,
     cityTaps: {'24208': 484}, cityTapsComplete: true, wins: 0, losses: 0, quiz: null};
   const view = {dataset: 'nara-2020-v1', projection: '1100x1500-v1',
     center: [dx+(lon-minX)*.826*ppd, dy+(maxY-lat)*ppd], scale,
-    selected: '242080950', cityId: '24208', prefectureId: '24', nationalView: false, showGeography: true};
+    selected: townId, cityId: '24208', prefectureId: '24', nationalView: false, showGeography: true};
   browser = await chromium.launch({executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium',
     proxy: process.env.HTTPS_PROXY ? {server: process.env.HTTPS_PROXY, bypass: '127.0.0.1,localhost'} : undefined,
     args: ['--no-sandbox']});

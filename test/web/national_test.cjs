@@ -68,7 +68,7 @@ let browser;
   await page.waitForTimeout(200);
   assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.includes('/map_tiles_uniform/')).length), tilesBeforeTap);
   assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').filter(e => e.name.includes('/border_tiles/')).length), bordersBeforeTap, 'A campaign tap must reuse boundary images');
-  assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /map_tiles_uniform\/[56]_/.test(e.name))), 'Nara must use the shared fine water-stroke tiles');
+  assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /map_tiles_uniform\/(?:dry_)?[56]_/.test(e.name))), 'Nara must use the shared fine background images');
   assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /\/map_tiles\//.test(e.name)))), 'Current build must not load legacy tiles');
   await page.screenshot({path: path.join(output, 'nara-saved-campaign.png')});
   await toNational();
@@ -105,7 +105,7 @@ let browser;
   await page.getByLabel('境界線画像の読込完了', {exact: true}).or(page.getByText('境界線画像の読込完了', {exact: true})).first().waitFor({timeout: 120000});
   await page.screenshot({path: path.join(output, 'national-urban-zoom.png')});
   for (var i = 0; i < 4; i++) { await page.getByRole('button', {name: '拡大', exact: true}).click(); console.log('National zoom step', i + 2); }
-  await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /map_tiles_uniform\/[1-4]_/.test(e.name)));
+  await page.waitForFunction(() => performance.getEntriesByType('resource').some(e => /map_tiles_uniform\/(?:dry_)?[1-4]_/.test(e.name)));
   await page.getByLabel('背景地図の読込完了', {exact: true}).or(page.getByText('背景地図の読込完了', {exact: true})).first().waitFor({timeout: 30000});
   await page.screenshot({path: path.join(output, 'national-image-LOD.png')});
   for (var i = 0; i < 5; i++) await page.getByRole('button', {name: '縮小', exact: true}).click();

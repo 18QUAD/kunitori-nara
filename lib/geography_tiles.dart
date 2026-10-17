@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'prefecture_border_mesh.dart';
+import 'water_mesh.dart';
 
 /// Offline-rendered GIS pyramid. No water geometry or DEM processing at runtime.
 class GeographyTileIndex {
@@ -50,7 +51,7 @@ class GeographyTileIndex {
   static Future<GeographyTileIndex> load() async {
     try {
       return await (_pending ??= rootBundle
-          .loadString('assets/data/map_tiles_uniform/index.json')
+          .loadString('assets/data/map_tiles_uniform/index-dry.json')
           .then((s) => GeographyTileIndex.fromJson(jsonDecode(s))));
     } catch (_) {
       _pending = null;
@@ -79,9 +80,11 @@ class GeographyImageCache {
     this.capacity = 48,
     this.assetDirectory = 'assets/data/map_tiles_uniform',
     this.filenamePrefix = '',
-    this.layerFilenamePrefixes = const {},
+    this.layerFilenamePrefixes = const {'detail': 'dry_', 'overview': 'dry_'},
   });
-  static final shared = GeographyImageCache();
+  static final shared = GeographyImageCache(
+    layerFilenamePrefixes: const {'detail': 'dry_', 'overview': 'dry_'},
+  );
   static final borders = GeographyImageCache(
     capacity: 8,
     assetDirectory: 'assets/data/border_tiles',
@@ -215,6 +218,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
   List<_Tile> tiles = [];
   final _detailImages = <String, ui.Image>{};
   Future<PrefectureBorderMesh>? _mesh;
+  Future<WaterMesh>? _waterMesh;
 
   void _disposeImages(Iterable<ui.Image> images) {
     final retired = images.toList();
@@ -231,6 +235,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     _disposeImages(_detailImages.values);
     _detailImages.clear();
     _mesh = null;
+    _waterMesh = null;
   }
 
   @override
@@ -259,7 +264,9 @@ class _GeographyTilesState extends State<GeographyTiles> {
     super.didUpdateWidget(old);
     if (old.clip != widget.clip ||
         old.project != widget.project ||
-        old.boundaryLayer != widget.boundaryLayer) {
+        old.boundaryLayer != widget.boundaryLayer ||
+        old.prefectureId != widget.prefectureId ||
+        old.nationalOverview != widget.nationalOverview) {
       _clearDetailImages();
     }
     if (old.transform != widget.transform) {
@@ -282,8 +289,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     timer?.cancel();
     // Never stretch the previous border LOD for a debounce frame. Refresh the
     // exact LOD synchronously on scale changes; cached tiles appear immediately.
-    if (widget.boundaryLayer != null &&
-        widget.transform.value.getMaxScaleOnAxis() != refreshedZoom) {
+    if (widget.transform.value.getMaxScaleOnAxis() != refreshedZoom) {
       _refresh();
       return;
     }
@@ -305,6 +311,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     final token = ++revision;
     if (!widget.enabled) {
       cache.pin(this, {});
+      _clearDetailImages();
       setState(() {
         tiles = [];
         loading = false;
@@ -331,16 +338,39 @@ class _GeographyTilesState extends State<GeographyTiles> {
       }
       return;
     }
+    if (!borders) {
+      final (_, _, _, cells) = _rasterGrid(zoom, pixelRatio);
+      setState(() {
+        tiles = [
+          for (final (key, rect) in cells)
+            if (_detailImages[key] case final image?)
+              _Tile(image, rect, rect, 'background'),
+        ];
+        loading = tiles.length != cells.length;
+      });
+      if (!loading && !failed) {
+        cache.pin(this, {});
+        return;
+      }
+    }
     var level = manifest.levelFor(
       math.max(unit.dx.abs(), unit.dy.abs()) *
           zoom *
           math.min(borders ? 3.0 : 1.5, MediaQuery.devicePixelRatioOf(context)),
       prefectureId: widget.prefectureId,
     );
-    final scene = Rect.fromPoints(
+    var scene = Rect.fromPoints(
       widget.transform.toScene(Offset.zero),
       widget.transform.toScene(widget.viewport.bottomRight(Offset.zero)),
     );
+    if (!borders) {
+      final (_, _, _, cells) = _rasterGrid(zoom, pixelRatio);
+      if (cells.isNotEmpty) {
+        scene = cells
+            .map((cell) => cell.$2)
+            .reduce((a, b) => a.expandToInclude(b));
+      }
+    }
     final detailLayer = widget.nationalOverview ? 'overview' : 'detail';
     final layers =
         widget.boundaryLayer == null
@@ -371,7 +401,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     // Keep requests/memory bounded even on a very large or high-DPI viewport.
     // 24 x 512px bounds the sharp border surface at 24 MiB, plus parents.
     // Offscreen images still use the small shared LRU rather than staying pinned.
-    final cellLimit = borders ? 24 : 12;
+    final cellLimit = 24;
     while (cells.length > cellLimit && level > manifest.minLevel) {
       cells = visible(--level);
     }
@@ -401,6 +431,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
       }
     }
     cache.pin(this, wanted);
+    var backgroundTiles = <_Tile>[];
     void publish() {
       if (!mounted || token != revision) return;
       // Descriptors are sharpest-first, one image per target/layer.
@@ -410,6 +441,10 @@ class _GeographyTilesState extends State<GeographyTiles> {
         final image = cache.peek(key);
         if (image == null || !chosen.add((target, layer))) continue;
         ready.add(_Tile(image, rect, target, layer));
+      }
+      if (!borders) {
+        backgroundTiles = ready;
+        return;
       }
       final changed =
           ready.length != tiles.length ||
@@ -441,15 +476,37 @@ class _GeographyTilesState extends State<GeographyTiles> {
       publish();
     }
     cache.pin(this, wanted);
-    if (mounted && token == revision) setState(() => loading = false);
+    if (!mounted || token != revision) return;
+    if (!borders) {
+      if (failed) {
+        setState(() => loading = false);
+        return;
+      }
+      try {
+        await _refreshDetailImages(
+          token,
+          zoom,
+          pixelRatio,
+          background: backgroundTiles,
+        );
+      } catch (_) {
+        if (mounted && token == revision) {
+          setState(() {
+            failed = true;
+            loading = false;
+          });
+        }
+      }
+      if (mounted && token == revision) cache.pin(this, {});
+    } else {
+      setState(() => loading = false);
+    }
   }
 
-  // Rasterize only on a cache miss, never in paint() or on a game tap. Fixed
-  // 512px cells and quantized scale keep both the work and native memory bounded.
-  // Unlike magnifying the last offline LOD, these images retain a subpixel white
-  // stroke at deep zoom. No casing, terrain or gameplay colors are baked here.
-  Future<void> _refreshDetailImages(int token, double zoom, double dpr) async {
-    cache.pin(this, {});
+  (int, double, double, List<(String, Rect)>) _rasterGrid(
+    double zoom,
+    double dpr,
+  ) {
     // Sixteen image scales per doubling keep the apparent line within 4.3%
     // of 0.65 logical pixels, including between the +/- button scales.
     final exponent = (math.log(zoom) / math.ln2 * 16).ceil();
@@ -481,10 +538,27 @@ class _GeographyTilesState extends State<GeographyTiles> {
 
     var density = renderZoom * dpr;
     var wanted = cells(density);
-    while (wanted.length > 24) {
+    final imageLimit = widget.boundaryLayer == null ? 12 : 24;
+    while (wanted.length > imageLimit) {
       density /= 2;
       wanted = cells(density);
     }
+    return (exponent, renderZoom, density, wanted);
+  }
+
+  // Rasterize only on a cache miss, never in paint() or on a game tap. Fixed
+  // 512px cells and quantized scale keep both the work and native memory bounded.
+  // Background images combine terrain, urban land and precise water at their
+  // native display resolution. Boundary images retain their thin white stroke.
+  Future<void> _refreshDetailImages(
+    int token,
+    double zoom,
+    double dpr, {
+    List<_Tile>? background,
+  }) async {
+    if (background == null) cache.pin(this, {});
+    final (exponent, renderZoom, density, wanted) = _rasterGrid(zoom, dpr);
+    final imageLimit = widget.boundaryLayer == null ? 12 : 24;
     final keep = wanted.map((cell) => cell.$1).toSet();
     // Retain up to one adjacent scale if space permits. Images from other
     // prefectures/scopes are cleared by didUpdateWidget or dispose.
@@ -492,7 +566,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     for (final key in _detailImages.keys.toList()) {
       if (!keep.contains(key) &&
           ((int.parse(key.split('@').first) - exponent).abs() > 1 ||
-              _detailImages.length > 24 - wanted.length)) {
+              _detailImages.length > imageLimit - wanted.length)) {
         retired.add(_detailImages.remove(key)!);
       }
     }
@@ -502,7 +576,12 @@ class _GeographyTilesState extends State<GeographyTiles> {
         tiles = [
           for (final (key, rect) in wanted)
             if (_detailImages[key] case final image?)
-              _Tile(image, rect, rect, widget.boundaryLayer!),
+              _Tile(
+                image,
+                rect,
+                rect,
+                background != null ? 'background' : widget.boundaryLayer!,
+              ),
         ];
         loading = tiles.length != wanted.length;
       });
@@ -517,8 +596,17 @@ class _GeographyTilesState extends State<GeographyTiles> {
         (path, path.getBounds()),
     ];
     final mesh =
-        widget.boundaryPaths == null
+        background == null && widget.boundaryPaths == null
             ? await (_mesh ??= PrefectureBorderMesh.load(widget.project))
+            : null;
+    final water =
+        background != null
+            ? await (_waterMesh ??= WaterMesh.load(
+              widget.nationalOverview
+                  ? 'national'
+                  : widget.prefectureId ?? '29',
+              widget.project,
+            ))
             : null;
     for (final (key, rect) in wanted) {
       if (!mounted || token != revision) return;
@@ -533,13 +621,27 @@ class _GeographyTilesState extends State<GeographyTiles> {
           combined.addPath(path, Offset.zero);
         }
       }
-      canvas.drawPath(
-        combined,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..color = Colors.white
-          ..strokeWidth = 0.65 / renderZoom,
-      );
+      if (background != null) {
+        // One high-resolution background image contains terrain, urban land
+        // and precise water. Nothing paints a separate water layer in the UI.
+        canvas.save();
+        canvas.translate(rect.left, rect.top);
+        _GeographyPainter(
+          background,
+          widget.clip,
+          rect.topLeft,
+        ).paint(canvas, rect.size);
+        canvas.restore();
+        water!.paint(canvas, rect, density);
+      } else {
+        canvas.drawPath(
+          combined,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..color = Colors.white
+            ..strokeWidth = 0.65 / renderZoom,
+        );
+      }
       final picture = recorder.endRecording();
       final image = await picture.toImage(512, 512);
       picture.dispose();
@@ -631,6 +733,8 @@ class _GeographyTilesState extends State<GeographyTiles> {
                         child: TextButton(
                           onPressed: () {
                             failed = false;
+                            _waterMesh = null;
+                            _mesh = null;
                             index == null ? _loadIndex() : _refresh();
                           },
                           child: Text(
@@ -676,6 +780,7 @@ class _GeographyPainter extends CustomPainter {
       'shade',
       'detail',
       'overview',
+      'background',
       'pref',
       'city',
       'town',

@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:kunitori/water_mesh.dart';
 import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/geography_tiles.dart';
@@ -13,7 +15,7 @@ void main() {
     'pyramid covers 47 prefectures and matches physical display resolution',
     () {
       final json = jsonDecode(
-        File('assets/data/map_tiles_uniform/index.json').readAsStringSync(),
+        File('assets/data/map_tiles_uniform/index-dry.json').readAsStringSync(),
       );
       final index = GeographyTileIndex.fromJson(json);
       expect((json['prefectureCoverage'] as Map).length, 47);
@@ -51,7 +53,7 @@ void main() {
   );
 
   test(
-    'real raster water preserves Lake Biwa and its island at multiple scales',
+    'cached precise water preserves Lake Biwa, islands and overview filtering',
     () async {
       Future<List<int>> pixel(
         double lon,
@@ -59,23 +61,29 @@ void main() {
         int level, {
         String layer = 'detail',
       }) async {
-        final span = GeographyTileIndex.span(level);
-        final x = ((lon - 120) / span).floor();
-        final y = ((48 - lat) / span).floor();
-        final bytes =
-            File(
-              'assets/data/map_tiles_uniform/${level}_${x}_${y}_$layer.webp',
-            ).readAsBytesSync();
-        final codec = await ui.instantiateImageCodec(bytes);
-        final image = (await codec.getNextFrame()).image;
+        final ppd = 4096.0 * math.pow(2, level);
+        final id =
+            layer == 'overview'
+                ? 'national'
+                : lon < 136
+                ? '29'
+                : '25';
+        final mesh = WaterMesh(
+          ByteData.sublistView(
+            File('assets/data/water_mesh/$id.bin').readAsBytesSync(),
+          ),
+          (math.Point<double> p) =>
+              Offset(.5 + (p.x - lon) * ppd, .5 + (lat - p.y) * ppd),
+        );
+        final recorder = ui.PictureRecorder();
+        mesh.paint(Canvas(recorder), const Rect.fromLTWH(0, 0, 1, 1), 1);
+        final picture = recorder.endRecording();
+        final image = await picture.toImage(1, 1);
         final rgba =
             (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
-        final px = ((lon - 120 - x * span) / span * 256).floor();
-        final py = ((48 - lat - y * span) / span * 256).floor();
-        final start = (py * 256 + px) * 4;
-        final result = [for (var c = 0; c < 4; c++) rgba.getUint8(start + c)];
+        final result = [for (var c = 0; c < 4; c++) rgba.getUint8(c)];
         image.dispose();
-        codec.dispose();
+        picture.dispose();
         return result;
       }
 
@@ -102,13 +110,30 @@ void main() {
         layer: 'overview',
       );
       expect(pond[1], greaterThan(pond[0] + 25));
-      expect(overviewPond[0], greaterThan(overviewPond[1]));
+      expect(overviewPond[3], 0);
       expect(
         await pixel(136.143, 35.4219, 4, layer: 'overview'),
         isNot([0x79, 0xD9, 0xFF, 255]),
       );
       // Building land at Tokyo's metropolitan government office remains lavender.
-      final urban = await pixel(139.6917, 35.6896, 4);
+      const span = 0.25;
+      final x = ((139.6917 - 120) / span).floor(),
+          y = ((48 - 35.6896) / span).floor();
+      final codec = await ui.instantiateImageCodec(
+        File(
+          'assets/data/map_tiles_uniform/dry_4_${x}_${y}_detail.webp',
+        ).readAsBytesSync(),
+      );
+      final urbanImage = (await codec.getNextFrame()).image;
+      final pixels =
+          (await urbanImage.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      final px = ((139.6917 - 120 - x * span) / span * 256).floor(),
+          py = ((48 - 35.6896 - y * span) / span * 256).floor();
+      final urban = [
+        for (var c = 0; c < 4; c++) pixels.getUint8((py * 256 + px) * 4 + c),
+      ];
+      urbanImage.dispose();
+      codec.dispose();
       expect(urban[0], greaterThan(urban[1]));
       expect(urban[2], greaterThan(urban[0]));
     },
