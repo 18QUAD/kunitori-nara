@@ -202,6 +202,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
           path.addPath(part, Offset.zero);
         }
       }
+      for (final part in parts) {
+        if (!identical(part, path)) part.reset();
+      }
       paths[t.id] = path;
       townOutlines[t.id] = detailed ? exteriorOutline(path) : Path();
       bounds[t.id] = path.getBounds();
@@ -217,9 +220,15 @@ class _TerritoryMapState extends State<TerritoryMap> {
       return;
     }
     for (final town in widget.atlas.byCity[city]!) {
-      final path = _union([
+      final parts = [
         for (final polygon in town.polygons) _polygonPath([polygon]),
-      ]);
+      ];
+      final path = _union(parts);
+      for (final part in parts) {
+        if (!identical(part, path)) part.reset();
+      }
+      paths[town.id]?.reset();
+      townOutlines[town.id]?.reset();
       paths[town.id] = path;
       townOutlines[town.id] = exteriorOutline(path);
       bounds[town.id] = path.getBounds();
@@ -268,13 +277,15 @@ class _TerritoryMapState extends State<TerritoryMap> {
 
   Path _union(List<Path> parts) {
     if (parts.isEmpty) return Path();
-    if (parts.length == 1) return parts.single;
+    if (parts.length == 1) return Path.from(parts.single);
     final mid = parts.length ~/ 2;
-    return Path.combine(
-      PathOperation.union,
-      _union(parts.sublist(0, mid)),
-      _union(parts.sublist(mid)),
-    );
+    final left = _union(parts.sublist(0, mid));
+    final right = _union(parts.sublist(mid));
+    final combined = Path.combine(PathOperation.union, left, right);
+    // Recursive results are owned copies; input town paths remain available.
+    left.reset();
+    right.reset();
+    return combined;
   }
 
   @override

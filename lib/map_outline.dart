@@ -29,5 +29,8 @@ Path exteriorOutline(Path source) {
     exterior.add(contour);
     outline.addPath(contour.path, Offset.zero);
   }
+  for (final contour in contours) {
+    contour.path.reset();
+  }
   return outline;
 }

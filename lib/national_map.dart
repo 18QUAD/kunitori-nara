@@ -10,6 +10,7 @@ import 'map_compass.dart';
 import 'border_tiles.dart';
 import 'map_paint_snapshot.dart';
 import 'map_controls.dart';
+import 'raster_geometry.dart';
 
 class NationalMap extends StatefulWidget {
   const NationalMap({
@@ -45,7 +46,8 @@ class _NationalMapState extends State<NationalMap> {
   bool initialized = false;
   bool showGeography = true;
   final _busyImageLayers = <String>{'background', 'border'};
-  bool get _imagesBusy => _busyImageLayers.isNotEmpty;
+  bool _territoryLoading = true;
+  bool get _imagesBusy => _territoryLoading || _busyImageLayers.isNotEmpty;
 
   void _imageBusy(String layer, bool busy) {
     if (busy) {
@@ -63,28 +65,37 @@ class _NationalMapState extends State<NationalMap> {
     WidgetsBinding.instance.ensureVisualUpdate();
   }
 
-  late final Path land;
-
   final territoryPaths = <String, Path>{};
   String? error;
   Size? viewport;
   late final Offset Function(math.Point<double>) project;
+  late final RasterCoastMask coastMask;
 
   @override
   void initState() {
     super.initState();
     // A common projection retains Hokkaido and the southern islands in one scene.
     project = (p) => Offset(40 + (p.x - 122) * 42, 40 + (46 - p.y) * 50);
+    coastMask = RasterCoastMask([
+      for (final pref in widget.data.prefectures.values) ...pref.polygons,
+    ], project);
     for (final p in widget.data.prefectures.values) {
       paths[p.id] = _path(p.polygons);
       // Offshore islands must not pull the Tokyo label into the Pacific.
       labelBounds[p.id] = p.polygons
-          .map((part) => _path([part]).getBounds())
+          .map((part) {
+            // Bounds need coordinates, not a native path for every island.
+            Rect? bounds;
+            for (final ring in part) {
+              for (final point in ring) {
+                final projected = project(point);
+                final vertex = Rect.fromPoints(projected, projected);
+                bounds = bounds?.expandToInclude(vertex) ?? vertex;
+              }
+            }
+            return bounds ?? Rect.zero;
+          })
           .reduce((a, b) => a.width * a.height >= b.width * b.height ? a : b);
-    }
-    land = Path()..fillType = PathFillType.evenOdd;
-    for (final path in paths.values) {
-      land.addPath(path, Offset.zero);
     }
     showGeography = widget.initialView?.showGeography ?? true;
     _loadTerritory();
@@ -108,12 +119,14 @@ class _NationalMapState extends State<NationalMap> {
   }
 
   Future<void> _loadTerritory() async {
+    final converted = <String, Path>{};
+    var published = false;
+    _territoryLoading = true;
     try {
       final ids = {...widget.game.owned, ...widget.game.progress.keys};
       for (final id in widget.game.owned) {
         ids.addAll(widget.data.atlas.towns[id]!.neighbors);
       }
-      final converted = <String, Path>{};
       if (ids.isEmpty) await widget.data.releaseGeometry();
       for (final pref in ids.map((id) => id.substring(0, 2)).toSet()) {
         if (!mounted) return;
@@ -125,12 +138,23 @@ class _NationalMapState extends State<NationalMap> {
         });
       }
       if (!mounted) return;
+      for (final path in territoryPaths.values) {
+        path.reset();
+      }
       territoryPaths
         ..clear()
         ..addAll(converted);
-      if (mounted) setState(() => error = null);
+      published = true;
+      error = null;
     } catch (_) {
-      if (mounted) setState(() => error = '領土の形状を読み込めませんでした');
+      error = '領土の形状を読み込めませんでした';
+    } finally {
+      if (!published) {
+        for (final path in converted.values) {
+          path.reset();
+        }
+      }
+      if (mounted) setState(() => _territoryLoading = false);
     }
   }
 
@@ -170,9 +194,10 @@ class _NationalMapState extends State<NationalMap> {
   @override
   void dispose() {
     transform.dispose();
-    for (final path in {...paths.values, ...territoryPaths.values, land}) {
+    for (final path in {...paths.values, ...territoryPaths.values}) {
       path.reset();
     }
+    boundaryClip.reset();
     territoryPaths.clear();
     super.dispose();
   }
@@ -238,6 +263,7 @@ class _NationalMapState extends State<NationalMap> {
                 boundaryMargin: const EdgeInsets.all(2000),
                 child: GestureDetector(
                   onTapUp: (details) {
+                    if (_imagesBusy) return;
                     final hit = paths.entries.where(
                       (e) => e.value.contains(details.localPosition),
                     );
@@ -271,10 +297,13 @@ class _NationalMapState extends State<NationalMap> {
                           onBusyChanged:
                               (busy) => _imageBusy('background', busy),
                           nationalOverview: true,
+                          rasterClip: coastMask.path,
                           transform: transform,
                           project: project,
                           viewport: size,
-                          clip: land,
+                          // Sea is masked once inside each cached image, with
+                          // only its visible contours at image-pixel precision.
+                          clip: boundaryClip,
                           enabled: showGeography,
                         ),
                         RepaintBoundary(
@@ -403,7 +432,7 @@ class _NationalMapState extends State<NationalMap> {
                 left: 8,
                 top: 35,
                 child: TextButton(
-                  onPressed: _loadTerritory,
+                  onPressed: _territoryLoading ? null : _loadTerritory,
                   child: Text('$error · 再試行'),
                 ),
               ),

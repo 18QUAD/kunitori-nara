@@ -99,6 +99,15 @@ Future<void> _serialRaster(Future<void> Function() action) {
   return result;
 }
 
+/// Call after the departing map has been unmounted for a frame. No new scene
+/// should allocate geometry until its in-flight rasters and retirements finish.
+Future<void> retireMapImages() async {
+  await _serialRaster(() async {});
+  await Future.wait(_retirements.toList());
+  GeographyImageCache.shared.clearUnused();
+  GeographyImageCache.borders.clearUnused();
+}
+
 /// Shared bounded LRU. Active map tiles are pinned; in-flight decodes deduplicate.
 class GeographyImageCache {
   GeographyImageCache({
@@ -220,6 +229,7 @@ class GeographyTiles extends StatefulWidget {
     this.boundaryLayer,
     this.boundaryPaths,
     this.onBusyChanged,
+    this.rasterClip,
   });
   final TransformationController transform;
   final Offset Function(math.Point<double>) project;
@@ -227,6 +237,7 @@ class GeographyTiles extends StatefulWidget {
   final Path clip;
   final bool enabled;
   final ValueChanged<bool>? onBusyChanged;
+  final Path Function(Rect, double)? rasterClip;
   final String? prefectureId;
   final bool nationalOverview;
   final String? boundaryLayer;
@@ -309,6 +320,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
   void didUpdateWidget(GeographyTiles old) {
     super.didUpdateWidget(old);
     if (old.clip != widget.clip ||
+        old.rasterClip != widget.rasterClip ||
         old.project != widget.project ||
         old.boundaryLayer != widget.boundaryLayer ||
         old.prefectureId != widget.prefectureId ||
@@ -320,6 +332,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
       widget.transform.addListener(_schedule);
     }
     if (old.transform != widget.transform ||
+        old.rasterClip != widget.rasterClip ||
         old.project != widget.project ||
         old.viewport != widget.viewport ||
         old.clip != widget.clip ||
@@ -714,6 +727,9 @@ class _GeographyTilesState extends State<GeographyTiles> {
       final canvas = Canvas(recorder);
       canvas.scale(density);
       canvas.translate(-rect.left, -rect.top);
+      final rasterClip =
+          background == null ? null : widget.rasterClip?.call(rect, density);
+      if (rasterClip != null) canvas.clipPath(rasterClip);
       final combined = mesh?.path(rect, density) ?? Path();
       for (final (path, bounds) in outlines) {
         if (bounds.overlaps(rect.inflate(2 / density))) {
@@ -748,6 +764,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
       } finally {
         picture.dispose();
         combined.reset();
+        rasterClip?.reset();
       }
       if (!mounted || token != revision) {
         image.dispose();

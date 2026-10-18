@@ -67,14 +67,30 @@ void main() {
           '奈良県 ${number(game.population)} / ${number(nara.totalPopulation)}';
       expect(progressLabel(), naraProgress);
       await waitForMapImages(tester);
+      final startingCity =
+          tester.widget<TerritoryMap>(find.byType(TerritoryMap)).cityId;
       await tester.tap(find.byKey(const Key('map-up')));
       await tester.pumpAndSettle();
-      if (find.byType(NationalMap).evaluate().isEmpty) {
+      if (startingCity != null) {
         expect(progressLabel(), naraProgress);
         await waitForMapImages(tester);
         await tester.tap(find.byKey(const Key('map-up')));
         await tester.pumpAndSettle();
       }
+      // The old scene must unmount before national geometry is constructed;
+      // its native rasters can finish retiring in a subsequent real frame.
+      expect(find.byType(TerritoryMap), findsNothing);
+      for (
+        var i = 0;
+        i < 200 && find.byType(NationalMap).evaluate().isEmpty;
+        i++
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pump();
+      }
+      expect(find.byType(NationalMap), findsOneWidget);
       final national = tester.widget<NationalMap>(find.byType(NationalMap));
       expect(
         tester.widget<BorderTiles>(find.byType(BorderTiles)).boundaryLayer,
@@ -85,6 +101,16 @@ void main() {
         '全国 ${number(game.population)} / ${number(national.data.atlas.totalPopulation)}',
       );
       expect(national.data.prefectures.length, 47);
+      final background = tester.widget<GeographyTiles>(
+        find.byType(GeographyTiles),
+      );
+      expect(background.rasterClip, isNotNull);
+      expect(
+        background.clip.computeMetrics().length,
+        1,
+        reason:
+            'The display layer must use the coast mask baked into each cell',
+      );
       final viewer = tester.widget<InteractiveViewer>(
         find.byType(InteractiveViewer),
       );

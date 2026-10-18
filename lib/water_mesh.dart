@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/services.dart';
+import 'raster_geometry.dart';
 
 /// Compact original water contours. Only the visible prefecture (or the sparse
 /// national overview) is resident; paths are built on image-cache misses only.
@@ -82,6 +83,7 @@ class WaterMesh {
       for (var r = 0; r < ringCounts[i]; r++) {
         final count = bytes.getUint32(offset, Endian.little);
         offset += 4;
+        final points = <Offset>[];
         for (var p = 0; p < count; p++) {
           final point = project(
             math.Point(
@@ -89,14 +91,13 @@ class WaterMesh {
               bytes.getInt32(offset + 4, Endian.little) / 1000000,
             ),
           );
-          if (p == 0) {
-            path.moveTo(point.dx, point.dy);
-          } else {
-            path.lineTo(point.dx, point.dy);
-          }
+          points.add(point);
           offset += 8;
         }
-        if (rivers[i] == 0) path.close();
+        path.addPolygon(
+          simplifyRasterLine(points, 0.05 / density),
+          rivers[i] == 0,
+        );
       }
       paths.add((path, rivers[i] != 0));
     }

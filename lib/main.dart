@@ -164,6 +164,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   NationalAtlas? national;
   bool nationalView = false;
+  bool _changingMap = false;
   String prefectureFilter = '29';
   Atlas? atlas;
   Game? game;
@@ -1327,13 +1328,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _save();
   }
 
-  void _showNational() {
-    if (_completedCity != null) return;
+  Future<void> _showNational() async {
+    if (_completedCity != null || _changingMap) return;
     setState(() {
+      _changingMap = true;
       nationalView = true;
       cityFilter = null;
       selected = null;
     });
+    // Unmount the prefecture first. Building NationalMap in the same frame
+    // overlaps its native paths with the old scene's paths and raster images.
+    await WidgetsBinding.instance.endOfFrame;
+    await retireMapImages();
+    if (mounted) setState(() => _changingMap = false);
   }
 
   Widget _prefectureMap(Widget map) {
@@ -1368,7 +1375,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               children: [
                 Positioned.fill(
                   child:
-                      nationalView && national != null
+                      _changingMap
+                          ? const Center(child: CircularProgressIndicator())
+                          : nationalView && national != null
                           ? NationalMap(
                             data: national!,
                             game: game!,
