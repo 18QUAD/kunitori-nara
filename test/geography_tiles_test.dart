@@ -180,8 +180,12 @@ void main() {
       cache.pin(owner, {keys.first});
       expect(cache.length, 2);
       expect(cache.peek(keys.first), same(pair.first));
+      cache.clearUnused();
+      expect(cache.length, 1);
+      expect(cache.peek(keys.first), same(pair.first));
       cache.release(owner);
-      expect(cache.length, lessThanOrEqualTo(2));
+      cache.clearUnused();
+      expect(cache.length, 0);
     },
   );
   testWidgets('background raster surface stays viewport-sized at deep zoom', (

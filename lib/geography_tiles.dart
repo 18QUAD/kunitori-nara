@@ -74,6 +74,31 @@ class GeographyTileIndex {
       );
 }
 
+// Both layers and departing map widgets share one native raster queue. A
+// completed load must retire its images before another map allocates replacements.
+final _retirements = <Future<void>>{};
+Future<void>? _rasterTail;
+Future<void> _serialRaster(Future<void> Function() action) {
+  Future<void> run() async {
+    await Future.wait(_retirements.toList());
+    await action();
+  }
+
+  final previous = _rasterTail;
+  final result = previous == null ? run() : previous.then((_) => run());
+  late final Future<void> tail;
+  void finish() {
+    if (identical(_rasterTail, tail)) _rasterTail = null;
+  }
+
+  tail = result.then<void>(
+    (_) => finish(),
+    onError: (Object _, StackTrace __) => finish(),
+  );
+  _rasterTail = tail;
+  return result;
+}
+
 /// Shared bounded LRU. Active map tiles are pinned; in-flight decodes deduplicate.
 class GeographyImageCache {
   GeographyImageCache({
@@ -135,6 +160,13 @@ class GeographyImageCache {
   void release(Object owner) {
     _pins.remove(owner);
     _trim();
+  }
+
+  void clearUnused() {
+    final pinned = _pins.values.expand((keys) => keys).toSet();
+    for (final key in _images.keys.toList()) {
+      if (!pinned.contains(key)) _images.remove(key)!.dispose();
+    }
   }
 
   void _trim() {
@@ -224,19 +256,26 @@ class _GeographyTilesState extends State<GeographyTiles> {
   Future<PrefectureBorderMesh>? _mesh;
   Future<WaterMesh>? _waterMesh;
 
-  void _disposeImages(Iterable<ui.Image> images) {
+  Future<void> _disposeImages(Iterable<ui.Image> images) async {
     final retired = images.toList();
+    if (retired.isEmpty) return;
+    final complete = Completer<void>();
+    _retirements.add(complete.future);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       for (final image in retired) {
         image.dispose();
       }
+      _retirements.remove(complete.future);
+      complete.complete();
     });
+    WidgetsBinding.instance.ensureVisualUpdate();
+    await complete.future;
   }
 
   void _clearDetailImages() {
     revision++;
     tiles = [];
-    _disposeImages(_detailImages.values);
+    unawaited(_disposeImages(_detailImages.values));
     _detailImages.clear();
     _mesh = null;
     _waterMesh = null;
@@ -589,7 +628,32 @@ class _GeographyTilesState extends State<GeographyTiles> {
     double zoom,
     double dpr, {
     List<_Tile>? background,
+  }) {
+    // A layer may wait behind another map's raster. Hide previous-scale border
+    // images now, before that wait, so they cannot flash as thick stretched lines.
+    if (widget.boundaryLayer != null && mounted && token == revision) {
+      final (_, _, _, wanted) = _rasterGrid(zoom, dpr);
+      setState(() {
+        tiles = [
+          for (final (key, rect) in wanted)
+            if (_detailImages[key] case final image?)
+              _Tile(image, rect, rect, widget.boundaryLayer!),
+        ];
+        loading = tiles.length != wanted.length;
+      });
+    }
+    return _serialRaster(
+      () => _renderDetailImages(token, zoom, dpr, background: background),
+    );
+  }
+
+  Future<void> _renderDetailImages(
+    int token,
+    double zoom,
+    double dpr, {
+    List<_Tile>? background,
   }) async {
+    if (!mounted || token != revision) return;
     if (background == null) cache.pin(this, {});
     final (exponent, renderZoom, density, wanted) = _rasterGrid(zoom, dpr);
     final imageLimit = widget.boundaryLayer == null ? 12 : 24;
@@ -624,7 +688,8 @@ class _GeographyTilesState extends State<GeographyTiles> {
     // Hide the enlarged offline/previous-scale image synchronously. A cold
     // scale must never flash a thick border while its sharp image is prepared.
     publish();
-    _disposeImages(retired);
+    await _disposeImages(retired);
+    if (!mounted || token != revision) return;
     final outlines = [
       for (final path in widget.boundaryPaths ?? const <Path>[])
         (path, path.getBounds()),
@@ -677,8 +742,13 @@ class _GeographyTilesState extends State<GeographyTiles> {
         );
       }
       final picture = recorder.endRecording();
-      final image = await picture.toImage(512, 512);
-      picture.dispose();
+      late final ui.Image image;
+      try {
+        image = await picture.toImage(512, 512);
+      } finally {
+        picture.dispose();
+        combined.reset();
+      }
       if (!mounted || token != revision) {
         image.dispose();
         return;

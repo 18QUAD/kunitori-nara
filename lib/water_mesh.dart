@@ -120,5 +120,10 @@ class WaterMesh {
         canvas.drawPath(path, Paint()..color = const Color(0xff79d9ff));
       }
     }
+    // Canvas records its own path data. Release these temporary native paths
+    // after the last draw instead of waiting for JS garbage collection.
+    for (final (path, _) in paths) {
+      path.reset();
+    }
   }
 }

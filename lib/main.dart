@@ -23,6 +23,8 @@ import 'attack_button.dart';
 import 'action_button_style.dart';
 import 'regional_ads.dart';
 import 'regional_ad_card.dart';
+import 'geography_tiles.dart';
+import 'rendering_memory.dart';
 
 const ink = Color(0xFF101C2B),
     panel = Color(0xFF192A3A),
@@ -30,6 +32,7 @@ const ink = Color(0xFF101C2B),
     gold = Color(0xFFEEC47C);
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await configureRenderingMemory();
   if (!kIsWeb) {
     await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
@@ -372,6 +375,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             setState(() => _adRepository = repository);
           }),
     );
+  }
+
+  @override
+  void didHaveMemoryPressure() {
+    PaintingBinding.instance.imageCache.clear();
+    GeographyImageCache.shared.clearUnused();
+    GeographyImageCache.borders.clearUnused();
   }
 
   @override
