@@ -12,16 +12,16 @@ List<Offset> simplifyRasterLine(List<Offset> points, double tolerance) {
   final limit = tolerance * tolerance;
   while (pending.isNotEmpty) {
     final last = pending.removeLast(), first = pending.removeLast();
-    final a = points[first], b = points[last], delta = b - a;
-    final length = delta.distanceSquared;
+    final a = points[first], b = points[last];
+    final dx = b.dx - a.dx, dy = b.dy - a.dy;
+    final length = dx * dx + dy * dy;
     var maximum = limit, selected = -1;
     for (var i = first + 1; i < last; i++) {
-      final p = points[i] - a;
+      final px = points[i].dx - a.dx, py = points[i].dy - a.dy;
       final t =
-          length == 0
-              ? 0.0
-              : ((p.dx * delta.dx + p.dy * delta.dy) / length).clamp(0.0, 1.0);
-      final distance = (p - delta * t).distanceSquared;
+          length == 0 ? 0.0 : ((px * dx + py * dy) / length).clamp(0.0, 1.0);
+      final ex = px - dx * t, ey = py - dy * t;
+      final distance = ex * ex + ey * ey;
       if (distance > maximum) {
         maximum = distance;
         selected = i;
@@ -37,29 +37,35 @@ List<Offset> simplifyRasterLine(List<Offset> points, double tolerance) {
   ];
 }
 
+/// The map projection is affine. Project two extrema instead of allocating a
+/// projected point and two rectangles for every coastline vertex.
+Rect rasterPolygonBounds(
+  List<List<math.Point<double>>> polygon,
+  Offset Function(math.Point<double>) project,
+) {
+  var left = double.infinity, top = double.infinity;
+  var right = double.negativeInfinity, bottom = double.negativeInfinity;
+  for (final ring in polygon) {
+    for (final p in ring) {
+      left = math.min(left, p.x);
+      right = math.max(right, p.x);
+      top = math.min(top, p.y);
+      bottom = math.max(bottom, p.y);
+    }
+  }
+  if (!left.isFinite) return Rect.zero;
+  return Rect.fromPoints(
+    project(math.Point(left, top)),
+    project(math.Point(right, bottom)),
+  );
+}
+
 /// Build only the coast contours needed by one cached 512px background cell.
 /// The maximum displacement is 0.05 image pixels, including at deep zoom.
 class RasterCoastMask {
   RasterCoastMask(List<List<List<math.Point<double>>>> polygons, this.project) {
     for (final polygon in polygons) {
-      var left = double.infinity, top = double.infinity;
-      var right = double.negativeInfinity, bottom = double.negativeInfinity;
-      for (final ring in polygon) {
-        for (final p in ring) {
-          left = math.min(left, p.x);
-          right = math.max(right, p.x);
-          top = math.min(top, p.y);
-          bottom = math.max(bottom, p.y);
-        }
-      }
-      if (!left.isFinite) continue;
-      _parts.add((
-        Rect.fromPoints(
-          project(math.Point(left, top)),
-          project(math.Point(right, bottom)),
-        ),
-        polygon,
-      ));
+      _parts.add((rasterPolygonBounds(polygon, project), polygon));
     }
   }
   final Offset Function(math.Point<double>) project;
@@ -67,8 +73,9 @@ class RasterCoastMask {
 
   Path path(Rect rect, double density) {
     final result = Path()..fillType = PathFillType.evenOdd;
+    final area = rect.inflate(1 / density);
     for (final (bounds, polygon) in _parts) {
-      if (!bounds.overlaps(rect.inflate(1 / density))) continue;
+      if (!bounds.overlaps(area)) continue;
       for (final ring in polygon) {
         result.addPolygon(
           simplifyRasterLine(ring.map(project).toList(), 0.05 / density),

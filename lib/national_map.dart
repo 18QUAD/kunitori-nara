@@ -83,18 +83,7 @@ class _NationalMapState extends State<NationalMap> {
       paths[p.id] = _path(p.polygons);
       // Offshore islands must not pull the Tokyo label into the Pacific.
       labelBounds[p.id] = p.polygons
-          .map((part) {
-            // Bounds need coordinates, not a native path for every island.
-            Rect? bounds;
-            for (final ring in part) {
-              for (final point in ring) {
-                final projected = project(point);
-                final vertex = Rect.fromPoints(projected, projected);
-                bounds = bounds?.expandToInclude(vertex) ?? vertex;
-              }
-            }
-            return bounds ?? Rect.zero;
-          })
+          .map((part) => rasterPolygonBounds(part, project))
           .reduce((a, b) => a.width * a.height >= b.width * b.height ? a : b);
     }
     showGeography = widget.initialView?.showGeography ?? true;
