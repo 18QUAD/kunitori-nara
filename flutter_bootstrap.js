@@ -10,7 +10,7 @@ _flutter.buildConfig = {"engineRevision":"cf56914b326edb0ccb123ffdc60f00060bd513
 
 for (const build of _flutter.buildConfig.builds) {
   if (build.mainJsPath) {
-    build.mainJsPath += '?v="3108739202"';
+    build.mainJsPath += '?v="3458915413"';
   }
 }
 // Embed in the document rather than making body a fixed, non-scrolling surface.
