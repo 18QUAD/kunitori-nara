@@ -31,7 +31,8 @@ export function itemAds(data, cityId, region, category, shop) {
     const merchant = normalize(item.shopName);
     // Unknown municipality shops are accepted only on an exact municipality name.
     const correctShop = shop ? code === shop.code :
-      [region.name, `奈良県${region.name}`].includes(merchant) && /^f29/.test(code);
+      [region.taxName, `${region.prefecture}${region.taxName}`].map(normalize).includes(merchant) &&
+        code.startsWith(`f${region.taxCityId}`) && /^f\d{6}(?:-|$)/.test(code);
     const url = affiliateUrl(item.affiliateUrl);
     if (!correctShop || !url || !text(item.itemName) ||
         Number(item.availability) !== 1 || !(Number(item.affiliateRate) > 0)) continue;
@@ -53,7 +54,10 @@ export function hotelAds(data, cityId, region) {
     if (!hotel) continue;
     const address = normalize(`${text(hotel.address1)}${text(hotel.address2)}`);
     // Hotel names and search keywords alone do not establish the location.
-    const local = new RegExp(`^奈良県(?:[^市町村]*郡)?${region.name}`).test(address);
+    const prefecture = normalize(region.prefecture);
+    const localAddress = address.startsWith(prefecture) ? address.slice(prefecture.length) : '';
+    const local = localAddress.startsWith(normalize(region.name)) ||
+      (/[町村]$/.test(region.name) && new RegExp(`^[^郡]+郡${region.name}`).test(localAddress));
     const url = affiliateUrl(hotel.hotelInformationUrl);
     if (!local || !url || !text(hotel.hotelName)) continue;
     result.push({cityId, category: 'hotel', name: text(hotel.hotelName),
@@ -95,13 +99,13 @@ export async function collectAds(cityId, env, {
   jobs.push(async () => {
     const shop = region.furusatoShop ? {code: region.furusatoShop} : null;
     const parameters = shop ? {shopCode: shop.code} :
-      {keyword: `ふるさと納税 奈良県 ${region.name}`};
+      {keyword: `ふるさと納税 ${region.prefecture} ${region.taxName}`};
     return itemAds(await requestApi(ITEM_API, {...parameters,
       availability: '1', minAffiliateRate: '1', hits: '30', sort: '-reviewCount'},
       env, fetcher), cityId, region, 'furusato', shop);
   });
   jobs.push(async () => hotelAds(await requestApi(HOTEL_API, {
-    keyword: `奈良県 ${region.name}`, hits: '30',
+    keyword: `${region.prefecture} ${region.name}`, hits: '30',
   }, env, fetcher), cityId, region));
   for (let index = 0; index < jobs.length; index++) {
     if (index) await pause();
@@ -145,7 +149,7 @@ export async function handleRequest(request, env, context, {
   if (!env.RAKUTEN_APPLICATION_ID || !env.RAKUTEN_ACCESS_KEY || !env.RAKUTEN_AFFILIATE_ID) {
     return reply({cityId, ads: [], error: 'not_configured'}, 503);
   }
-  const key = new Request(`${url.origin}/internal/v1/${cityId}?account=${encodeURIComponent(env.RAKUTEN_AFFILIATE_ID)}`);
+  const key = new Request(`${url.origin}/internal/v2/${cityId}?account=${encodeURIComponent(env.RAKUTEN_AFFILIATE_ID)}`);
   const cached = await cache?.match(key);
   if (cached) {
     const body = await cached.json();

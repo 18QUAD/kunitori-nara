@@ -7,11 +7,13 @@ String? advertisingCity(
   Game game, {
   String? selectedTown,
   String? selectedCity,
+  String? selectedPrefecture,
 }) {
-  final target = game.attackTarget ?? selectedTown;
-  return target == null
-      ? selectedCity ?? game.atlas.towns[game.home]?.cityId
-      : game.atlas.towns[target]?.cityId;
+  return game.tipsCityFor(
+    selectedTown: selectedTown,
+    selectedCity: selectedCity,
+    selectedPrefecture: selectedPrefecture,
+  );
 }
 
 class RegionalAd {
@@ -108,14 +110,19 @@ class RegionalAdRepository {
   }
 
   Future<RegionalAdBatch> load(String cityId) {
-    final cached = _cache[cityId];
+    _cache.removeWhere((_, value) => !DateTime.now().isBefore(value.expiresAt));
+    final cached = _cache.remove(cityId);
     if (cached != null && DateTime.now().isBefore(cached.expiresAt)) {
+      _cache[cityId] = cached;
       return Future.value(cached);
     }
     return _pending.putIfAbsent(
       cityId,
       () => _fetch(cityId).whenComplete(() {
         _pending.remove(cityId);
+        while (_cache.length > 3) {
+          _cache.remove(_cache.keys.first);
+        }
       }),
     );
   }
@@ -126,7 +133,8 @@ class RegionalAdRepository {
       const [],
       now.add(const Duration(minutes: 5)),
     );
-    if (endpoint == null || !RegExp(r'^29\d{3}$').hasMatch(cityId)) {
+    if (endpoint == null ||
+        !RegExp(r'^(?:0[1-9]|[1-3]\d|4[0-7])\d{3}$').hasMatch(cityId)) {
       return empty;
     }
     try {

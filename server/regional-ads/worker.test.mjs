@@ -13,9 +13,13 @@ const request = city => new Request(`https://worker.example/ads?city=${city}`,
   {headers: {Origin: 'https://18quad.github.io'}});
 const context = {waitUntil(promise) {return promise;}};
 
-test('all 39 game municipality IDs are configured', () => {
+test('all 1896 game municipality IDs are configured', () => {
   const atlas = JSON.parse(fs.readFileSync('../../assets/data/nara.json'));
-  assert.deepEqual(Object.keys(regions).sort(), atlas.cities.map(c => c.id).sort());
+  const national = JSON.parse(fs.readFileSync('../../assets/data/japan.json'));
+  assert.deepEqual(Object.keys(regions).sort(), [...atlas.cities, ...national.cities].map(c => c.id).sort());
+  assert.equal(new Set(Object.values(regions).map(r => r.prefecture)).size, 47);
+  assert.equal(regions['14131'].taxCityId, '14130');
+  assert.equal(regions['13101'].taxName, '千代田区');
 });
 
 test('local products require a verified shop, availability, and affiliate URL', () => {
@@ -48,7 +52,7 @@ test('hotel address must match Nara and the municipality including county prefix
 
 test('unknown regions, disallowed origins, and missing credentials never call Rakuten', async () => {
   const options = {fetcher() {throw new Error('unexpected call');}};
-  assert.equal((await handleRequest(request('13101'), env, context, options)).status, 400);
+  assert.equal((await handleRequest(request('99001'), env, context, options)).status, 400);
   assert.equal((await handleRequest(request('29201'), {}, context, options)).status, 503);
   const bad = new Request('https://worker.example/ads?city=29201',
     {headers: {Origin: 'https://evil.test'}});
@@ -84,4 +88,38 @@ test('credentials stay upstream; category failures do not hide valid ads; cache 
   time = new Date('2026-10-12T00:06:00Z');
   await handleRequest(request('29201'), env, context, options);
   assert.ok(calls > firstCalls);
+});
+
+
+test('nationwide same-name municipalities require the prefecture and tax municipality code', () => {
+  const item = {...product, shopCode:'f403431-shime', shopName:'福岡県志免町'};
+  assert.equal(itemAds({Items:[item]}, '40343', regions['40343'], 'furusato', null).length, 1);
+  assert.equal(itemAds({Items:[{...item, shopCode:'f294461-tenkawa', shopName:'奈良県天川村'}]}, '40343', regions['40343'], 'furusato', null).length, 0);
+  const kawanishi = {...product, shopCode:'f063827-kawanishi', shopName:'川西町'};
+  assert.equal(itemAds({Items:[kawanishi]}, '29361', regions['29361'], 'furusato', null).length, 0);
+  assert.equal(itemAds({Items:[kawanishi]}, '06382', regions['06382'], 'furusato', null).length, 1);
+});
+
+test('designated wards use their parent city for donations, special wards keep their own municipality', () => {
+  const item = {...product, shopCode:'f141003-yokohama', shopName:'神奈川県横浜市'};
+  assert.equal(itemAds({Items:[item]}, '14101', regions['14101'], 'furusato', null).length, 1);
+  assert.equal(itemAds({Items:[{...item, shopCode:'f141305-kawasaki'}]}, '14101', regions['14101'], 'furusato', null).length, 0);
+  const tokyo = {...product, shopCode:'f131016-chiyoda', shopName:'東京都千代田区'};
+  assert.equal(itemAds({Items:[tokyo]}, '13101', regions['13101'], 'furusato', null).length, 1);
+});
+
+test('nationwide hotels match the actual prefecture, ward and county address', () => {
+  const hotels = addresses => ({hotels:addresses.map(address => ({hotel:[{hotelBasicInfo:{hotelName:'施設', hotelInformationUrl:link, address1:address}}]}))});
+  assert.equal(hotelAds(hotels(['三重県名張市中央1','三重県津市1','奈良県名張市1']), '24208', regions['24208']).length, 1);
+  assert.equal(hotelAds(hotels(['北海道札幌市中央区1','北海道札幌市北区1']), '01101', regions['01101']).length, 1);
+  assert.equal(hotelAds(hotels(['北海道余市郡仁木町1']), '01407', regions['01407']).length, 1);
+});
+
+test('nationwide API queries use prefecture and donation parent city without invented shop codes', async () => {
+  const calls = [];
+  const options = {pause:async()=>{},fetcher:async(url)=>{calls.push(url);return Response.json({});}};
+  assert.equal((await handleRequest(request('14131'),env,context,options)).status,200);
+  assert.equal(calls[0].searchParams.get('keyword'),'ふるさと納税 神奈川県 川崎市');
+  assert.equal(calls[0].searchParams.has('shopCode'),false);
+  assert.equal(calls[1].searchParams.get('keyword'),'神奈川県 川崎市川崎区');
 });

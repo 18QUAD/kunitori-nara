@@ -229,6 +229,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             game!,
             selectedTown: selected,
             selectedCity: cityFilter,
+            selectedPrefecture: nationalView ? null : prefectureFilter,
           );
 
   RegionalAd? get _visibleAd {

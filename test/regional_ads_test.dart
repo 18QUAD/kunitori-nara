@@ -75,7 +75,44 @@ void main() {
       await repository.load('29201');
       expect(calls, 1);
       expect((await repository.load('29202')).ads, isEmpty);
-      expect((await repository.load('13101')).ads, isEmpty);
+      expect((await repository.load('13101')).ads, hasLength(2));
+      expect((await repository.load('99001')).ads, isEmpty);
+    },
+  );
+
+  test(
+    'nationwide requests retain affiliate and furusato cards and evict old cities',
+    () async {
+      var calls = 0;
+      final repository = RegionalAdRepository(
+        Uri.parse('https://worker.test/ads'),
+        client: MockClient((request) async {
+          calls++;
+          final city = request.url.queryParameters['city']!;
+          return http.Response(
+            jsonEncode({
+              'cityId': city,
+              'expiresAt':
+                  DateTime.now()
+                      .add(const Duration(minutes: 30))
+                      .toIso8601String(),
+              'ads': [
+                {...adJson(city), 'category': 'furusato'},
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }),
+      );
+      addTearDown(repository.dispose);
+      for (final city in ['24208', '01101', '13101', '47201']) {
+        expect((await repository.load(city)).ads.single.category, 'furusato');
+      }
+      await repository.load('47201');
+      expect(calls, 4);
+      await repository.load('24208');
+      expect(calls, 5);
     },
   );
 
@@ -97,6 +134,40 @@ void main() {
     addTearDown(repository.dispose);
     expect((await repository.load('29201')).ads, isEmpty);
   });
+
+  test(
+    'advertisements follow a viewed non-Nara municipality and prefecture',
+    () async {
+      final raw = jsonDecode(
+        await rootBundle.loadString('assets/data/nara.json'),
+      );
+      final atlas = Atlas.fromJson({
+        'cities': [
+          ...raw['cities'],
+          {'id': '24208', 'name': '名張市'},
+        ],
+        'towns': [
+          ...raw['towns'],
+          {
+            'id': '242080010',
+            'name': '中央町',
+            'cityId': '24208',
+            'population': 10,
+            'area': 1,
+            'neighbors': [],
+            'polygons': [],
+          },
+        ],
+      });
+      final game =
+          Game(atlas)
+            ..setHome('29205043001')
+            ..selectAttackTarget('29205041001');
+      expect(advertisingCity(game, selectedCity: '24208'), '24208');
+      expect(advertisingCity(game, selectedPrefecture: '24'), '24208');
+      expect(advertisingCity(game, selectedCity: '29201'), '29205');
+    },
+  );
 
   testWidgets('card fits a narrow tips area and opens only on tap', (
     tester,
