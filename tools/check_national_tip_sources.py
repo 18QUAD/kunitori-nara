@@ -35,7 +35,7 @@ def main():
         assert parse_qs(u.query)['oldid'] == [str(entry['revisionId'])]
         assert entry['license'] == 'CC BY-SA 4.0' and entry['attribution']
         assert entry['reviewStatus'] == 'unreviewed_source_material'
-        assert entry['parserVersion'] == 2
+        assert entry['parserVersion'] == 3
         assert entry['retrievedAt'] and len(entry['sha256']) == 64
         assert all(not any(word in m['text'] for word in ['人口', '世帯', '推計']) for m in entry['materials'])
         if args.snapshots:

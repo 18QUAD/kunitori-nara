@@ -43,6 +43,10 @@ let browser;
   for (const label of ['境界線画像の読込完了', '背景地図の読込完了']) {
     await page.getByLabel(label, {exact: true}).or(page.getByText(label, {exact: true})).first().waitFor({timeout: 120000});
   }
+  const regionalTips = JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/data/tips/24.json'))).cities['24208'];
+  await page.waitForFunction(texts => [...document.querySelectorAll('flt-semantics')].some(e => texts.includes(e.textContent) || texts.includes(e.getAttribute('aria-label'))), regionalTips.map(t => t.text), {timeout:30000});
+  const regionalFiles = await page.evaluate(() => performance.getEntriesByType('resource').filter(e => /\/tips\/\d{2}\.json/.test(e.name)).map(e => e.name));
+  assert(regionalFiles.length === 1 && regionalFiles[0].includes('/tips/24.json'));
   const saved = await page.evaluate(() => JSON.parse(JSON.parse(localStorage.getItem('flutter.kunitori.nara.mapView.v1'))));
   assert.equal(saved.scale, scale);
   assert.equal(saved.nationalView, false);

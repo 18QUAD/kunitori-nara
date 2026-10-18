@@ -234,7 +234,24 @@ void main() {
         tester.widget<TerritoryMap>(find.byType(TerritoryMap)).prefectureId,
         '47',
       );
-      expect(find.text('この地域の歴史・文化tipsは準備中です。'), findsOneWidget);
+      for (
+        var i = 0;
+        i < 100 && game.atlas.facts['47201']!.first.category == '仮tips';
+        i++
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 30)),
+        );
+        await tester.pump();
+      }
+      expect(game.atlas.facts['47201']!.first.category, isNot('仮tips'));
+      expect(find.text('この地域の歴史・文化tipsは準備中です。'), findsNothing);
+      expect(
+        game.atlas.facts['47201']!.every(
+          (f) => !f.quizEligible && f.text.runes.length <= 40,
+        ),
+        isTrue,
+      );
       expect(
         progressLabel(),
         '沖縄県 0 / ${number(national.data.atlas.prefecturePopulations['47']!)}',

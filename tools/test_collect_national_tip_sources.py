@@ -36,6 +36,11 @@ class SourceParserTest(unittest.TestCase):
         self.assertIsNone(error)
         self.assertEqual(len(record['materials']), 3)
 
+    def test_citation_removal_preserves_following_sentence_text(self):
+        body = self.source().replace('市内には古代寺院の跡が残っています。<sup>1</sup>'.encode(), '江戸時代<sup>注釈</sup>には宿場町として栄えました。'.encode())
+        record, _ = self.parse_source(body)
+        self.assertEqual(record['materials'][1]['text'], '江戸時代には宿場町として栄えました。')
+
     def test_population_and_reference_lists_are_not_tip_material(self):
         record, _ = self.parse_source(self.source())
         self.assertEqual(len(record['materials']), 3)

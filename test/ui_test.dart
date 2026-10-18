@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'map_image_wait.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -148,6 +149,7 @@ void main() {
             .transformationController!
             .value
             .getMaxScaleOnAxis();
+    await waitForMapImages(tester);
     await tester.tap(find.byKey(const Key('map-home')));
     await tester.pumpAndSettle();
     expectCenteredOn(tester, '292010010');
@@ -199,10 +201,7 @@ void main() {
     );
     expect(map.game.attackTarget, target.id);
     expect(map.game.progress.containsKey(other.id), isFalse);
-    expect(
-      find.text('攻略先は1か所です。攻略中の町を獲得してから選んでください。'),
-      findsNothing,
-    );
+    expect(find.text('攻略先は1か所です。攻略中の町を獲得してから選んでください。'), findsNothing);
     expect(
       tester.widget<Text>(find.byKey(const Key('attack-progress'))).data,
       '10',
@@ -239,10 +238,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getRect(find.byKey(const Key('fixed-region'))), fixed);
     await tester.ensureVisible(find.byTooltip('1段上の地図を表示'));
+    await waitForMapImages(tester);
     await tester.tap(find.byTooltip('1段上の地図を表示'));
     await tester.pumpAndSettle();
     expect(find.text('奈良県'), findsOneWidget);
     expect(find.text('ここを本拠地にする'), findsNothing);
+    await waitForMapImages(tester);
     await tester.tap(find.byKey(const Key('map-home')));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
@@ -251,6 +252,7 @@ void main() {
       target.id,
     );
     expectCenteredOn(tester, target.id);
+    await waitForMapImages(tester);
     await tester.tap(find.byTooltip('拡大'));
     await tester.pumpAndSettle();
     final zoomedScale =
@@ -261,6 +263,7 @@ void main() {
             .getMaxScaleOnAxis();
     await tester.drag(find.byType(InteractiveViewer), const Offset(40, 30));
     await tester.pumpAndSettle();
+    await waitForMapImages(tester);
     await tester.tap(find.byKey(const Key('map-home')));
     await tester.pumpAndSettle();
     expectCenteredOn(tester, target.id);

@@ -8,10 +8,12 @@ import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/services.dart';
 import 'game.dart';
 import 'office_marker.dart';
+import 'national_tips.dart';
 
 /// Population and adjacency are resident; detailed polygons are loaded by prefecture.
 class NationalAtlas {
-  NationalAtlas(this.atlas, this.prefectures);
+  NationalAtlas(this.atlas, this.prefectures, {this.tips});
+  final NationalTips? tips;
   final Atlas atlas;
   final Map<String, Prefecture> prefectures;
   String? _requested;
@@ -163,7 +165,7 @@ class NationalAtlas {
     return _cached = NationalAtlas(atlas, {
       for (final p in national['prefectures'] as List)
         p['id'] as String: Prefecture.fromJson(p as Map<String, dynamic>),
-    });
+    }, tips: await NationalTips.load(atlas));
   }
 
   Future<void> ensureGeometry(String prefecture) {

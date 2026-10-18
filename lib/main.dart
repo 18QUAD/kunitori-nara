@@ -171,6 +171,37 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String? error, selected;
   String? cityFilter;
   int factIndex = 0, mapFocus = 0, mapCenter = 0;
+  String? _tipsPrefecture;
+  bool _tipsRequested = false;
+  int _tipsRevision = 0;
+
+  void _ensureRegionalTips(String? city) {
+    final tips = national?.tips;
+    if (tips == null) return;
+    final pref = city?.substring(0, 2);
+    if (_tipsRequested && _tipsPrefecture == pref) return;
+    _tipsRequested = true;
+    _tipsPrefecture = pref;
+    final token = ++_tipsRevision;
+    unawaited(
+      tips
+          .ensure(pref)
+          .then((changed) {
+            if (!mounted || token != _tipsRevision || !changed) return;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted || token != _tipsRevision) return;
+              setState(() => factIndex = 0);
+              _rememberVisibleFact();
+              _save();
+            });
+            WidgetsBinding.instance.ensureVisualUpdate();
+          })
+          .catchError((Object error) {
+            // Keep the existing local fallback when an offline asset is unavailable.
+          }),
+    );
+  }
+
   Timer? timer, tipsTimer;
   DateTime? _nextTipAt, _feedbackEndsAt;
   bool corrupt = false;
@@ -499,6 +530,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   LocalFact? get visibleFact {
+    final city = game!.tipsCityFor(
+      selectedTown: selected,
+      selectedCity: cityFilter,
+      selectedPrefecture: nationalView ? null : prefectureFilter,
+    );
+    _ensureRegionalTips(city);
     final facts = game!.tipsFor(
       selectedTown: selected,
       selectedCity: cityFilter,
@@ -1735,7 +1772,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 10),
                   const SelectableText(
-                    '地域tips：奈良県の全39市町村に各30件。他県は仮tipsを表示します。自治体公式資料の90件に、日本語版Wikipediaの各記事の執筆者による内容を要約・編集した1,080件を追加しています。tipsは吹き出しに収まる短文で表示します。キャラ・吹き出しのデザイン、配置、表示は設定から変更できます。出典は以下の一覧で確認できます。\nWikipedia由来のtips：CC BY-SA 4.0\nhttps://creativecommons.org/licenses/by-sa/4.0/',
+                    '地域tips：奈良県の全39市町村に各30件。奈良県外の全1,857市区町村には、地理・歴史・名所などの短文tipsを表示します。奈良県は自治体公式資料90件とWikipedia由来1,080件、奈良県外はWikipediaと文化庁の資料から編集した3,582件です。tipsは吹き出しに収まる短文で表示します。キャラ・吹き出しのデザイン、配置、表示は設定から変更できます。出典は以下の一覧で確認できます。\nWikipedia由来のtips：各記事の執筆者による文章を抽出・要約・文体調整。CC BY-SA 4.0\nhttps://creativecommons.org/licenses/by-sa/4.0/',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
@@ -1744,7 +1781,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 12),
                   ExpansionTile(
-                    title: const Text('Wikipediaの出典一覧'),
+                    title: const Text('地域tipsの出典一覧（読み込み済み）'),
                     children: [
                       for (final source
                           in atlas!.facts.values
@@ -1753,13 +1790,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                               .where(
                                 (source) =>
                                     Uri.tryParse(source)?.host ==
-                                    'ja.wikipedia.org',
+                                        'ja.wikipedia.org' ||
+                                    Uri.tryParse(source)?.host ==
+                                        'kunishitei.bunka.go.jp',
                               )
                               .toSet())
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                           child: SelectableText(
-                            '${Uri.parse(source).queryParameters['title']?.replaceAll('_', ' ')}\n$source',
+                            '${Uri.parse(source).queryParameters['title']?.replaceAll('_', ' ') ?? '文化庁 国指定文化財等データベース'}\n$source',
                             style: const TextStyle(fontSize: 12, height: 1.6),
                           ),
                         ),

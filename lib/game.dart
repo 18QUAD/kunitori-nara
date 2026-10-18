@@ -285,6 +285,7 @@ class Atlas {
   final Map<String, List<List<List<Point<double>>>>> cityPolygons = {};
   final Map<String, List<List<List<Point<double>>>>> prefecturePolygons = {};
   final Map<String, List<LocalFact>> facts = {};
+  final Set<String> additionalFactIds = {};
   late final int totalPopulation = towns.values.fold<int>(
     0,
     (sum, town) => sum + town.population,
@@ -540,7 +541,7 @@ class Game {
 
   void observe(String city) => seen.addAll(atlas.facts[city]!.map((f) => f.id));
 
-  List<LocalFact> tipsFor({
+  String? tipsCityFor({
     String? selectedTown,
     String? selectedCity,
     String? selectedPrefecture,
@@ -548,22 +549,33 @@ class Game {
     final browsingCity =
         selectedTown == null ? selectedCity : atlas.towns[selectedTown]?.cityId;
     if (browsingCity != null && !browsingCity.startsWith('29')) {
-      return atlas.facts[browsingCity]!;
+      return browsingCity;
     }
     if (selectedTown == null &&
         selectedCity == null &&
         selectedPrefecture != null &&
         selectedPrefecture != '29') {
-      final city = citiesInPrefecture(selectedPrefecture).firstOrNull;
-      return city == null ? const [] : atlas.facts[city]!;
+      return citiesInPrefecture(selectedPrefecture).firstOrNull;
     }
     final target = attackTarget ?? selectedTown;
-    final city =
-        target == null
-            ? selectedCity ?? (home == null ? null : atlas.towns[home]?.cityId)
-            : atlas.towns[target]?.cityId;
+    return target == null
+        ? selectedCity ?? (home == null ? null : atlas.towns[home]?.cityId)
+        : atlas.towns[target]?.cityId;
+  }
+
+  List<LocalFact> tipsFor({
+    String? selectedTown,
+    String? selectedCity,
+    String? selectedPrefecture,
+  }) {
+    final city = tipsCityFor(
+      selectedTown: selectedTown,
+      selectedCity: selectedCity,
+      selectedPrefecture: selectedPrefecture,
+    );
     if (city == null) return const [];
     final local = atlas.facts[city]!;
+    if (!city.startsWith('29')) return local;
     return [
       ...local.where((f) => !f.quizEligible),
       ...local.where((f) => f.id == '$city:heritage'),
@@ -908,8 +920,10 @@ class Game {
       }
     }
     final validIds = atlas.towns.keys.toSet();
-    final validFacts =
-        atlas.facts.values.expand((f) => f).map((f) => f.id).toSet();
+    final validFacts = {
+      ...atlas.facts.values.expand((f) => f).map((f) => f.id),
+      ...atlas.additionalFactIds,
+    };
     if (!validIds.containsAll(g.owned) ||
         !validIds.containsAll(g.everOwned) ||
         !g.everOwned.containsAll(g.owned) ||

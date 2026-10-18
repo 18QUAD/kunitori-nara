@@ -90,7 +90,7 @@ def parse(body, meta, city, prefecture):
     root = max(roots, key=lambda node: len(node.text_content()))
     for node in list(root.xpath('.//table | .//sup | .//style | .//script | .//*[contains(@class,"navbox")] | .//*[contains(@class,"reflist")]')):
         if node.getparent() is not None:
-            node.getparent().remove(node)
+            node.drop_tree()
     headings = {2: '概要'}
     section = '概要'
     materials, seen = [], set()
@@ -118,7 +118,7 @@ def parse(body, meta, city, prefecture):
         'prefectureName': prefecture['name'], 'articleTitle': title, 'articleUrl': article_url,
         'revisionId': revision, 'revisionUrl': 'https://ja.wikipedia.org/w/index.php?oldid=' + str(revision),
         **meta, 'license': 'CC BY-SA 4.0', 'attribution': '日本語版Wikipedia「' + title + '」の執筆者',
-        'parserVersion': 2, 'reviewStatus': 'unreviewed_source_material', 'materials': materials,
+        'parserVersion': 3, 'reviewStatus': 'unreviewed_source_material', 'materials': materials,
     }, None
 
 
@@ -166,7 +166,7 @@ def main():
         for entry in json.loads(path.read_text())['municipalities']:
             saved[entry['cityId']] = entry
     by_pref = {pid: {c['id']: saved[c['id']] for c in cities if c['id'][:2] == pid and
-                     c['id'] in saved and saved[c['id']].get('revisionId') and saved[c['id']].get('parserVersion') == 2 and saved[c['id']].get('materials')} for pid in prefectures}
+                     c['id'] in saved and saved[c['id']].get('revisionId') and saved[c['id']].get('parserVersion') == 3 and saved[c['id']].get('materials')} for pid in prefectures}
     pending = [c for c in cities if c['id'] not in by_pref[c['id'][:2]]]
     print('Municipalities:', len(cities), 'pending:', len(pending), flush=True)
     with ThreadPoolExecutor(max_workers=min(3, max(1, args.workers))) as pool:

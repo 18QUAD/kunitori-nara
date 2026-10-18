@@ -71,6 +71,7 @@ flutter:
     - assets/characters/nara_guide_sad_face_parts.png
     - assets/data/nara.json
     - assets/data/nara_metadata.json
+    - assets/data/tips/
     - assets/data/japan.json
     - assets/data/japan_import_report.json
     - assets/data/coastline_import_report.json

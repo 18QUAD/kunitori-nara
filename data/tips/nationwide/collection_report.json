@@ -1,11 +1,11 @@
 {
   "createdAt": "2026-10-18T01:39:56.296343+00:00",
-  "scope": "collection_only_no_runtime_changes",
+  "scope": "sources_and_short_tips",
   "municipalities": 1857,
   "collected": 1857,
-  "materials": 151630,
+  "materials": 151767,
   "unresolved": [],
-  "verifiedAt": "2026-10-18T01:40:27.172856+00:00",
+  "verifiedAt": "2026-10-18T02:41:55.798308+00:00",
   "prefectures": 46,
   "withoutMaterials": 0,
   "officialPrefectures": 46,
@@ -13,5 +13,8 @@
   "officialMunicipalitiesMatched": 220,
   "officialSampling": "First five designated historic/scenic/natural site search results per prefecture; not exhaustive",
   "validation": "Municipality IDs, source hosts, Wikipedia revisions, population exclusions and every raw HTML SHA-256 verified",
-  "appChanged": false
+  "appChanged": true,
+  "shortTips": 3582,
+  "shortTipMunicipalities": 1857,
+  "parserVersion": 3
 }
