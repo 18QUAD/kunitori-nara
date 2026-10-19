@@ -5,7 +5,7 @@ const ROOT = new URL('./', self.location.href);
 const STORE = 'kunitori-map-images-v1';
 const META = 'kunitori-map-images-meta-v1';
 const BATCH = 48;
-const CONCURRENCY = 4;
+const CONCURRENCY = 2;
 let inventoryPromise;
 let warming;
 const transfers = new Map();
@@ -18,15 +18,18 @@ async function inventory() {
       const meta = await caches.open(META);
       const url = new URL(`map-image-manifest.json?v=${REVISION}`, ROOT).href;
       let response = await meta.match(url);
+      let value;
       if (!response) {
         response = await fetch(url, {cache: 'no-cache'});
         if (!response.ok) throw new Error(`Map inventory HTTP ${response.status}`);
         // Validate before persisting; a deployment can briefly serve mixed files.
-        const value = await response.clone().json();
+        const bytes = await response.arrayBuffer();
+        value = JSON.parse(new TextDecoder().decode(bytes));
         if (value.schema !== 1 || value.revision !== REVISION) throw new Error('Map inventory version mismatch');
-        await meta.put(url, response.clone());
+        await meta.put(url, new Response(bytes, {headers: {'Content-Type': 'application/json'}}));
+      } else {
+        value = await response.json();
       }
-      const value = await response.json();
       const byPath = new Map(value.assets.map(entry => [new URL(entry[0], ROOT).pathname, entry]));
       const byteOffsets = new Float64Array(value.assets.length + 1);
       value.assets.forEach((entry, i) => {byteOffsets[i + 1] = byteOffsets[i] + entry[2];});
@@ -40,14 +43,17 @@ async function storedImage(entry, mustStore = false) {
   const key = keyFor(entry);
   const store = await caches.open(STORE);
   const local = await store.match(key);
-  if (local) return local;
+  if (local) {
+    if (mustStore) { await local.body?.cancel(); return; }
+    return local;
+  }
   if (!transfers.has(key)) {
     const pending = (async () => {
       const abort = new AbortController();
       const timeout = setTimeout(() => abort.abort(), 20000);
       let bytes;
       try {
-        const response = await fetch(new URL(`${entry[0]}?map-sha256=${entry[1]}`, ROOT), {cache: 'no-cache', signal: abort.signal});
+        const response = await fetch(new URL(`${entry[0]}?map-sha256=${entry[1]}`, ROOT), {cache: 'no-store', signal: abort.signal});
         if (!response.ok) throw new Error(`Map image HTTP ${response.status}`);
         bytes = await response.arrayBuffer();
       } finally { clearTimeout(timeout); }
@@ -60,14 +66,22 @@ async function storedImage(entry, mustStore = false) {
         'Content-Length': String(bytes.byteLength),
       }});
       let storageError;
-      try { await store.put(key, saved.clone()); } catch (error) { storageError = error; }
-      return {response: saved, storageError};
+      // Cache.put consumes the only response body. An unread clone/tee can keep
+      // native byte buffers alive long after a background download finishes.
+      try { await store.put(key, saved); } catch (error) { storageError = error; }
+      return storageError ? {bytes, storageError} : {};
     })().finally(() => transfers.delete(key));
     transfers.set(key, pending);
   }
   const result = await transfers.get(key);
   if (mustStore && result.storageError) throw result.storageError;
-  return result.response.clone();
+  if (mustStore) return;
+  if (result.storageError) {
+    return new Response(result.bytes, {headers: {'Content-Type': entry[0].endsWith('.json') ? 'application/json' : 'image/webp'}});
+  }
+  const response = await store.match(key);
+  if (!response) throw new Error('Stored map image unavailable');
+  return response;
 }
 
 async function removeOldVersions(data, meta) {

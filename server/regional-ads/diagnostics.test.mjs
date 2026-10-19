@@ -16,6 +16,14 @@ test('sanitize allowlist never stores saves or arbitrary fields',()=>{
   const r=sanitizeReport(sample());assert(!JSON.stringify(r).includes('DO NOT STORE'));assert(!JSON.stringify(r).includes('token=secret'));
   assert.equal(r.sessions[0].events[0].memory.processBytes,null);assert.equal(sanitizeReport({}),null);
 });
+test('download progress counters survive private report sanitization',()=>{
+  const report=sample();
+  const counters={mapDownloadSaved:480,mapDownloadTotal:44400,mapDownloadBytes:1234567,mapDownloadTotalBytes:302822453};
+  Object.assign(report.sessions[0].events[0].state,counters);
+  const state=sanitizeReport(report).sessions[0].events[0].state;
+  for(const [key,value] of Object.entries(counters))assert.equal(state[key],value);
+  assert.equal(state.save,undefined);
+});
 test('origin, method, size checks and authenticated read',async()=>{
   const {store:backend}=store(),env=envFor(backend);
   assert.equal((await handleDiagnostics(post(sample(),'https://evil.test'),env)).status,403);

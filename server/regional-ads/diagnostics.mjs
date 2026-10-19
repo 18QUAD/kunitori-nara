@@ -4,7 +4,8 @@ const RETENTION = 7 * 24 * 60 * 60 * 1000;
 const fields = new Set(['map','prefecture','city','selected','scale','centerX','centerY',
   'terrain','changingMap','totalTaps','territories','attackTarget','flutterImageBytes',
   'flutterImageCount','flutterLiveImages','flutterPendingImages','backgroundCache',
-  'borderCache','destinationPrefecture','imageScale','imageCache','persisted','error']);
+  'borderCache','destinationPrefecture','imageScale','imageCache','persisted','error',
+  'mapDownloadSaved','mapDownloadTotal','mapDownloadBytes','mapDownloadTotalBytes']);
 function scalar(value) {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (typeof value === 'boolean' || value == null) return value;

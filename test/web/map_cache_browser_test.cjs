@@ -9,6 +9,9 @@ const assert = require('node:assert/strict');
 const workerSource = fs.readFileSync('web/map-cache-worker.js', 'utf8');
 const clientSource = fs.readFileSync('web/map-cache.js', 'utf8');
 const styles = fs.readFileSync('web/index.html', 'utf8').match(/<style>([\s\S]*?)<\/style>/)[1];
+const bootstrap = fs.readFileSync('web/flutter_bootstrap.js', 'utf8')
+  .replace('{{flutter_js}}', '').replace('{{flutter_build_config}}', '')
+  .replaceAll('{{flutter_service_worker_version}}', 'fixture');
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'kunitori-map-cache-'));
 const root = '/kunitori-nara/';
 const imagePaths = Array.from({length: 100}, (_, i) => `assets/assets/data/map_tiles_uniform/dry_${i}_detail.webp`);
@@ -17,6 +20,10 @@ let version = 1;
 let requests = new Map();
 let failOnce = imagePaths[60];
 let wrongOnce = imagePaths[61];
+let workerFailure = true;
+let workerRequests = 0;
+let activeTransfers = 0;
+let peakTransfers = 0;
 const sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 function manifest() {
   const assets = [...contents].map(([name, bytes]) => [name, sha(bytes), bytes.length]);
@@ -28,14 +35,19 @@ const server = http.createServer((req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (name === '') {
     res.setHeader('Content-Type', 'text/html');
-    res.end(`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${styles}</style><div id="app-host"></div><script src="map-cache.js?v=${version}"></script>`);
+    res.end(`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${styles}</style><div id="app-host"></div><div id="safe-area-probe"></div><script>window.loaderStarts=0;window._flutter={buildConfig:{builds:[{mainJsPath:'fixture.js'}]},loader:{load(){window.loaderStarts++;}}};</script><script src="map-cache.js?v=${version}"></script><script src="bootstrap-test.js"></script>`);
+  } else if (name === 'bootstrap-test.js') {
+    res.setHeader('Content-Type', 'application/javascript'); res.end(bootstrap);
   } else if (name === 'map-cache.js') {
     res.setHeader('Content-Type', 'application/javascript'); res.end(clientSource);
   } else if (name === 'map-cache-worker.js') {
+    workerRequests++;
+    if (workerFailure) {workerFailure = false; res.writeHead(503); res.end('retry installation'); return;}
     res.setHeader('Content-Type', 'application/javascript');
     // Enumerating every stored image would create tens of thousands of Request
     // objects on the phone. Fail if the worker attempts that operation.
-    const guard = `const originalOpen = caches.open.bind(caches);
+    const guard = `Response.prototype.clone = () => {throw new Error('Response cloning retains unread native buffers');};
+      const originalOpen = caches.open.bind(caches);
       caches.open = async name => {
         const cache = await originalOpen(name);
         if (name === 'kunitori-map-images-v1') cache.keys = () => {throw new Error('Image-store enumeration exceeds memory budget');};
@@ -45,6 +57,9 @@ const server = http.createServer((req, res) => {
   } else if (name === 'map-image-manifest.json') {
     res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(manifest()));
   } else if (contents.has(name)) {
+    activeTransfers++;
+    peakTransfers = Math.max(peakTransfers, activeTransfers);
+    res.on('finish', () => {activeTransfers--;});
     requests.set(name, (requests.get(name) || 0) + 1);
     if (name === failOnce) {failOnce = null; res.writeHead(503); res.end('retry');}
     else if (name === wrongOnce) {wrongOnce = null; res.end('invalid checksum');}
@@ -88,6 +103,7 @@ async function waitUntil(check, message) {
   const base = `http://127.0.0.1:${server.address().port}${root}`;
   let page = await open(base);
   await page.getByText('全国の地図データをダウンロード中', {exact: true}).waitFor();
+  assert.equal(await page.evaluate(() => window.loaderStarts), 0, 'Game must not load while initial download is running');
   const bar = page.getByRole('progressbar', {name: '地図データのダウンロード', exact: true});
   assert.equal(await bar.evaluate(element => element.value), 0);
   await page.evaluate(() => localStorage.setItem('flutter.kunitori.nara.v1', 'preserve-game-save'));
@@ -104,13 +120,17 @@ async function waitUntil(check, message) {
   assert(Math.abs(layout.game.bottom - 667) <= 1);
   await context.setOffline(true);
   await page.getByText('接続を待っています。続きから再開します', {exact: true}).waitFor();
+  assert.equal(await page.evaluate(() => window.loaderStarts), 0);
   assert.equal(await bar.evaluate(element => element.value), firstPercent, 'Offline state must retain progress');
   await context.close();
   const downloaded = new Map(requests);
   page = await open(base);
   await waitUntil(async () => await page.locator('#map-download-status progress').evaluate(element => element.value).catch(() => 0) >= firstPercent, 'Resumed UI lost saved bytes');
   await waitUntil(async () => (await progress(page)).cleaned, 'Interrupted download did not resume');
+  assert(workerRequests >= 2, 'Failed worker installation must recover automatically');
+  assert(peakTransfers <= 2, 'Disk downloads must use at most two simultaneous transfers');
   await page.locator('#map-download-status').waitFor({state: 'detached'});
+  await page.waitForFunction(() => window.loaderStarts === 1);
   assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('app-host')).height), '667px');
   for (let i = 0; i < 48; i++) assert.equal(requests.get(imagePaths[i]), downloaded.get(imagePaths[i]), 'Saved bytes downloaded again');
   assert.equal(requests.get(imagePaths[60]), 2, 'Temporary HTTP failure must retry');
@@ -147,7 +167,7 @@ async function waitUntil(check, message) {
   assert.equal(requests.get(imagePaths[99]), completeCounts.get(imagePaths[99]) + 1);
   assert.equal(await page.evaluate(async () => (await (await caches.open('kunitori-map-images-v1')).keys()).length), 100);
   assert.equal(await page.evaluate(() => localStorage.getItem('flutter.kunitori.nara.v1')), 'preserve-game-save');
-  console.log('PASS: byte-based progress, unobstructed mobile layout, offline pause, resumed progress, completion/no-flash, persistent offline images, delta updates and save preservation.');
+  console.log('PASS: failed worker setup recovers; no response clones; at most two downloads; game starts after saved bytes; resume/offline/delta updates preserve progress and saves.');
 })().finally(async () => {
   if (context) await context.close();
   server.close();

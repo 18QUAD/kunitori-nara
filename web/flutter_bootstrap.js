@@ -70,6 +70,8 @@ async function startCurrentBuild() {
   // The image-only worker takes over this app's scope without reloading the page.
   // It never caches executable code or touches game saves.
   await window.kunitoriMapStorage;
+  // Keep the game atlas, CanvasKit and map rasters out of the initial download.
+  await window.kunitoriMapDownload;
   return _flutter.loader.load({
     config: {canvasKitBaseUrl: 'canvaskit/', canvasKitMaximumSurfaces: 2},
     onEntrypointLoaded: async (engineInitializer) => {
