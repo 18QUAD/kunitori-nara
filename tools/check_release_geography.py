@@ -20,13 +20,28 @@ assert (root/'assets/assets/data/prefecture_border_mesh.bin').is_file()
 assert (root/'assets/assets/data/border_tiles/index-slim.json').is_file()
 assert all(p.name.startswith(('slim_', 'slimshared_')) for p in (root/'assets/assets/data/border_tiles').glob('*.webp')), 'Outdated border style was bundled'
 inventory = json.loads((root/'map-image-manifest.json').read_text())
-expected_images = {
-    str(p.relative_to(root))
-    for folder in ('map_tiles_uniform', 'border_tiles')
-    for p in (root/'assets/assets/data'/folder).iterdir()
-    if p.suffix in ('.webp', '.json')
-}
-assert {entry[0] for entry in inventory['assets']} == expected_images, 'Incomplete local map inventory'
+assert inventory['packSchema'] == 1
+import hashlib
+cursor = 0
+for name, digest, size, start, end in inventory['packs']:
+    assert start == cursor and end > start
+    packed = (root/name).read_bytes()
+    assert len(packed) == size and hashlib.sha256(packed).hexdigest() == digest
+    offset = 0
+    for path, checksum, length in inventory['assets'][start:end]:
+        data = packed[offset:offset+length]
+        assert len(data) == length and hashlib.sha256(data).hexdigest() == checksum, path
+        if path.endswith('.json'):
+            assert (root/path).read_bytes() == data
+        else:
+            assert not (root/path).exists(), 'Individual images duplicate pack bytes'
+            if '/border_tiles/' in path:
+                assert Path(path).name.startswith(('slim_', 'slimshared_'))
+        offset += length
+    assert offset == size
+    cursor = end
+assert cursor == len(inventory['assets'])
+assert sum(entry[2] for entry in inventory['assets']) == inventory['bytes']
 assert '__MAP_IMAGE_REVISION__' not in (root/'map-cache-worker.js').read_text(), 'Map worker was not prepared'
 assert inventory['revision'] in (root/'map-cache-worker.js').read_text()
 size = sum(p.stat().st_size for p in root.rglob('*') if p.is_file())

@@ -3,6 +3,7 @@
 const REVISION = '__MAP_IMAGE_REVISION__';
 const ROOT = new URL('./', self.location.href);
 const STORE = 'kunitori-map-images-v1';
+const PACK_STORE = 'kunitori-map-packs-v1';
 const META = 'kunitori-map-images-meta-v1';
 const BATCH = 48;
 const CONCURRENCY = 2;
@@ -16,7 +17,7 @@ async function inventory() {
   if (!inventoryPromise) {
     inventoryPromise = (async () => {
       const meta = await caches.open(META);
-      const url = new URL(`map-image-manifest.json?v=${REVISION}`, ROOT).href;
+      const url = new URL(`map-image-manifest.json?packs=1&v=${REVISION}`, ROOT).href;
       let response = await meta.match(url);
       let value;
       if (!response) {
@@ -30,6 +31,16 @@ async function inventory() {
       } else {
         value = await response.json();
       }
+      if (value.packSchema === 1) {
+        value.packs.forEach((pack, index) => {
+          let offset = 0;
+          for (let i = pack[3]; i < pack[4]; i++) {
+            value.assets[i].push(index, offset, i);
+            offset += value.assets[i][2];
+          }
+          if (offset !== pack[2]) throw new Error('Map pack index mismatch');
+        });
+      }
       const byPath = new Map(value.assets.map(entry => [new URL(entry[0], ROOT).pathname, entry]));
       const byteOffsets = new Float64Array(value.assets.length + 1);
       value.assets.forEach((entry, i) => {byteOffsets[i + 1] = byteOffsets[i] + entry[2];});
@@ -40,6 +51,8 @@ async function inventory() {
 }
 
 async function storedImage(entry, mustStore = false) {
+  const data = await inventory();
+  if (data.packSchema === 1) return packedImage(data, entry);
   const key = keyFor(entry);
   const store = await caches.open(STORE);
   const local = await store.match(key);
@@ -84,15 +97,100 @@ async function storedImage(entry, mustStore = false) {
   return response;
 }
 
+// Packs reduce tens of thousands of HTTP and CacheStorage operations to a few
+// hundred. Each transfer is <= 1 MiB (apart from a single larger source asset).
+async function storedPack(pack) {
+  const key = keyFor(pack);
+  const store = await caches.open(PACK_STORE);
+  const cached = await store.match(key);
+  if (cached) {await cached.body?.cancel(); return;}
+  if (!transfers.has(key)) {
+    const pending = (async () => {
+      const abort = new AbortController();
+      const timeout = setTimeout(() => abort.abort(), 60000);
+      let bytes;
+      try {
+        const response = await fetch(key, {cache: 'no-store', signal: abort.signal});
+        if (!response.ok) throw new Error(`Map pack HTTP ${response.status}`);
+        bytes = await response.arrayBuffer();
+      } finally {clearTimeout(timeout);}
+      if (bytes.byteLength !== pack[2]) throw new Error('Map pack length mismatch');
+      const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))]
+        .map(byte => byte.toString(16).padStart(2, '0')).join('');
+      if (digest !== pack[1]) throw new Error('Map pack checksum mismatch');
+      await store.put(key, new Response(bytes));
+    })().finally(() => transfers.delete(key));
+    transfers.set(key, pending);
+  }
+  await transfers.get(key);
+}
+
+async function packedImage(data, entry) {
+  const pack = data.packs[entry[3]];
+  const store = await caches.open(PACK_STORE);
+  let response = await store.match(keyFor(pack));
+  if (!response) {
+    // Previously saved individual images remain usable, including partial initial
+    // downloads. They are never downloaded again merely to change storage format.
+    const legacy = await (await caches.open(STORE)).match(keyFor(entry));
+    if (legacy) return legacy;
+    await storedPack(pack);
+    response = await store.match(keyFor(pack));
+  }
+  if (!response) throw new Error('Stored map pack unavailable');
+  // Read only the requested compressed bytes, cancel the remainder. No retained
+  // whole-pack buffers, decompression, image decoding, or unconsumed response tee.
+  const bytes = new Uint8Array(entry[2]);
+  const reader = response.body.getReader();
+  const start = entry[4], end = start + entry[2];
+  let position = 0;
+  try {
+    while (position < end) {
+      const {value, done} = await reader.read();
+      if (done) throw new Error('Stored map pack truncated');
+      const from = Math.max(start, position), to = Math.min(end, position + value.length);
+      if (to > from) bytes.set(value.subarray(from - position, to - position), from - start);
+      position += value.length;
+    }
+  } finally {await reader.cancel();}
+  return new Response(bytes, {headers: {
+    'Content-Type': entry[0].endsWith('.json') ? 'application/json' : 'image/webp',
+    'Content-Length': String(bytes.length),
+  }});
+}
+
+async function warmPacks(data, meta, progress) {
+  const start = progress.next;
+  if (start === data.assets.length && progress.cleaned) return progressReport(data, start, true);
+  const first = data.assets[start]?.[3] ?? data.packs.length;
+  const batch = data.packs.slice(first, first + CONCURRENCY);
+  // Wait for both operations even on failure: a retry must not overlap unfinished
+  // storage writes from the preceding batch.
+  const results = await Promise.allSettled(batch.map(pack => storedPack(pack)));
+  const failure = results.find(result => result.status === 'rejected');
+  if (failure) throw failure.reason;
+  const end = batch.length ? batch[batch.length - 1][4] : start;
+  const legacy = progress.legacy ?? start;
+  const complete = end === data.assets.length;
+  await meta.put(progressKey, new Response(JSON.stringify({next: end, legacy, cleaned: complete})));
+  if (complete) await removeOldVersions(data, meta);
+  return progressReport(data, end, complete);
+}
+
 async function removeOldVersions(data, meta) {
   const store = await caches.open(STORE);
   // Do not enumerate 44,000 CacheStorage Request objects. Only obsolete
   // manifests describe image versions that actually need deleting.
   for (const request of await meta.keys()) {
     if (request.url !== progressKey &&
-        request.url !== new URL(`map-image-manifest.json?v=${REVISION}`, ROOT).href) {
+        request.url !== new URL(`map-image-manifest.json?packs=1&v=${REVISION}`, ROOT).href) {
       if (new URL(request.url).pathname.endsWith('/map-image-manifest.json')) {
         const old = await (await meta.match(request)).json();
+        const currentPacks = new Set((data.packs || []).map(pack => keyFor(pack)));
+        const packedStore = await caches.open(PACK_STORE);
+        for (const pack of old.packs || []) {
+          if (!currentPacks.has(keyFor(pack))) await packedStore.delete(keyFor(pack));
+        }
         for (const entry of old.assets) {
           const current = data.byPath.get(new URL(entry[0], ROOT).pathname);
           if (!current || current[1] !== entry[1]) await store.delete(keyFor(entry));
@@ -120,6 +218,7 @@ async function warmBatch() {
   const meta = await caches.open(META);
   const saved = await meta.match(progressKey);
   const progress = saved ? await saved.json() : {next: 0};
+  if (data.packSchema === 1) return warmPacks(data, meta, progress);
   const start = progress.next;
   if (start === data.assets.length && progress.cleaned) {
     return progressReport(data, start, true);
