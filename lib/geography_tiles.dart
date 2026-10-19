@@ -1,3 +1,4 @@
+import 'diagnostics.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -155,6 +156,12 @@ class GeographyImageCache {
   }
 
   int get length => _images.length;
+  Map<String, Object?> get diagnosticCounts => {
+    'images': _images.length,
+    'decoding': _decoding,
+    'queued': _waiting.length,
+    'owners': _pins.length,
+  };
   ui.Image? peek(String key) {
     final image = _images.remove(key);
     if (image != null) _images[key] = image;
@@ -377,6 +384,10 @@ class _GeographyTilesState extends State<GeographyTiles> {
       return;
     }
     _refreshing = true;
+    recordDiagnostic('images_load_start', {
+      'imageScale': widget.transform.value.getMaxScaleOnAxis(),
+      'imageCache': cache.diagnosticCounts,
+    });
     widget.onBusyChanged?.call(true);
     try {
       do {
@@ -385,8 +396,14 @@ class _GeographyTilesState extends State<GeographyTiles> {
         // Retired images are disposed after paint; don't unlock beforehand.
         await WidgetsBinding.instance.endOfFrame;
       } while (mounted && _refreshPending);
+    } catch (error) {
+      recordDiagnostic('images_load_error', {'error': error.toString()});
+      rethrow;
     } finally {
       _refreshing = false;
+      recordDiagnostic('images_load_end', {
+        'imageCache': cache.diagnosticCounts,
+      });
       if (mounted) widget.onBusyChanged?.call(false);
     }
   }

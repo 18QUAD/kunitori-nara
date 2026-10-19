@@ -25,6 +25,7 @@ import 'regional_ads.dart';
 import 'regional_ad_card.dart';
 import 'geography_tiles.dart';
 import 'rendering_memory.dart';
+import 'diagnostics.dart';
 
 const ink = Color(0xFF101C2B),
     panel = Color(0xFF192A3A),
@@ -32,6 +33,12 @@ const ink = Color(0xFF101C2B),
     gold = Color(0xFFEEC47C);
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  recordDiagnostic('flutter_start', {});
+  final previousErrorHandler = FlutterError.onError;
+  FlutterError.onError = (details) {
+    recordDiagnostic('flutter_error', {'error': details.exceptionAsString()});
+    previousErrorHandler?.call(details);
+  };
   await configureRenderingMemory();
   if (!kIsWeb) {
     await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -178,6 +185,90 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String? _tipsPrefecture;
   bool _tipsRequested = false;
   int _tipsRevision = 0;
+
+  Timer? _diagnosticTimer;
+
+  void _diagnose(String event, {bool important = true, MapViewState? view}) {
+    if (!kIsWeb) return;
+    final v = view ?? _restoredMapView;
+    final cache = PaintingBinding.instance.imageCache;
+    recordDiagnostic(event, {
+      'map':
+          nationalView
+              ? 'national'
+              : (cityFilter == null ? 'prefecture' : 'city'),
+      'prefecture': prefectureFilter,
+      'city': cityFilter,
+      'selected': selected,
+      'scale': v?.scale,
+      'centerX': v?.center.dx,
+      'centerY': v?.center.dy,
+      'terrain': v?.showGeography,
+      'changingMap': _changingMap,
+      'totalTaps': game?.totalTaps,
+      'territories': game?.owned.length,
+      'attackTarget': game?.attackTarget,
+      'flutterImageBytes': cache.currentSizeBytes,
+      'flutterImageCount': cache.currentSize,
+      'flutterLiveImages': cache.liveImageCount,
+      'flutterPendingImages': cache.pendingImageCount,
+      'backgroundCache': GeographyImageCache.shared.diagnosticCounts,
+      'borderCache': GeographyImageCache.borders.diagnosticCounts,
+    }, important: important);
+  }
+
+  void _recordView(MapViewState view) {
+    final old = _restoredMapView;
+    _diagnose(
+      'map_view',
+      view: view,
+      important:
+          old?.scale != view.scale ||
+          old?.showGeography != view.showGeography ||
+          old?.cityId != view.cityId ||
+          old?.nationalView != view.nationalView ||
+          old?.prefectureId != view.prefectureId,
+    );
+  }
+
+  Future<void> _showDiagnostics() async {
+    _diagnose('open_diagnostics');
+    final report = diagnosticReport();
+    final data = jsonDecode(report) as Map<String, dynamic>;
+    final sessions = data['sessions'] as List? ?? [];
+    await showDialog<void>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('診断ログ'),
+            content: SingleChildScrollView(
+              child: Text(
+                '${data['storageAvailable'] == false ? '端末へのログ保存が利用できません。' : '直近の記録 ${sessions.length}回分を端末内に保存しています。'}\n\n'
+                '再読み込み前の地図・縮尺・操作・画像キャッシュ・取得可能なメモリ情報を記録します。\n\n'
+                'Safariでは端末全体のメモリ使用量や強制終了の原因は取得できません。終了通知がない場合もメモリ不足とは断定しません。\n\n'
+                '不具合の後にJSONを保存またはコピーしてください。地図座標と攻略状況の件数・IDを含みます。自動送信は行いません。',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('閉じる'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: report));
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('コピー'),
+              ),
+              FilledButton(
+                onPressed: downloadDiagnostics,
+                child: const Text('JSONを保存'),
+              ),
+            ],
+          ),
+    );
+  }
 
   void _ensureRegionalTips(String? city) {
     final tips = national?.tips;
@@ -363,6 +454,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _diagnose('game_load_start');
+    _diagnosticTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _diagnose('game_checkpoint', important: false);
+    });
     _load();
     unawaited(
       (widget.adRepository == null
@@ -380,6 +475,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   void didHaveMemoryPressure() {
+    _diagnose('memory_pressure');
     PaintingBinding.instance.imageCache.clear();
     GeographyImageCache.shared.clearUnused();
     GeographyImageCache.borders.clearUnused();
@@ -388,6 +484,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     timer?.cancel();
+    _diagnosticTimer?.cancel();
     tipsTimer?.cancel();
     _conquestTimer?.cancel();
     _practice?.dispose();
@@ -443,6 +540,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               .substring(0, 2);
       nationalView =
           national != null && (_restoredMapView?.nationalView ?? false);
+      _diagnose('game_loaded');
       final expiredOnLoad = g.expire(DateTime.now());
       _rememberVisibleFact();
       setState(() {});
@@ -478,6 +576,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _diagnose('lifecycle_${state.name}');
     if (game == null) return;
     if (state == AppLifecycleState.resumed && !_answerFeedbackOpen) {
       final q = game!.quiz;
@@ -503,6 +602,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _save() {
+    _diagnose('game_state', important: false);
     if (game != null && store != null) unawaited(store!.save(game!));
   }
 
@@ -673,6 +773,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _focusCampaign() {
+    _diagnose('home_start');
     final target = game!.attackTarget ?? game!.home;
     if (target == null) return;
     setState(() {
@@ -695,9 +796,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final oldCity =
         g.attackTarget == null ? null : atlas!.towns[g.attackTarget]!.cityId;
     final before = g.totalTaps;
+    if ((g.progress[selected!] ?? 0) + 1 >=
+        g.requiredTaps(atlas!.towns[selected!]!)) {
+      _diagnose('conquest_before');
+    }
     final won = g.tap(selected!, DateTime.now());
     if (g.totalTaps == before) return;
-    if (won) HapticFeedback.mediumImpact();
+    if (won) {
+      _diagnose('conquest_after');
+      HapticFeedback.mediumImpact();
+    }
     setState(() {
       final newCity =
           g.attackTarget == null ? null : atlas!.towns[g.attackTarget]!.cityId;
@@ -856,6 +964,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               if (value == 'records') _showRecords();
               if (value == 'help') _about();
               if (value == 'tips') _tipSettings();
+              if (value == 'diagnostics') _showDiagnostics();
             },
             itemBuilder:
                 (_) => const [
@@ -880,6 +989,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       title: Text('戦績'),
                     ),
                   ),
+                  if (kIsWeb)
+                    PopupMenuItem(
+                      value: 'diagnostics',
+                      child: ListTile(
+                        leading: Icon(Icons.description_outlined),
+                        title: Text('診断ログ'),
+                      ),
+                    ),
                   PopupMenuItem(
                     value: 'help',
                     child: ListTile(
@@ -1315,6 +1432,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _selectPrefecture(String id) {
+    recordDiagnostic('select_prefecture_start', {'destinationPrefecture': id});
+    _diagnose('leave_map');
     setState(() {
       prefectureFilter = id;
       nationalView = false;
@@ -1330,6 +1449,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Future<void> _showNational() async {
     if (_completedCity != null || _changingMap) return;
+    _diagnose('show_national_start');
     setState(() {
       _changingMap = true;
       nationalView = true;
@@ -1340,7 +1460,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     // overlaps its native paths with the old scene's paths and raster images.
     await WidgetsBinding.instance.endOfFrame;
     await retireMapImages();
-    if (mounted) setState(() => _changingMap = false);
+    if (mounted) {
+      setState(() => _changingMap = false);
+      _diagnose('show_national_retired');
+    }
   }
 
   Widget _prefectureMap(Widget map) {
@@ -1392,6 +1515,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     ? _restoredMapView
                                     : null,
                             onViewChanged: (view) {
+                              _recordView(view);
                               _restoredMapView = view;
                               if (store != null) {
                                 unawaited(store!.saveMapView(view));
@@ -1429,6 +1553,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                       ? _restoredMapView
                                       : null,
                               onViewChanged: (view) {
+                                _recordView(view);
                                 _restoredMapView = view;
                                 if (store != null) {
                                   unawaited(store!.saveMapView(view));
