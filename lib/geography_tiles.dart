@@ -263,6 +263,8 @@ class _GeographyTilesState extends State<GeographyTiles> {
           : GeographyImageCache.borders;
   GeographyTileIndex? index;
   Timer? timer;
+  Timer? _retryTimer;
+  int _retryAttempt = 0;
   int revision = 0;
   bool _refreshing = false;
   bool _refreshPending = false;
@@ -299,6 +301,19 @@ class _GeographyTilesState extends State<GeographyTiles> {
     _waterMesh = null;
   }
 
+  void _retryAfterFailure() {
+    if (!mounted || !widget.enabled || _retryTimer != null) return;
+    final seconds = math.min(30, 1 << math.min(_retryAttempt++, 5));
+    _retryTimer = Timer(Duration(seconds: seconds), () {
+      _retryTimer = null;
+      if (!mounted || !widget.enabled) return;
+      _mesh = null;
+      _waterMesh = null;
+      recordDiagnostic('images_load_retry', {'attempt': _retryAttempt});
+      index == null ? _loadIndex() : _refresh();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -315,10 +330,12 @@ class _GeographyTilesState extends State<GeographyTiles> {
       if (!mounted) return;
       index = loaded;
       _refresh();
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
+        recordDiagnostic('images_index_error', {'error': error.toString()});
         setState(() => failed = true);
         widget.onBusyChanged?.call(false);
+        _retryAfterFailure();
       }
     }
   }
@@ -383,6 +400,8 @@ class _GeographyTilesState extends State<GeographyTiles> {
       }
       return;
     }
+    _retryTimer?.cancel();
+    _retryTimer = null;
     _refreshing = true;
     recordDiagnostic('images_load_start', {
       'imageScale': widget.transform.value.getMaxScaleOnAxis(),
@@ -392,13 +411,19 @@ class _GeographyTilesState extends State<GeographyTiles> {
     try {
       do {
         _refreshPending = false;
+        failed = false;
         await _refreshOnce();
         // Retired images are disposed after paint; don't unlock beforehand.
         await WidgetsBinding.instance.endOfFrame;
       } while (mounted && _refreshPending);
     } catch (error) {
       recordDiagnostic('images_load_error', {'error': error.toString()});
-      rethrow;
+      if (mounted) {
+        setState(() {
+          failed = true;
+          loading = false;
+        });
+      }
     } finally {
       if (widget.boundaryLayer == null) {
         // The screen owns composed backgrounds, not their decoded input tiles.
@@ -414,7 +439,14 @@ class _GeographyTilesState extends State<GeographyTiles> {
       recordDiagnostic('images_load_end', {
         'imageCache': cache.diagnosticCounts,
       });
-      if (mounted) widget.onBusyChanged?.call(false);
+      if (mounted) {
+        widget.onBusyChanged?.call(false);
+        if (failed) {
+          _retryAfterFailure();
+        } else {
+          _retryAttempt = 0;
+        }
+      }
     }
   }
 
@@ -839,6 +871,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
   void dispose() {
     revision++;
     timer?.cancel();
+    _retryTimer?.cancel();
     widget.transform.removeListener(_schedule);
     cache.release(this);
     _clearDetailImages();
@@ -903,30 +936,6 @@ class _GeographyTilesState extends State<GeographyTiles> {
                     ),
                   ),
                 ),
-                if (failed)
-                  Positioned.fromRect(
-                    rect: visible,
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Transform.scale(
-                        alignment: Alignment.topLeft,
-                        scale: 1 / widget.transform.value.getMaxScaleOnAxis(),
-                        child: TextButton(
-                          onPressed: () {
-                            failed = false;
-                            _waterMesh = null;
-                            _mesh = null;
-                            index == null ? _loadIndex() : _refresh();
-                          },
-                          child: Text(
-                            widget.boundaryLayer == null
-                                ? '背景地図の読込を再試行'
-                                : '境界線の読込を再試行',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             );
           },

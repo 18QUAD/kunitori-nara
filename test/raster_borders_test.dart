@@ -24,6 +24,55 @@ void main() {
     jsonDecode(File('assets/data/nara.json').readAsStringSync()),
   );
 
+  testWidgets('failed rasters retry automatically without a retry button', (
+    tester,
+  ) async {
+    final transform = TransformationController();
+    var attempts = 0;
+    Iterable<Path> paths() sync* {
+      attempts++;
+      if (attempts <= 2) throw StateError('temporary raster failure');
+      yield Path()..addRect(const Rect.fromLTWH(20, 20, 100, 100));
+    }
+
+    final events = <bool>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GeographyTiles(
+          enabled: true,
+          transform: transform,
+          project: (p) => Offset(p.x, p.y),
+          viewport: const Size(300, 300),
+          clip: Path()..addRect(const Rect.fromLTWH(0, 0, 800, 600)),
+          boundaryLayer: 'town',
+          boundaryPaths: paths(),
+          onBusyChanged: events.add,
+        ),
+      ),
+    );
+    for (
+      var i = 0;
+      i < 250 && (attempts <= 2 || events.lastOrNull != false);
+      i++
+    ) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(attempts, greaterThan(2));
+    expect(events.where((busy) => busy).length, 3);
+    expect(find.byType(TextButton), findsNothing);
+    expect(tester.takeException(), isNull);
+    final completed = attempts;
+    await tester.pump(const Duration(seconds: 35));
+    expect(attempts, completed, reason: 'Successful rendering cancels retries');
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 35));
+    expect(tester.takeException(), isNull);
+    transform.dispose();
+  });
+
   testWidgets('zoom stays locked through queued work and image retirement', (
     tester,
   ) async {
