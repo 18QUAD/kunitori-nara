@@ -39,7 +39,13 @@ let context,page,ticker;const result={actions:[],samples:[],errors:[]};let phase
   await page.waitForFunction(()=>audit.events.filter(e=>e.event==='images_load_start').length===audit.events.filter(e=>e.event==='images_load_end').length,{},{timeout:120000});
   const home=page.getByRole('button',{name:'攻略中の町へ',exact:true});const end=Date.now()+120000;while(!await home.isEnabled()){if(Date.now()>end)throw Error('controls timeout');await page.waitForTimeout(50);}
  }
- await ready();fs.writeFileSync(output('prepared-map-startup.cpuprofile'),JSON.stringify((await cdp.send('Profiler.stop')).profile));console.log('initial ready',Date.now()-started);phase='national';
+ await ready();
+ const expectedImages=JSON.parse(fs.readFileSync(path.join(root,'build/web/map-image-manifest.json')));
+ const expectedRuntime=JSON.parse(fs.readFileSync(path.join(root,'build/web/runtime-data-manifest.json')));
+ const downloaded=await page.evaluate(()=>audit.events.filter(e=>e.event==='map_storage_progress').at(-1)?.data);
+ assert.equal(downloaded.mapDownloadTotal,expectedImages.assets.length+expectedRuntime.chunks.length,'The active worker must use the complete current build');
+ assert.equal(downloaded.mapDownloadBytes,expectedImages.bytes+expectedRuntime.bytes,'The active worker must finish saving the current build');
+ fs.writeFileSync(output('prepared-map-startup.cpuprofile'),JSON.stringify((await cdp.send('Profiler.stop')).profile));console.log('initial ready',Date.now()-started);phase='national';
  const readyTimeOrigin=await page.evaluate(()=>performance.timeOrigin);assert.equal(await page.evaluate(()=>kunitoriMapMemory.get()),32);await context.setOffline(true);
  const report=async(name)=>{const h=await cdp.send('Runtime.getHeapUsage');const wasm=await page.evaluate(()=>window.flutterCanvasKit?.HEAPU8?.buffer?.byteLength);console.log(name,'JS',Math.round(h.usedSize/1048576),'WASM',Math.round(wasm/1048576));};
  async function save(){fs.writeFileSync(output('prepared-map-browser.json'),JSON.stringify({...result,audit:await page.evaluate(()=>audit)},null,2));}
