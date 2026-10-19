@@ -10,7 +10,7 @@ _flutter.buildConfig = {"engineRevision":"cf56914b326edb0ccb123ffdc60f00060bd513
 
 for (const build of _flutter.buildConfig.builds) {
   if (build.mainJsPath) {
-    build.mainJsPath += '?v="3017414311"';
+    build.mainJsPath += '?v="3246825670"';
   }
 }
 // Embed in the document rather than making body a fixed, non-scrolling surface.
@@ -58,7 +58,7 @@ function updateBrowserViewport() {
   const visibleTop = viewport ? viewport.offsetTop : 0;
   const visibleHeight = viewport ? viewport.height : window.innerHeight;
   const safeArea = getComputedStyle(safeAreaProbe);
-  const nextTop = Math.max(0, visibleTop - rect.top, parseFloat(safeArea.paddingTop) || 0);
+  const nextTop = Math.max(0, visibleTop - rect.top, (parseFloat(safeArea.paddingTop) || 0) - rect.top);
   const nextBottom = Math.max(0, rect.bottom - visibleTop - visibleHeight, parseFloat(safeArea.paddingBottom) || 0);
   if (nextTop !== topInset || nextBottom !== bottomInset) {
     topInset = nextTop;

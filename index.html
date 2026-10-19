@@ -37,7 +37,18 @@
     html, body { margin: 0; background: #101C2B; }
     html { min-height: 100%; }
     body { min-height: 100vh; min-height: 100lvh; }
-    #app-host { position: relative; width: 100%; height: 100vh; height: 100lvh; background: #101C2B; }
+    #app-host { position: relative; width: 100%; height: calc(100vh - var(--map-download-height, 0px)); height: calc(100lvh - var(--map-download-height, 0px)); background: #101C2B; }
+    #map-download-status {
+      box-sizing: border-box; width: 100%; padding: 10px 16px;
+      padding-top: calc(10px + env(safe-area-inset-top, 0px));
+      background: #1b3040; color: #fff9ef; font: 14px/1.4 system-ui, sans-serif;
+    }
+    #map-download-status p { margin: 0; font-weight: 600; }
+    #map-download-status progress { display: block; width: 100%; height: 6px; margin: 7px 0; border: 0; border-radius: 3px; overflow: hidden; accent-color: #e6be77; background: #344c5c; }
+    #map-download-status progress::-webkit-progress-bar { background: #344c5c; }
+    #map-download-status progress::-webkit-progress-value { background: #e6be77; }
+    #map-download-status progress::-moz-progress-bar { background: #e6be77; }
+    #map-download-status small { display: block; font-size: 12px; color: #d7e1e5; }
     /* Repeated taps must not select Flutter's accessibility text on iOS. */
     #app-host, #app-host * {
       -webkit-user-select: none !important;
@@ -59,8 +70,8 @@
 <body>
   <div id="app-host"></div>
   <div id="safe-area-probe" aria-hidden="true"></div>
-  <script src="diagnostics.js?v=local-map-storage-20261019-v1"></script>
-  <script src="map-cache.js?v=local-map-storage-20261019-v1"></script>
-  <script src="flutter_bootstrap.js?v=local-map-storage-20261019-v1" async></script>
+  <script src="diagnostics.js?v=map-download-progress-20261019-v1"></script>
+  <script src="map-cache.js?v=map-download-progress-20261019-v1"></script>
+  <script src="flutter_bootstrap.js?v=map-download-progress-20261019-v1" async></script>
 </body>
 </html>
