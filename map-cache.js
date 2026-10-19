@@ -81,9 +81,15 @@ window.kunitoriMapStorage = (async () => {
       checkpoint(result, done);
       if (done) {finishMapDownload(); window.kunitoriDiagnostics?.record?.('map_storage_complete', JSON.stringify({}));}
       retry = 1000;
-      if (!done) downloadTimer = setTimeout(next, 50);
+      if (!done) downloadTimer = setTimeout(next, 0);
     } catch (error) {
-      showProgress(null, true);
+      // A failed window can still have committed a verified prefix. Show that
+      // progress during the retry delay instead of appearing stuck at zero.
+      try {
+        const saved = await request('map-images-status');
+        showProgress(saved, true);
+        checkpoint(saved, true);
+      } catch (_) {showProgress(null, true);}
       window.kunitoriDiagnostics?.record?.('map_storage_retry', JSON.stringify({error: String(error)}));
       downloadTimer = setTimeout(next, retry);
       retry = Math.min(retry * 2, 30000);
