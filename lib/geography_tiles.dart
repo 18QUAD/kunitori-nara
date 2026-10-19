@@ -400,6 +400,16 @@ class _GeographyTilesState extends State<GeographyTiles> {
       recordDiagnostic('images_load_error', {'error': error.toString()});
       rethrow;
     } finally {
+      if (widget.boundaryLayer == null) {
+        // The screen owns composed backgrounds, not their decoded input tiles.
+        // Keeping both duplicates GPU/CPU pixels and raises the next zoom peak.
+        if (mounted) {
+          cache.pin(this, {});
+        } else {
+          cache.release(this);
+        }
+        cache.clearUnused();
+      }
       _refreshing = false;
       recordDiagnostic('images_load_end', {
         'imageCache': cache.diagnosticCounts,
@@ -427,6 +437,8 @@ class _GeographyTilesState extends State<GeographyTiles> {
     final borders = widget.boundaryLayer != null;
     refreshedZoom = zoom;
     final pixelRatio = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
+    await _retireObsoleteDetailImages(zoom, pixelRatio);
+    if (!mounted || token != revision) return;
     if (borders &&
         (widget.boundaryPaths != null || widget.boundaryLayer == 'pref')) {
       try {
@@ -585,6 +597,9 @@ class _GeographyTilesState extends State<GeographyTiles> {
         setState(() => loading = false);
         return;
       }
+      recordDiagnostic('background_sources_ready', {
+        'imageCache': cache.diagnosticCounts,
+      });
       try {
         await _refreshDetailImages(
           token,
@@ -677,19 +692,10 @@ class _GeographyTilesState extends State<GeographyTiles> {
     );
   }
 
-  Future<void> _renderDetailImages(
-    int token,
-    double zoom,
-    double dpr, {
-    List<_Tile>? background,
-  }) async {
-    if (!mounted || token != revision) return;
-    if (background == null) cache.pin(this, {});
-    final (exponent, renderZoom, density, wanted) = _rasterGrid(zoom, dpr);
+  Future<void> _retireObsoleteDetailImages(double zoom, double dpr) async {
+    final (exponent, _, _, wanted) = _rasterGrid(zoom, dpr);
     final imageLimit = widget.boundaryLayer == null ? 12 : 24;
     final keep = wanted.map((cell) => cell.$1).toSet();
-    // Retain up to one adjacent scale if space permits. Images from other
-    // prefectures/scopes are cleared by didUpdateWidget or dispose.
     final retired = <ui.Image>[];
     for (final key in _detailImages.keys.toList()) {
       if (!keep.contains(key) &&
@@ -698,6 +704,34 @@ class _GeographyTilesState extends State<GeographyTiles> {
         retired.add(_detailImages.remove(key)!);
       }
     }
+    if (retired.isEmpty) return;
+    setState(() {
+      tiles = [
+        for (final (key, rect) in wanted)
+          if (_detailImages[key] case final image?)
+            _Tile(image, rect, rect, widget.boundaryLayer ?? 'background'),
+      ];
+      loading = tiles.length != wanted.length;
+    });
+    await _disposeImages(retired);
+    // Both background and borders can retire in the same frame. Finish all
+    // pending retirements before decoding even the first new source image.
+    await Future.wait(_retirements.toList());
+  }
+
+  Future<void> _renderDetailImages(
+    int token,
+    double zoom,
+    double dpr, {
+    List<_Tile>? background,
+  }) async {
+    if (!mounted || token != revision) return;
+    if (background == null) cache.pin(this, {});
+    final phase = background == null ? 'boundary' : 'background';
+    recordDiagnostic('${phase}_raster_start', {
+      'imageCache': cache.diagnosticCounts,
+    });
+    final (_, renderZoom, density, wanted) = _rasterGrid(zoom, dpr);
     void publish() {
       if (!mounted || token != revision) return;
       setState(() {
@@ -718,7 +752,6 @@ class _GeographyTilesState extends State<GeographyTiles> {
     // Hide the enlarged offline/previous-scale image synchronously. A cold
     // scale must never flash a thick border while its sharp image is prepared.
     publish();
-    await _disposeImages(retired);
     if (!mounted || token != revision) return;
     final outlines = [
       for (final path in widget.boundaryPaths ?? const <Path>[])
@@ -737,6 +770,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
               widget.project,
             ))
             : null;
+    var recordedPicture = false;
     for (final (key, rect) in wanted) {
       if (!mounted || token != revision) return;
       if (_detailImages.containsKey(key)) continue;
@@ -775,6 +809,12 @@ class _GeographyTilesState extends State<GeographyTiles> {
         );
       }
       final picture = recorder.endRecording();
+      if (!recordedPicture) {
+        recordedPicture = true;
+        recordDiagnostic('${phase}_picture_ready', {
+          'imageCache': cache.diagnosticCounts,
+        });
+      }
       late final ui.Image image;
       try {
         image = await picture.toImage(512, 512);
@@ -790,6 +830,9 @@ class _GeographyTilesState extends State<GeographyTiles> {
       _detailImages[key] = image;
       publish();
     }
+    recordDiagnostic('${phase}_raster_done', {
+      'imageCache': cache.diagnosticCounts,
+    });
   }
 
   @override

@@ -72,6 +72,105 @@ void main() {
     transform.dispose();
   });
 
+  testWidgets(
+    'composed backgrounds release source pixels and retire old zoom first',
+    (tester) async {
+      tester.view.devicePixelRatio = 2;
+      tester.view.physicalSize = const Size(750, 900);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final semantics = tester.ensureSemantics();
+      final transform = TransformationController();
+      final clip = Path()..addRect(const Rect.fromLTWH(0, 0, 1100, 1500));
+      void zoom(double scale) {
+        transform.value =
+            Matrix4.identity()
+              ..translate(187.5 - 236.8 * scale, 225 - 179.2 * scale)
+              ..scale(scale);
+      }
+
+      zoom(2);
+      GeographyImageCache.shared.clearUnused();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OverflowBox(
+            alignment: Alignment.topLeft,
+            maxWidth: 1100,
+            maxHeight: 1500,
+            child: SizedBox(
+              width: 1100,
+              height: 1500,
+              child: GeographyTiles(
+                transform: transform,
+                project: (p) => Offset((p.x - 134) * 128, (36 - p.y) * 128),
+                viewport: const Size(375, 450),
+                clip: clip,
+                enabled: true,
+                prefectureId: '29',
+              ),
+            ),
+          ),
+        ),
+      );
+      final ready = find.bySemanticsLabel('背景地図の読込完了');
+      Future<void> settle() async {
+        for (var i = 0; i < 150 && ready.evaluate().isEmpty; i++) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)),
+          );
+          await tester.pump();
+        }
+        expect(ready, findsOneWidget);
+        // The finishing frame is part of the image busy interval.
+        await tester.pump();
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+      }
+
+      await settle();
+      final dynamic painter =
+          tester
+              .widget<CustomPaint>(
+                find
+                    .descendant(
+                      of: find.byType(GeographyTiles),
+                      matching: find.byType(CustomPaint),
+                    )
+                    .first,
+              )
+              .painter;
+      final old = [
+        for (final dynamic tile in painter.tiles as Iterable)
+          tile.image as ui.Image,
+      ];
+      expect(old, isNotEmpty);
+      expect(
+        GeographyImageCache.shared.length,
+        0,
+        reason:
+            'A completed background must not retain duplicate decoded source tiles',
+      );
+      zoom(3.4);
+      await tester.pump();
+      await tester.pump();
+      expect(
+        old.every((image) => image.debugDisposed),
+        isTrue,
+        reason:
+            'The outgoing zoom must retire before replacement source pixels are loaded',
+      );
+      await settle();
+      expect(GeographyImageCache.shared.length, 0);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+      transform.dispose();
+      semantics.dispose();
+      clip.reset();
+    },
+  );
+
   test('immutable map state changes only when displayed colors change', () {
     final atlas = nara();
     final home = atlas.towns.values.firstWhere(
