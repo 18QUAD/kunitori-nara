@@ -23,7 +23,7 @@
   const previous = read().find(s => s.id === previousId);
   // Only associate a predecessor from this tab, never another tab's open session.
   const session = {
-    id: run, tab: previous?.tab || tab, build: 'diagnostics-20261019-v1',
+    id: run, tab: previous?.tab || tab, build: 'remote-diagnostics-20261019-v1',
     startedAt: new Date().toISOString(),
     navigation: performance.getEntriesByType?.('navigation')?.[0]?.type || 'unknown',
     wasDiscarded: document.wasDiscarded === true,
@@ -86,16 +86,46 @@
   function report() {
     record('export');
     return JSON.stringify({
-      version: 1, exportedAt: new Date().toISOString(), storageAvailable,
+      version: 1, exportedAt: new Date().toISOString(), storageAvailable, lastUploaded,
       explanation: 'no_pagehide_observed means a termination callback was not recorded; it does not prove a memory kill. null means unavailable. canvasKitHeapBytes is WASM capacity, not total process memory.',
       currentSession: run, sessions: read(),
     }, null, 2);
+  }
+  // Recover existing local-only logs as well. Never block the map on telemetry.
+  const endpoint = 'https://kunitori-nara-regional-ads.narusaki-masafumi.workers.dev/diagnostics';
+  let sending = false, lastUploaded = null, clientId;
+  try {
+    clientId = localStorage.getItem(key + '.client');
+    if (!/^[a-zA-Z0-9-]{16,80}$/.test(clientId || '')) {
+      clientId = id() + '-' + id(); localStorage.setItem(key + '.client', clientId);
+    }
+  } catch (_) {}
+  async function upload() {
+    if (sending || !clientId || typeof fetch !== 'function' || navigator.onLine === false) return;
+    const sessions = read();
+    if (!sessions.length) return;
+    let body = JSON.stringify({version:1,clientId,sessions});
+    while (new TextEncoder().encode(body).length > 40 * 1024) {
+      const longest = sessions.reduce((a,b)=>a.events.length>b.events.length?a:b);
+      if(longest.events.length>4)longest.events.shift();else if(sessions.length>1)sessions.shift();else return;
+      body = JSON.stringify({version:1,clientId,sessions});
+    }
+    sending = true;
+    const controller = new AbortController();
+    const timeout = setTimeout(()=>controller.abort(),10000);
+    try {
+      const response = await fetch(endpoint,{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',
+        headers:{'Content-Type':'text/plain;charset=UTF-8'},body,keepalive:true,signal:controller.signal});
+      if(response.ok)lastUploaded = new Date().toISOString();
+    } catch (_) { /* Offline reports remain local for the next retry. */ }
+    finally {clearTimeout(timeout);sending=false;}
   }
   window.kunitoriDiagnostics = {
     record(event, json, important) {
       try { record(event, JSON.parse(json), important); } catch (_) {}
     },
     report,
+    upload,
     download() {
       try {
         const url = URL.createObjectURL(new Blob([report()], {type: 'application/json'}));
@@ -108,7 +138,8 @@
   };
   window.addEventListener('pagehide', e => { ended = true; record('pagehide', {persisted: e.persisted}); });
   window.addEventListener('pageshow', e => { ended = false; record('pageshow', {persisted: e.persisted}); });
-  document.addEventListener('visibilitychange', () => record('visibilitychange'));
+  document.addEventListener('visibilitychange', () => {record('visibilitychange');if(document.visibilityState==='hidden')void upload();});
+  window.addEventListener('online', () => {void upload();});
   window.addEventListener('error', e => record('browser_error', {
     error: e.message || 'resource_load_error',
   }));
@@ -117,4 +148,6 @@
   }));
   setInterval(() => { if (!ended && document.visibilityState === 'visible') record('heartbeat'); }, 5000);
   record('startup');
+  setTimeout(()=>{void upload();},2000);
+  setInterval(()=>{if(!ended && document.visibilityState==='visible')void upload();},60000);
 })();
