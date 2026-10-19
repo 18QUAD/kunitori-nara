@@ -116,8 +116,8 @@ async function waitUntil(check, message) {
     panel: document.getElementById('map-download-status').getBoundingClientRect().toJSON(),
     game: document.getElementById('app-host').getBoundingClientRect().toJSON(),
   }));
-  assert.equal(layout.panel.bottom, layout.game.top, 'Progress must not cover the game');
-  assert(Math.abs(layout.game.bottom - 667) <= 1);
+  assert.equal(layout.game.height, 0, 'Game stays hidden until initial storage completes');
+  assert(layout.panel.height > 0);
   await context.setOffline(true);
   await page.getByText('接続を待っています。続きから再開します', {exact: true}).waitFor();
   assert.equal(await page.evaluate(() => window.loaderStarts), 0);

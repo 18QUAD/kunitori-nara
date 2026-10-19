@@ -11,17 +11,19 @@ window.kunitoriMapStorage = (async () => {
   let running = false;
   let connected = false;
   let done = false;
-  let timer;
+  let setupTimer;
+  let downloadTimer;
+  let connecting = false;
+  let setupAttempts = 0;
   let lastProgress;
   let panel;
-  let panelObserver;
+
   function showProgress(result, waiting = false) {
     if (result) lastProgress = result;
     if (lastProgress?.done) {
-      panelObserver?.disconnect();
       panel?.remove();
       panel = null;
-      document.documentElement.style.setProperty('--map-download-height', '0px');
+      document.body.removeAttribute('data-map-loading');
       return;
     }
     if (!panel) {
@@ -38,10 +40,7 @@ window.kunitoriMapStorage = (async () => {
       note.textContent = '保存完了後にゲームを開始します';
       panel.append(title, bar, detail, note);
       document.body.insertBefore(panel, document.getElementById('app-host') || document.body.firstChild);
-      panelObserver = new ResizeObserver(() => {
-        if (panel) document.documentElement.style.setProperty('--map-download-height', `${panel.offsetHeight}px`);
-      });
-      panelObserver.observe(panel);
+      document.body.setAttribute('data-map-loading', '');
     }
     const bar = panel.querySelector('progress');
     const detail = panel.querySelector('small');
@@ -51,12 +50,13 @@ window.kunitoriMapStorage = (async () => {
       detail.textContent = `初回保存 · ${(lastProgress.savedBytes / 1e6).toFixed(1)} / ${(lastProgress.bytes / 1e6).toFixed(1)} MB（${percent}%）`;
     } else {
       bar.removeAttribute('value');
-      detail.textContent = '初回ダウンロードを準備しています';
+      detail.textContent = setupAttempts > 1
+        ? `保存処理を復旧しています（再試行 ${setupAttempts - 1} 回）`
+        : '初回ダウンロードを準備しています';
     }
     panel.querySelector('p').textContent = waiting
       ? (navigator.onLine ? '地図データのダウンロードを再開しています' : '接続を待っています。続きから再開します')
       : '全国の地図データをダウンロード中';
-    document.documentElement.style.setProperty('--map-download-height', `${panel.offsetHeight}px`);
   }
   function request(type) {
     return new Promise((resolve, reject) => {
@@ -71,8 +71,8 @@ window.kunitoriMapStorage = (async () => {
     });
   }
   async function next() {
-    clearTimeout(timer);
     if (!connected || done || running || document.hidden || !navigator.onLine) return;
+    clearTimeout(downloadTimer);
     running = true;
     try {
       const result = await request('warm-map-images');
@@ -81,11 +81,11 @@ window.kunitoriMapStorage = (async () => {
       checkpoint(result, done);
       if (done) {finishMapDownload(); window.kunitoriDiagnostics?.record?.('map_storage_complete', JSON.stringify({}));}
       retry = 1000;
-      if (!done) timer = setTimeout(next, 50);
+      if (!done) downloadTimer = setTimeout(next, 50);
     } catch (error) {
       showProgress(null, true);
       window.kunitoriDiagnostics?.record?.('map_storage_retry', JSON.stringify({error: String(error)}));
-      timer = setTimeout(next, retry);
+      downloadTimer = setTimeout(next, retry);
       retry = Math.min(retry * 2, 30000);
     } finally {running = false;}
   }
@@ -114,10 +114,18 @@ window.kunitoriMapStorage = (async () => {
     return active.origin === worker.origin && active.pathname === worker.pathname;
   }
   async function connect() {
+    if (connecting || connected || done) return;
+    clearTimeout(setupTimer);
+    connecting = true;
+    setupAttempts++;
+    if (panel) showProgress(null, true);
+    let registration;
+    let phase = 'registration';
     try {
       record('map_storage_register_start');
-      const registration = await bounded(navigator.serviceWorker.register(worker, {scope: root.href, updateViaCache: 'none'}), 'registration');
+      registration = await bounded(navigator.serviceWorker.register(worker, {scope: root.href, updateViaCache: 'none'}), 'registration');
       record('map_storage_registered');
+      phase = 'activation';
       const pending = registration.installing || registration.waiting;
       if (pending && pending.state !== 'activated') {
         await new Promise((resolve, reject) => {
@@ -136,6 +144,7 @@ window.kunitoriMapStorage = (async () => {
         });
       }
       record('map_storage_activated');
+      phase = 'control';
       if (!controlled()) {
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => finish(new Error('Map worker control timed out')), 15000);
@@ -167,20 +176,40 @@ window.kunitoriMapStorage = (async () => {
       });
       // The game engine starts only after the initial disk store is complete.
       window.kunitoriDiagnostics?.record?.('map_storage_start', JSON.stringify({}));
-      timer = setTimeout(next, 500);
+      downloadTimer = setTimeout(next, 500);
     } catch (error) {
       record('map_storage_setup_retry', {error: String(error)});
+      // An old worker can remain stuck on extended events. Replace only this
+      // app's registration; its disk cache and all game saves remain intact.
+      if (registration && phase !== 'registration' && registration.scope === root.href) {
+        const scripts = [registration.installing, registration.waiting, registration.active].filter(Boolean);
+        if (scripts.length && scripts.every(item => {
+          const url = new URL(item.scriptURL);
+          return url.origin === worker.origin && url.pathname === worker.pathname;
+        })) {
+          try {
+            await bounded(registration.unregister(), 'recovery');
+            record('map_storage_registration_recovered');
+          } catch (recoveryError) {
+            record('map_storage_recovery_retry', {error: String(recoveryError)});
+          }
+        }
+      }
       showProgress(null, true);
-      timer = setTimeout(connect, retry);
+      setupTimer = setTimeout(connect, retry);
       retry = Math.min(retry * 2, 30000);
-    }
+    } finally {connecting = false;}
   }
-  window.addEventListener('online', next);
+  function resume() {
+    if (document.hidden || !navigator.onLine) return;
+    if (connected) next();
+    else connect();
+  }
+  window.addEventListener('online', resume);
   window.addEventListener('offline', () => {if (lastProgress && !done) showProgress(null, true);});
-  document.addEventListener('visibilitychange', next);
+  document.addEventListener('visibilitychange', resume);
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    done = false;
-    next();
+    if (!done) resume();
   });
   setTimeout(() => {if (!lastProgress && !done) showProgress(null);}, 500);
   return connect();
