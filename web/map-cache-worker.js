@@ -28,7 +28,9 @@ async function inventory() {
       }
       const value = await response.json();
       const byPath = new Map(value.assets.map(entry => [new URL(entry[0], ROOT).pathname, entry]));
-      return {...value, byPath};
+      const byteOffsets = new Float64Array(value.assets.length + 1);
+      value.assets.forEach((entry, i) => {byteOffsets[i + 1] = byteOffsets[i] + entry[2];});
+      return {...value, byPath, byteOffsets};
     })().catch(error => {inventoryPromise = null; throw error;});
   }
   return inventoryPromise;
@@ -87,6 +89,18 @@ async function removeOldVersions(data, meta) {
   }
 }
 
+function progressReport(data, next, done) {
+  return {done, saved: next, total: data.assets.length, savedBytes: data.byteOffsets[next], bytes: data.bytes};
+}
+
+async function storageStatus() {
+  const data = await inventory();
+  const meta = await caches.open(META);
+  const saved = await meta.match(progressKey);
+  const progress = saved ? await saved.json() : {next: 0};
+  return progressReport(data, progress.next, progress.next === data.assets.length && !!progress.cleaned);
+}
+
 async function warmBatch() {
   const data = await inventory();
   const meta = await caches.open(META);
@@ -94,7 +108,7 @@ async function warmBatch() {
   const progress = saved ? await saved.json() : {next: 0};
   const start = progress.next;
   if (start === data.assets.length && progress.cleaned) {
-    return {done: true, saved: start, total: start, bytes: data.bytes};
+    return progressReport(data, start, true);
   }
   const end = Math.min(start + BATCH, data.assets.length);
   let cursor = start;
@@ -114,13 +128,21 @@ async function warmBatch() {
     await removeOldVersions(data, meta);
     await meta.put(progressKey, new Response(JSON.stringify({next: end, cleaned: true})));
   }
-  return {done: end === data.assets.length, saved: end, total: data.assets.length, bytes: data.bytes};
+  return progressReport(data, end, end === data.assets.length);
 }
 
 self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 self.addEventListener('message', event => {
-  if (event.data?.type !== 'warm-map-images' || !event.ports[0]) return;
+  if (!event.ports[0]) return;
+  if (event.data?.type === 'map-images-status') {
+    event.waitUntil(storageStatus().then(
+      result => event.ports[0].postMessage(result),
+      error => event.ports[0].postMessage({error: String(error)}),
+    ));
+    return;
+  }
+  if (event.data?.type !== 'warm-map-images') return;
   // Multiple tabs share one bounded batch and the same in-flight transfers.
   if (!warming) warming = warmBatch().finally(() => {warming = null;});
   event.waitUntil(warming.then(

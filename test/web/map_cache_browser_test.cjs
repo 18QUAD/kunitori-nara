@@ -8,6 +8,7 @@ const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const workerSource = fs.readFileSync('web/map-cache-worker.js', 'utf8');
 const clientSource = fs.readFileSync('web/map-cache.js', 'utf8');
+const styles = fs.readFileSync('web/index.html', 'utf8').match(/<style>([\s\S]*?)<\/style>/)[1];
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'kunitori-map-cache-'));
 const root = '/kunitori-nara/';
 const imagePaths = Array.from({length: 100}, (_, i) => `assets/assets/data/map_tiles_uniform/dry_${i}_detail.webp`);
@@ -27,7 +28,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (name === '') {
     res.setHeader('Content-Type', 'text/html');
-    res.end(`<script src="map-cache.js?v=${version}"></script>`);
+    res.end(`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${styles}</style><div id="app-host"></div><script src="map-cache.js?v=${version}"></script>`);
   } else if (name === 'map-cache.js') {
     res.setHeader('Content-Type', 'application/javascript'); res.end(clientSource);
   } else if (name === 'map-cache-worker.js') {
@@ -54,9 +55,16 @@ let context;
 async function open(base) {
   context = await chromium.launchPersistentContext(profile, {
     executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium',
-    headless: true, args: ['--no-sandbox'],
+    headless: true, args: ['--no-sandbox'], viewport: {width: 375, height: 667},
   });
   const page = context.pages()[0];
+  page.on('pageerror', error => console.error('Page error:', error.message));
+  page.on('console', message => {if (message.type() === 'error') console.error(message.text());});
+  await page.addInitScript(() => {
+    window.kunitoriDiagnostics = {record(event, json) {
+      if (event === 'map_storage_retry') console.error(json);
+    }};
+  });
   await page.goto(base);
   await page.evaluate(() => window.kunitoriMapStorage);
   return page;
@@ -79,12 +87,31 @@ async function waitUntil(check, message) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}${root}`;
   let page = await open(base);
+  await page.getByText('全国の地図データをダウンロード中', {exact: true}).waitFor();
+  const bar = page.getByRole('progressbar', {name: '地図データのダウンロード', exact: true});
+  assert.equal(await bar.evaluate(element => element.value), 0);
   await page.evaluate(() => localStorage.setItem('flutter.kunitori.nara.v1', 'preserve-game-save'));
   await waitUntil(async () => (await progress(page)).next >= 48, 'First batch did not finish');
+  await waitUntil(async () => await bar.evaluate(element => element.value) > 0, 'Visible progress did not advance');
+  const firstBytes = manifest().assets.slice(0, 48).reduce((sum, entry) => sum + entry[2], 0);
+  const firstPercent = firstBytes / manifest().bytes * 100;
+  assert.equal(await bar.evaluate(element => element.value), firstPercent);
+  const layout = await page.evaluate(() => ({
+    panel: document.getElementById('map-download-status').getBoundingClientRect().toJSON(),
+    game: document.getElementById('app-host').getBoundingClientRect().toJSON(),
+  }));
+  assert.equal(layout.panel.bottom, layout.game.top, 'Progress must not cover the game');
+  assert(Math.abs(layout.game.bottom - 667) <= 1);
+  await context.setOffline(true);
+  await page.getByText('接続を待っています。続きから再開します', {exact: true}).waitFor();
+  assert.equal(await bar.evaluate(element => element.value), firstPercent, 'Offline state must retain progress');
   await context.close();
   const downloaded = new Map(requests);
   page = await open(base);
+  await waitUntil(async () => await page.locator('#map-download-status progress').evaluate(element => element.value).catch(() => 0) >= firstPercent, 'Resumed UI lost saved bytes');
   await waitUntil(async () => (await progress(page)).cleaned, 'Interrupted download did not resume');
+  await page.locator('#map-download-status').waitFor({state: 'detached'});
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('app-host')).height), '667px');
   for (let i = 0; i < 48; i++) assert.equal(requests.get(imagePaths[i]), downloaded.get(imagePaths[i]), 'Saved bytes downloaded again');
   assert.equal(requests.get(imagePaths[60]), 2, 'Temporary HTTP failure must retry');
   assert.equal(requests.get(imagePaths[61]), 2, 'Invalid bytes must retry rather than be cached');
@@ -92,12 +119,23 @@ async function waitUntil(check, message) {
   const completeCounts = new Map(requests);
   await context.close();
   page = await open(base);
+  const insertions = await page.evaluate(() => {
+    window.progressPanels = 0;
+    new MutationObserver(records => {
+      for (const record of records) for (const node of record.addedNodes) {
+        if (node.id === 'map-download-status') window.progressPanels++;
+      }
+    }).observe(document.body, {childList: true});
+    return document.querySelectorAll('#map-download-status').length;
+  });
   await context.setOffline(true);
   const offline = await page.evaluate(async names => {
     return Promise.all(names.map(async name => (await fetch(name)).text()));
   }, imagePaths);
   assert.deepEqual(offline, [...contents.values()].map(bytes => bytes.toString()));
   assert.deepEqual(requests, completeCounts, 'Completed store must not request image bytes again');
+  await page.waitForTimeout(2300);
+  assert.equal(insertions + await page.evaluate(() => window.progressPanels), 0, 'Completed downloads must not flash a progress panel');
   await context.setOffline(false);
   // A newer dataset downloads one changed image, reuses 99 and retires the old copy.
   contents.set(imagePaths[99], Buffer.from('updated-image-99'));
@@ -109,7 +147,7 @@ async function waitUntil(check, message) {
   assert.equal(requests.get(imagePaths[99]), completeCounts.get(imagePaths[99]) + 1);
   assert.equal(await page.evaluate(async () => (await (await caches.open('kunitori-map-images-v1')).keys()).length), 100);
   assert.equal(await page.evaluate(() => localStorage.getItem('flutter.kunitori.nara.v1')), 'preserve-game-save');
-  console.log('PASS: persistent disk images, restart/resume, HTTP/checksum retries, offline reads, delta updates, stale-image cleanup and save preservation.');
+  console.log('PASS: byte-based progress, unobstructed mobile layout, offline pause, resumed progress, completion/no-flash, persistent offline images, delta updates and save preservation.');
 })().finally(async () => {
   if (context) await context.close();
   server.close();

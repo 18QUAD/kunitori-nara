@@ -6,12 +6,12 @@ const source = fs.readFileSync('web/flutter_bootstrap.js', 'utf8')
   .replace('{{flutter_build_config}}', '')
   .replaceAll('{{flutter_service_worker_version}}', 'test-build-90');
 
-async function run(serviceWorker) {
+async function run(serviceWorker, top = 0, safeTop = 0) {
   let loaded = 0, reloaded = 0;
   const buildConfig = {builds: [{mainJsPath: 'main.dart.js'}]};
   const host = {
     addEventListener() {},
-    getBoundingClientRect() {return {top: 0, bottom: 800};},
+    getBoundingClientRect() {return {top, bottom: 800};},
   };
   const context = {
     URL, console: {warn() {}},
@@ -24,18 +24,21 @@ async function run(serviceWorker) {
       location: {reload() { reloaded++; }}, innerHeight: 800,
       addEventListener() {}, dispatchEvent() {},
     },
-    getComputedStyle() {return {paddingTop: '0px', paddingBottom: '0px'};},
+    getComputedStyle() {return {paddingTop: `${safeTop}px`, paddingBottom: '0px'};},
     ResizeObserver: class {observe() {}},
     Event: class {},
     _flutter: {buildConfig, loader: {load() { loaded++; }}},
   };
   await vm.runInNewContext(source, context);
   assert.equal(buildConfig.builds[0].mainJsPath, 'main.dart.js?v=test-build-90');
+  assert.equal(context.window.kunitoriViewport.top(), Math.max(0, safeTop - top));
   return {loaded, reloaded};
 }
 
 (async () => {
   assert.deepEqual(await run(), {loaded: 1, reloaded: 0});
+  assert.deepEqual(await run(undefined, 0, 44), {loaded: 1, reloaded: 0});
+  assert.deepEqual(await run(undefined, 80, 44), {loaded: 1, reloaded: 0});
   // Worker registration/migration belongs to map-cache.js. Bootstrap must not
   // unregister a persistent map store or force a reload on each visit.
   assert.deepEqual(await run({

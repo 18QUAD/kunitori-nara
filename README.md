@@ -427,6 +427,7 @@ DIAGNOSTICS_PLATFORM=all node tools/diagnostics/fetch.mjs /workspace/remote-diag
 新版の起動までサーバーには届きません。
 
 地図画像は初回起動後に全国分を CacheStorage へ自動保存します。
+初回保存中はメッセージと保存済み容量に基づく進捗バーを表示し、完了後に消えます。
 次回以降は保存済み画像を優先し、画像内容のハッシュが変わった分だけ取得します。
 ダウンロードが中断した場合も保存済み分から再開します。画像を一括デコードしません。
 Web ビルド後は上記の `prepare_map_cache.py` を必ず実行してください。

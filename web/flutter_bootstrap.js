@@ -50,7 +50,7 @@ function updateBrowserViewport() {
   const visibleTop = viewport ? viewport.offsetTop : 0;
   const visibleHeight = viewport ? viewport.height : window.innerHeight;
   const safeArea = getComputedStyle(safeAreaProbe);
-  const nextTop = Math.max(0, visibleTop - rect.top, parseFloat(safeArea.paddingTop) || 0);
+  const nextTop = Math.max(0, visibleTop - rect.top, (parseFloat(safeArea.paddingTop) || 0) - rect.top);
   const nextBottom = Math.max(0, rect.bottom - visibleTop - visibleHeight, parseFloat(safeArea.paddingBottom) || 0);
   if (nextTop !== topInset || nextBottom !== bottomInset) {
     topInset = nextTop;
