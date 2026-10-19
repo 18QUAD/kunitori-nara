@@ -37,7 +37,10 @@ def prepare(root, source_root=None):
             # exceeds Pages' site limit. These are the same public repository's
             # immutable committed bytes, downloaded once and verified on disk.
             repo = prepared.parents[1]
-            commit = subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
+            # Code-only releases keep the same CDN URLs. Otherwise every
+            # application update creates cold URLs for identical 1.6 GiB bytes.
+            commit = subprocess.check_output(['git','log','-1','--format=%H','HEAD','--',
+                'data/prepared_maps'],cwd=repo,text=True).strip()
             committed = subprocess.check_output(['git','show','HEAD:data/prepared_maps/map-image-manifest.json'],cwd=repo)
             if committed != (prepared/'map-image-manifest.json').read_bytes():
                 raise ValueError('Commit the finished image packs before preparing the public build')

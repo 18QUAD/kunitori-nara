@@ -73,7 +73,7 @@ async function cursor(page){return page.evaluate(async revision=>{
  const partial=(await cursor(page)).next;assert(partial>=20 && partial<100);
  await context.setOffline(false);
  await page.reload();await page.evaluate(()=>kunitoriMapStorage);await page.waitForFunction(()=>window.started,{},{timeout:30000});
- assert.equal((await cursor(page)).next,100);assert(peak<=2);
+ assert.equal((await cursor(page)).next,100);assert(peak<=8);
  assert.equal(await page.evaluate(()=>localStorage.getItem('kunitori.nara.v1')),'saved-game');
  const packs=fixture().manifest.packs;
  assert.equal(requests.get(packs[0][0]),1);assert.equal(requests.get(packs[1][0]),1);
@@ -127,7 +127,7 @@ async function cursor(page){return page.evaluate(async revision=>{
  assert.equal(await page.evaluate(()=>localStorage.getItem('kunitori.nara.v1')),'legacy-save');
  assert.equal((await cursor(page)).legacy,20);
  }
- console.log('PASS: packed download/resume; checksums; two bounded transfers; offline byte-exact images; legacy prefix/save migration; delta pack reuse.');
+ console.log('PASS: packed download/resume; checksums; eight bounded streaming transfers; offline byte-exact images; legacy prefix/save migration; delta pack reuse.');
  await browser.close();await new Promise(resolve=>server.close(resolve));
  if(remote)await new Promise(resolve=>packServer.close(resolve));
 })().catch(async error=>{console.error(error);if(browser)await browser.close();server.close();packServer.close();process.exitCode=1;});

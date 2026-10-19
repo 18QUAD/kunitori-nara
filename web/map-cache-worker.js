@@ -7,6 +7,12 @@ const PACK_STORE = 'kunitori-map-packs-v1';
 const META = 'kunitori-map-images-meta-v1';
 const BATCH = 48;
 const CONCURRENCY = 2;
+// Initial packs stream directly to disk, before the rendering engine starts.
+// Refill each of eight slots independently instead of waiting for a slow partner.
+// Packs are <= 1 MiB; there are no decoded images or retained download buffers.
+const DOWNLOAD_CONCURRENCY = 8;
+const DOWNLOAD_WINDOW_MS = 1200;
+const DOWNLOAD_WINDOW_PACKS = 32;
 let inventoryPromise;
 let warming;
 const transfers = new Map();
@@ -283,20 +289,37 @@ function imageResponse(bytes, entry, offset) {
   }});
 }
 
+async function downloadPackWindow(packs, first, storeName, downloadBase = ROOT) {
+  const deadline = Date.now() + DOWNLOAD_WINDOW_MS;
+  const end = Math.min(first + DOWNLOAD_WINDOW_PACKS, packs.length);
+  const completed = new Set();
+  let cursor = first, failure;
+  await Promise.all(Array.from({length: DOWNLOAD_CONCURRENCY}, async () => {
+    while (!failure && cursor < end && Date.now() < deadline) {
+      const index = cursor++;
+      try {
+        await storedPack(packs[index], storeName, downloadBase);
+        completed.add(index);
+      } catch (error) {failure = error;}
+    }
+  }));
+  // Out-of-order successes remain on disk. Persist only the uninterrupted
+  // prefix so a failed/interrupted request cannot be mistaken for a saved pack.
+  let next = first;
+  while (completed.has(next)) next++;
+  return {next, failure};
+}
+
 async function warmPacks(data, meta, progress) {
   const start = progress.next;
   if (start === data.assetCount && progress.cleaned) return progressReport(data, start, true);
   const first = assetEntry(data,start)?.[3] ?? data.packs.length;
-  const batch = data.packs.slice(first, first + CONCURRENCY);
-  // Wait for both operations even on failure: a retry must not overlap unfinished
-  // storage writes from the preceding batch.
-  const results = await Promise.allSettled(batch.map(pack => storedPack(pack, PACK_STORE, data.packBaseUrl || ROOT)));
-  const failure = results.find(result => result.status === 'rejected');
-  if (failure) throw failure.reason;
-  const end = batch.length ? batch[batch.length - 1][4] : start;
+  const result = await downloadPackWindow(data.packs, first, PACK_STORE, data.packBaseUrl || ROOT);
+  const end = result.next > first ? data.packs[result.next - 1][4] : start;
   const legacy = progress.legacy ?? start;
   const complete = end === data.assetCount;
   await meta.put(progressKey, new Response(JSON.stringify({next: end, legacy})));
+  if (result.failure) throw result.failure;
   if (complete) {
     await removeOldVersions(data, meta);
     await meta.put(progressKey, new Response(JSON.stringify({next: end, legacy, cleaned: true})));
@@ -408,12 +431,10 @@ async function runtimeProgress(data, warm=false) {
   const saved = await meta.match(key);
   let next = saved ? (await saved.json()).next : 0;
   if (warm && next<data.chunks.length) {
-    const end = Math.min(next+CONCURRENCY,data.chunks.length);
-    const results = await Promise.allSettled(data.chunks.slice(next,end).map(c=>storedPack(c,RUNTIME_STORE)));
-    const failed = results.find(r=>r.status==='rejected');
-    if (failed) throw failed.reason;
-    next=end;
+    const result = await downloadPackWindow(data.chunks, next, RUNTIME_STORE);
+    next=result.next;
     await meta.put(key,new Response(JSON.stringify({next})));
+    if (result.failure) throw result.failure;
   }
   return {done:next===data.chunks.length,saved:next,total:data.chunks.length,
     savedBytes:data.chunks.slice(0,next).reduce((n,c)=>n+c[2],0),bytes:data.bytes};
@@ -426,8 +447,11 @@ async function storageStatus() {
   return combinedProgress(await imageStorageStatus(),await runtimeProgress(await runtimeInventory()));
 }
 async function warmBatch() {
-  const images=await imageWarmBatch();
-  return combinedProgress(images,await runtimeProgress(await runtimeInventory(),images.done));
+  const before=await imageStorageStatus();
+  const images=before.done ? before : await imageWarmBatch();
+  // One transfer phase per message bounds the time until a progress response,
+  // including on a slow connection. The next message starts runtime chunks.
+  return combinedProgress(images,await runtimeProgress(await runtimeInventory(),before.done));
 }
 async function runtimeResponse(data,file) {
   let index=0, reader;
