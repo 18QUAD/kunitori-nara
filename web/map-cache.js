@@ -109,17 +109,18 @@ window.kunitoriMapStorage = (async () => {
       return memory.megabytes;
     },
   };
-  let checkingMemory = false;
-  setInterval(async () => {
-    if (!connected || !done || document.hidden || checkingMemory) return;
-    checkingMemory = true;
-    try {
-      const memory = await request('map-memory-get');
-      window.kunitoriDiagnostics?.record?.('map_memory', JSON.stringify({
-        mapCacheLimitMb: memory.megabytes, mapCacheBytes: memory.bytes,
-      }), false);
-    } catch (_) {} finally {checkingMemory = false;}
-  }, 5000);
+  function recordMemory(memory) {
+    window.kunitoriDiagnostics?.record?.('map_memory', JSON.stringify({
+      mapCacheLimitMb: memory.megabytes, mapCacheBytes: memory.bytes,
+    }), false);
+  }
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'map-memory-state') recordMemory(event.data);
+  });
+  // One startup snapshot; do not keep an idle worker/cache alive by polling it.
+  window.kunitoriMapDownload.then(async () => {
+    try {recordMemory(await request('map-memory-get'));} catch (_) {}
+  });
   let lastCheckpoint = 0;
   function checkpoint(result, force = false) {
     if (!force && Date.now() - lastCheckpoint < 5000) return;

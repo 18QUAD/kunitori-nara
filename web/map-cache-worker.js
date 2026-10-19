@@ -369,15 +369,33 @@ self.addEventListener('message', event => {
     error => event.ports[0].postMessage({error: String(error)}),
   ));
 });
+let memoryNotice;
+function reportMemoryAfterRead() {
+  if (!memoryNotice) memoryNotice = new Promise(resolve => {
+    setTimeout(async () => {
+      try {
+        const clients = await self.clients.matchAll({type: 'window'});
+        for (const client of clients) client.postMessage({
+          type: 'map-memory-state', megabytes: packMemoryLimit / 1024 / 1024,
+          bytes: packMemoryBytes,
+        });
+      } catch (_) {} finally {memoryNotice = null; resolve();}
+    }, 1000);
+  });
+  return memoryNotice;
+}
+
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.origin !== ROOT.origin ||
       !['map_tiles_uniform', 'border_tiles'].some(folder =>
         url.pathname.startsWith(`${ROOT.pathname}assets/assets/data/${folder}/`))) return;
-  event.respondWith((async () => {
+  const response = (async () => {
     let data;
     try { data = await inventory(); } catch (_) { return fetch(event.request); }
     const entry = data.byPath.get(url.pathname);
     return entry ? storedImage(entry) : fetch(event.request);
-  })());
+  })();
+  event.respondWith(response);
+  event.waitUntil(response.then(reportMemoryAfterRead, () => {}));
 });
