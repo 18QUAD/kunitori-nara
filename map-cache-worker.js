@@ -764,12 +764,17 @@ self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 self.addEventListener('message', event => {
   if (!event.ports[0]) return;
-  if (['map-memory-get', 'map-memory-set'].includes(event.data?.type)) {
+  if (['map-memory-get', 'map-memory-set', 'map-memory-release'].includes(event.data?.type)) {
     const operation = event.data.type === 'map-memory-set'
       ? setMemorySettings(event.data.megabytes)
       : memorySettingsQueue.then(async () => {
         await loadMemorySettings();
-        return {megabytes: packMemoryLimit / 1024 / 1024};
+        if (event.data.type === 'map-memory-release') {
+          await Promise.allSettled([...packReads.values()]);
+          packMemory.clear();
+          packMemoryBytes = 0;
+        }
+        return {megabytes: packMemoryLimit / 1024 / 1024, bytes: packMemoryBytes};
       });
     event.waitUntil(operation.then(
       result => event.ports[0].postMessage(result),
