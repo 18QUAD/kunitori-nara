@@ -10,12 +10,13 @@ let browser;
 (async () => {
   const base = process.env.BASE_URL || 'http://127.0.0.1:8766/kunitori-nara/';
   const output = process.env.MEMORY_OUTPUT || '/workspace/exact-zoom-memory.json';
-  const scale = Number(process.env.MAP_SCALE || 6.443794328325407);
+  let scale = Number(process.env.MAP_SCALE || 6.443794328325407);
   const geo = JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/data/prefectures/24.json')));
   const pts = geo.towns.flatMap(t => t.polygons.flat(2));
   const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
   const minX = xs.reduce((a,b)=>Math.min(a,b),Infinity), maxX = xs.reduce((a,b)=>Math.max(a,b),-Infinity), minY = ys.reduce((a,b)=>Math.min(a,b),Infinity), maxY = ys.reduce((a,b)=>Math.max(a,b),-Infinity);
   const ppd = Math.min(1020 / ((maxX-minX)*.826),1420/(maxY-minY));
+  scale = 128 * 2**Math.max(-3,Math.min(7,Math.round(Math.log2(scale*ppd*2/128)))) / (ppd*2);
   const dx=(1100-(maxX-minX)*.826*ppd)/2,dy=(1500-(maxY-minY)*ppd)/2;
   const townId = process.env.TOWN_ID || '242081510';
   const town=geo.towns.find(t=>t.id===townId);
@@ -96,7 +97,7 @@ let browser;
       const report=await page.evaluate(()=>JSON.parse(window.kunitoriDiagnostics.report()));
       const ends=report.sessions.flatMap(s=>s.events).filter(e=>e.event==='images_load_end');
       assert(ends.length>0);
-      assert(ends.every(e=>e.state.imageCache.images===0),'Finished layers must release decoded input images');
+      assert(ends.every(e=>e.state.imageCache.runtimeRasters===0),'Finished layers must not generate map images');
     }
   }
   let peakRss=0;
@@ -111,7 +112,7 @@ let browser;
         await page.getByRole('button',{name,exact:true}).evaluate(e=>e.click());
         await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
         const until=Date.now()+120000;
-        while(!(await page.getByRole('button',{name:'拡大',exact:true}).isEnabled())) {
+        while(!(await page.getByRole('button',{name:'攻略中の町へ',exact:true}).or(page.getByRole('button',{name:'本拠地へ',exact:true})).first().isEnabled())) {
           if(Date.now()>until)throw Error('Image retirement/zoom controls did not finish');
           await page.waitForTimeout(20);
         }
@@ -119,7 +120,7 @@ let browser;
         const captured=await page.evaluate(()=>({x:scrollX,y:scrollY,view:JSON.parse(JSON.parse(localStorage.getItem('flutter.kunitori.nara.mapView.v1')))}));
         assert.equal(captured.x,0,'Test must not scroll the document while clicking map semantics');
         assert.equal(captured.y,0);
-        assert(Math.abs(captured.view.scale-(name==='拡大'?scale*1.7:scale))<1e-8);
+        assert(Math.abs(captured.view.scale-(name==='拡大'?scale*2:scale))<1e-8);
         await sample(`${i}-${name}`);
       }
     }
@@ -129,6 +130,6 @@ let browser;
     assert.equal(saved.totalTaps,game.totalTaps);assert.deepEqual(saved.owned,game.owned);
     assert.equal(documentLoads,1);assert.equal(await page.evaluate(()=>performance.timeOrigin),started);assert.deepEqual(errors,[]);
     fs.writeFileSync(output,JSON.stringify({samples,textures,peakRss},null,2));
-    console.log('PASS exact logged scene: 6.44379 ↔ 10.95445, 560 territories, no reload; peak RSS',peakRss);
+    console.log('PASS prepared adjacent scales, 560 territories, no reload; peak RSS',peakRss);
   } finally {clearInterval(poll);await browser.close();}
 })().catch(async error=>{console.error(error);await browser?.close();process.exitCode=1;});

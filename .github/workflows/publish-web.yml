@@ -70,7 +70,10 @@ jobs:
       - name: Build with public API endpoint
         env:
           REGIONAL_ADS_ENDPOINT: ${{ vars.REGIONAL_ADS_ENDPOINT }}
-        run: flutter build web --release --no-pub --base-href /kunitori-nara/ --dart-define="REGIONAL_ADS_ENDPOINT=$REGIONAL_ADS_ENDPOINT"
+        run: |
+          flutter build web --release --no-pub --base-href /kunitori-nara/ --dart-define="REGIONAL_ADS_ENDPOINT=$REGIONAL_ADS_ENDPOINT"
+          python3 tools/prepare_map_cache.py build/web
+          python3 tools/check_release_geography.py
       - name: Publish gh-pages
         run: |
           touch build/web/.nojekyll

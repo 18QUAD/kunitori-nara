@@ -11,16 +11,13 @@ class MapImageBudget extends ChangeNotifier {
   final _entries = <Object, (MapImageKind, int)>{};
   int get totalBytes => megabytes * mib;
   int get compressedBytes => totalBytes ~/ 8;
-  int limit(MapImageKind kind) => switch (kind) {
-    MapImageKind.source => totalBytes * 5 ~/ 16,
-    MapImageKind.background || MapImageKind.boundary => totalBytes * 9 ~/ 32,
-  };
+  // Finished backgrounds and boundaries compete in one LRU. There are no
+  // additional composed-image pools or duplicate decoded ingredients.
+  int limit(MapImageKind kind) => totalBytes - compressedBytes;
   int used(MapImageKind kind) => _entries.values
       .where((entry) => entry.$1 == kind)
       .fold(0, (total, entry) => total + entry.$2);
   int get retainedBytes => _entries.values.fold(0, (n, entry) => n + entry.$2);
-  int rasterCells(MapImageKind kind) =>
-      (limit(kind) ~/ mib).clamp(1, kind == MapImageKind.background ? 12 : 24);
 
   void configure(int value) {
     if (![32, 64, 128, 256].contains(value)) {
@@ -35,7 +32,7 @@ class MapImageBudget extends ChangeNotifier {
     if (_entries.containsKey(key)) {
       throw StateError('Duplicate image reservation');
     }
-    if (bytes < 0 || used(kind) + bytes > limit(kind)) return false;
+    if (bytes < 0 || retainedBytes + bytes > limit(kind)) return false;
     _entries[key] = (kind, bytes);
     return true;
   }

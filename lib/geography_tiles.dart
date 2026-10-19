@@ -1,59 +1,65 @@
 import 'diagnostics.dart';
 import 'map_image_budget.dart';
+import 'prepared_map_bytes.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'prefecture_border_mesh.dart';
-import 'water_mesh.dart';
 
-/// Offline-rendered GIS pyramid. No water geometry or DEM processing at runtime.
+/// One button step equals one prepared image level. Fixed 2x sampling makes
+/// the pre-baked .625 logical-pixel boundary independent of device DPR.
+abstract final class MapImageScale {
+  static const sampling = 2.0;
+  static const minLevel = -3;
+  static int maximum({bool national = false, bool city = false}) =>
+      national
+          ? 5
+          : city
+          ? 8
+          : 7;
+  static double scale(int level, double projection) =>
+      128 * math.pow(2, level) / (projection * sampling);
+  static int level(double zoom, double projection) =>
+      (math.log(zoom * projection * sampling / 128) / math.ln2).round();
+  static double snap(
+    double zoom,
+    double projection,
+    int maximum, {
+    bool fit = false,
+  }) {
+    final exponent = math.log(zoom * projection * sampling / 128) / math.ln2;
+    final level = (fit ? exponent.floor() : exponent.round()).clamp(
+      minLevel,
+      maximum,
+    );
+    return scale(level, projection);
+  }
+}
+
 class GeographyTileIndex {
   GeographyTileIndex.fromJson(Map<String, dynamic> json)
-    : layerMaxLevels = (json['layerMaxLevels'] as Map<String, dynamic>? ?? {})
-          .map((key, value) => MapEntry(key, value as int)),
+    : layerMaxLevels = (json['layerMaxLevels'] as Map<String, dynamic>).map(
+        (key, value) => MapEntry(key, value as int),
+      ),
       available = (json['tiles'] as Map).keys.cast<String>().toSet(),
       maxLevel = json['maxLevel'] as int,
-      minLevel = json['minLevel'] as int? ?? 0,
-      basePixelsPerDegree = json['basePixelsPerDegree'] as int? ?? 64,
-      detailLevels = (json['detailLevels'] as Map<String, dynamic>? ?? {}).map(
-        (key, value) => MapEntry(key, value as int),
-      );
+      minLevel = json['minLevel'] as int,
+      basePixelsPerDegree = json['basePixelsPerDegree'] as int;
   final Set<String> available;
-  final int maxLevel;
-  final int minLevel;
-  final int basePixelsPerDegree;
-  final Map<String, int> detailLevels;
+  final int maxLevel, minLevel, basePixelsPerDegree;
   final Map<String, int> layerMaxLevels;
-
   int layerLevel(int level, String layer) =>
-      math.min(level, layerMaxLevels[layer] ?? level);
-
-  bool hasTile(int level, int x, int y, String layer) {
-    final lod = layerLevel(level, layer);
-    final divisor = 1 << (level - lod);
-    return available.contains('${lod}_${x ~/ divisor}_${y ~/ divisor}_$layer');
-  }
-
+      math.min(level, layerMaxLevels[layer] ?? maxLevel);
+  bool hasTile(int level, int x, int y, String layer) =>
+      available.contains('${level}_${x}_${y}_$layer');
   static Future<GeographyTileIndex>? _pending;
-  static Future<GeographyTileIndex>? _borderPending;
-  static Future<GeographyTileIndex> loadBorders() async {
-    try {
-      return await (_borderPending ??= rootBundle
-          .loadString('assets/data/border_tiles/index-slim.json', cache: false)
-          .then((s) => GeographyTileIndex.fromJson(jsonDecode(s))));
-    } catch (_) {
-      _borderPending = null;
-      rethrow;
-    }
-  }
-
+  static Future<GeographyTileIndex> loadBorders() => load();
   static Future<GeographyTileIndex> load() async {
     try {
       return await (_pending ??= rootBundle
-          .loadString('assets/data/map_tiles_uniform/index-dry.json')
+          .loadString('assets/data/map_images/index.json', cache: false)
           .then((s) => GeographyTileIndex.fromJson(jsonDecode(s))));
     } catch (_) {
       _pending = null;
@@ -67,99 +73,33 @@ class GeographyTileIndex {
     return Rect.fromLTWH(120 + x * side, 48 - (y + 1) * side, side, side);
   }
 
-  /// Use image resolution near the device's physical pixel density; overzoom the
-  /// finest source instead of synthesizing geography during a gesture.
   int levelFor(double pixelsPerDegree, {String? prefectureId}) =>
-      (math.log(pixelsPerDegree / basePixelsPerDegree) / math.ln2).ceil().clamp(
-        minLevel,
-        detailLevels[prefectureId] ?? maxLevel,
-      );
+      (math.log(pixelsPerDegree / basePixelsPerDegree) / math.ln2)
+          .round()
+          .clamp(minLevel, maxLevel);
 }
 
-// Both layers and departing map widgets share one native raster queue. A
-// completed load must retire its images before another map allocates replacements.
-final _retirements = <Future<void>>{};
-Future<void>? _rasterTail;
-Future<void> _serialRaster(Future<void> Function() action) {
-  Future<void> run() async {
-    await Future.wait(_retirements.toList());
-    await action();
-  }
-
-  final previous = _rasterTail;
-  final result = previous == null ? run() : previous.then((_) => run());
-  late final Future<void> tail;
-  void finish() {
-    if (identical(_rasterTail, tail)) _rasterTail = null;
-  }
-
-  tail = result.then<void>(
-    (_) => finish(),
-    onError: (Object _, StackTrace __) => finish(),
-  );
-  _rasterTail = tail;
-  return result;
-}
-
-/// Call after the departing map has been unmounted for a frame. No new scene
-/// should allocate geometry until its in-flight rasters and retirements finish.
+/// Navigation waits for pending decodes but retains reusable finished images.
+/// Reclamation happens only under the shared budget, or OS memory pressure.
 Future<void> retireMapImages() async {
-  await Future.wait([
-    GeographyImageCache.shared.drain(),
-    GeographyImageCache.borders.drain(),
-  ]);
-  await _serialRaster(() async {});
-  await Future.wait(_retirements.toList());
-  GeographyImageCache.shared.clearUnused();
-  GeographyImageCache.borders.clearUnused();
+  await GeographyImageCache.shared.drain();
+  GeographyImageCache.shared.trim();
 }
 
-/// Shared bounded LRU. Active map tiles are pinned; in-flight decodes deduplicate.
+/// One byte-bounded LRU for backgrounds AND boundaries, including reservations
+/// for decodes in flight. Active painters pin their images until the next frame.
 class GeographyImageCache {
-  GeographyImageCache({
-    this.capacity = 48,
-    this.assetDirectory = 'assets/data/map_tiles_uniform',
-    this.filenamePrefix = '',
-    this.layerFilenamePrefixes = const {'detail': 'dry_', 'overview': 'dry_'},
-  });
-  static final shared = GeographyImageCache(
-    layerFilenamePrefixes: const {'detail': 'dry_', 'overview': 'dry_'},
-  );
-  static final borders = GeographyImageCache(
-    capacity: 8,
-    assetDirectory: 'assets/data/border_tiles',
-    filenamePrefix: 'slim_',
-    layerFilenamePrefixes: const {'pref': 'slimshared_'},
-  );
-  static final _reservations = <ui.Image, Object>{};
-  static void _disposeSource(ui.Image image) {
-    MapImageBudget.shared.release(_reservations.remove(image));
-    image.dispose();
-  }
-
-  static void _makeSourceRoom(int bytes) {
-    for (final cache in [shared, borders]) {
-      final pinned = cache._pins.values.expand((keys) => keys).toSet();
-      for (final key in cache._images.keys.toList()) {
-        if (MapImageBudget.shared.used(MapImageKind.source) + bytes <=
-            MapImageBudget.shared.limit(MapImageKind.source)) {
-          return;
-        }
-        if (!pinned.contains(key)) _disposeSource(cache._images.remove(key)!);
-      }
-    }
-  }
-
+  GeographyImageCache({this.capacity = 256});
+  static final shared = GeographyImageCache();
   final int capacity;
-  final String assetDirectory, filenamePrefix;
-  final Map<String, String> layerFilenamePrefixes;
-  String prefixFor(String key) =>
-      layerFilenamePrefixes[key.split('_').last] ?? filenamePrefix;
   final _images = <String, ui.Image>{};
+  final _reservations = <String, Object>{};
   final _pending = <String, Future<ui.Image>>{};
   final _pins = <Object, Set<String>>{};
+  final _preferred = <Object, Set<String>>{};
   final _waiting = <Completer<void>>[];
   int _decoding = 0;
+  int _decodeCount = 0;
   Future<void> _acquire() async {
     if (_decoding < 2) {
       _decoding++;
@@ -176,29 +116,27 @@ class GeographyImageCache {
     } else {
       _decoding--;
     }
-    _trim();
   }
 
   Future<void> drain() async {
     while (_pending.isNotEmpty) {
       await Future.wait([
-        for (final pending in _pending.values.toList())
-          pending.then<void>((_) {}, onError: (Object _, StackTrace __) {}),
+        for (final f in _pending.values.toList())
+          f.then<void>((_) {}, onError: (Object _, StackTrace __) {}),
       ]);
     }
   }
 
   int get length => _images.length;
   Map<String, Object?> get diagnosticCounts => {
-    'images': _images.length,
-    'bytes': _images.values.fold<int>(
-      0,
-      (n, image) => n + image.width * image.height * 4,
-    ),
+    'images': length,
+    'bytes': _images.values.fold<int>(0, (n, i) => n + i.width * i.height * 4),
     'budget': MapImageBudget.shared.diagnosticCounts,
     'decoding': _decoding,
     'queued': _waiting.length,
     'owners': _pins.length,
+    'decodes': _decodeCount,
+    'runtimeRasters': 0,
   };
   ui.Image? peek(String key) {
     final image = _images.remove(key);
@@ -208,66 +146,103 @@ class GeographyImageCache {
 
   void pin(Object owner, Set<String> keys) {
     _pins[owner] = keys;
-    _trim();
+  }
+
+  void prefer(Object owner, Set<String> keys) {
+    _preferred[owner] = keys;
   }
 
   void release(Object owner) {
     _pins.remove(owner);
-    _trim();
+    _preferred.remove(owner);
+    trim();
+  }
+
+  void _remove(String key) {
+    _images.remove(key)?.dispose();
+    MapImageBudget.shared.release(_reservations.remove(key));
   }
 
   void clearUnused() {
-    final pinned = _pins.values.expand((keys) => keys).toSet();
+    PreparedMapBytes.shared.clear();
+    final pinned = _pins.values.expand((s) => s).toSet();
     for (final key in _images.keys.toList()) {
-      if (!pinned.contains(key)) _disposeSource(_images.remove(key)!);
+      if (!pinned.contains(key)) _remove(key);
     }
   }
 
-  void _trim() {
-    _makeSourceRoom(0);
+  void trim([int incoming = 0]) {
+    final budget = MapImageBudget.shared;
     final pinned = _pins.values.expand((s) => s).toSet();
-    for (final key in _images.keys.toList()) {
-      if (_images.length <= capacity) break;
-      if (!pinned.contains(key)) _disposeSource(_images.remove(key)!);
+    final preferred = _preferred.values.expand((s) => s).toSet();
+    final keys = [
+      ..._images.keys.where((key) => !preferred.contains(key)),
+      ..._images.keys.where(preferred.contains),
+    ];
+    for (final key in keys) {
+      if (budget.retainedBytes + incoming <=
+              budget.limit(MapImageKind.source) &&
+          length < capacity + (incoming == 0 ? 1 : 0)) {
+        break;
+      }
+      if (!pinned.contains(key)) _remove(key);
     }
+  }
+
+  bool get canPrefetch {
+    if (_pending.isNotEmpty) return false;
+    final preferred = _preferred.values.expand((s) => s).toSet();
+    final pinned = _pins.values.expand((s) => s).toSet();
+    final reclaimable = _images.entries.where(
+      (e) => !preferred.contains(e.key) && !pinned.contains(e.key),
+    );
+    final reclaimBytes = reclaimable.fold(
+      0,
+      (n, e) => n + e.value.width * e.value.height * 4,
+    );
+    return length - reclaimable.length < capacity &&
+        MapImageBudget.shared.retainedBytes -
+                reclaimBytes +
+                MapImageBudget.mib <=
+            MapImageBudget.shared.limit(MapImageKind.source);
   }
 
   Future<ui.Image> load(String key) {
-    final cached = _images.remove(key);
-    if (cached != null) {
-      _images[key] = cached;
-      return Future.value(cached);
-    }
+    final cached = peek(key);
+    if (cached != null) return Future.value(cached);
     return _pending.putIfAbsent(key, () async {
       await _acquire();
       final reservation = Object();
       var retained = false;
       try {
-        final side = assetDirectory.endsWith('border_tiles') ? 512 : 256;
-        final size = side * side * 4;
-        _makeSourceRoom(size);
-        if (!MapImageBudget.shared.reserve(
-          reservation,
-          MapImageKind.source,
-          size,
-        )) {
-          throw StateError('Source image budget exhausted');
+        final parts = key.split('~');
+        final side = parts.length == 1 ? 512 : int.parse(parts.last);
+        final bytesNeeded = side * side * 4;
+        trim(bytesNeeded);
+        final kind =
+            parts.first.endsWith('_background') ||
+                    parts.first.endsWith('_overview')
+                ? MapImageKind.background
+                : MapImageKind.boundary;
+        if (!MapImageBudget.shared.reserve(reservation, kind, bytesNeeded)) {
+          throw StateError('Map image budget exhausted');
         }
-        final bytes = await rootBundle.load(
-          '$assetDirectory/${prefixFor(key)}$key.webp',
-        );
+        final bytes = await PreparedMapBytes.shared.load(parts.first);
         final codec = await ui.instantiateImageCodec(
-          bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+          bytes,
+          targetWidth: side,
+          targetHeight: side,
         );
         try {
           final image = (await codec.getNextFrame()).image;
-          if (image.width * image.height * 4 != size) {
+          if (image.width != side || image.height != side) {
             image.dispose();
             throw StateError('Unexpected map image dimensions');
           }
-          _reservations[image] = reservation;
-          retained = true;
           _images[key] = image;
+          _reservations[key] = reservation;
+          retained = true;
+          _decodeCount++;
           return image;
         } finally {
           codec.dispose();
@@ -292,9 +267,7 @@ class GeographyTiles extends StatefulWidget {
     this.prefectureId,
     this.nationalOverview = false,
     this.boundaryLayer,
-    this.boundaryPaths,
     this.onBusyChanged,
-    this.rasterClip,
   });
   final TransformationController transform;
   final Offset Function(math.Point<double>) project;
@@ -302,76 +275,23 @@ class GeographyTiles extends StatefulWidget {
   final Path clip;
   final bool enabled;
   final ValueChanged<bool>? onBusyChanged;
-  final Path Function(Rect, double)? rasterClip;
   final String? prefectureId;
   final bool nationalOverview;
   final String? boundaryLayer;
-
-  /// Detailed outlines already resident for the visible prefecture. Cached as
-  /// images with the same screen stroke width at every scale.
-  final Iterable<Path>? boundaryPaths;
   @override
   State<GeographyTiles> createState() => _GeographyTilesState();
 }
 
 class _GeographyTilesState extends State<GeographyTiles> {
-  late final cache =
-      widget.boundaryLayer == null
-          ? GeographyImageCache.shared
-          : GeographyImageCache.borders;
+  final cache = GeographyImageCache.shared;
   GeographyTileIndex? index;
-  Timer? timer;
-  Timer? _retryTimer;
-  int _retryAttempt = 0;
-  int revision = 0;
-  bool _refreshing = false;
-  bool _refreshPending = false;
+  Timer? timer, _retryTimer;
+  int revision = 0, _retryAttempt = 0;
+  bool _refreshing = false, _refreshPending = false;
   double? refreshedZoom;
-  bool failed = false;
-  bool loading = true;
+  bool failed = false, loading = true;
   List<_Tile> tiles = [];
-  final _detailImages = <String, ui.Image>{};
-  Future<PrefectureBorderMesh>? _mesh;
-  Future<WaterMesh>? _waterMesh;
-
-  Future<void> _disposeImages(Iterable<ui.Image> images) async {
-    final retired = images.toList();
-    if (retired.isEmpty) return;
-    final complete = Completer<void>();
-    _retirements.add(complete.future);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      for (final image in retired) {
-        MapImageBudget.shared.release(image);
-        image.dispose();
-      }
-      _retirements.remove(complete.future);
-      complete.complete();
-    });
-    WidgetsBinding.instance.ensureVisualUpdate();
-    await complete.future;
-  }
-
-  void _clearDetailImages() {
-    revision++;
-    tiles = [];
-    unawaited(_disposeImages(_detailImages.values));
-    _detailImages.clear();
-    _mesh = null;
-    _waterMesh = null;
-  }
-
-  void _retryAfterFailure() {
-    if (!mounted || !widget.enabled || _retryTimer != null) return;
-    final seconds = math.min(30, 1 << math.min(_retryAttempt++, 5));
-    _retryTimer = Timer(Duration(seconds: seconds), () {
-      _retryTimer = null;
-      if (!mounted || !widget.enabled) return;
-      _mesh = null;
-      _waterMesh = null;
-      recordDiagnostic('images_load_retry', {'attempt': _retryAttempt});
-      index == null ? _loadIndex() : _refresh();
-    });
-  }
+  Set<String> _pinned = {};
 
   @override
   void initState() {
@@ -382,51 +302,51 @@ class _GeographyTilesState extends State<GeographyTiles> {
   }
 
   void _budgetChanged() {
-    _clearDetailImages();
+    cache.trim();
     _refresh();
   }
 
   Future<void> _loadIndex() async {
     try {
-      final loaded =
-          await (widget.boundaryLayer == null
-              ? GeographyTileIndex.load()
-              : GeographyTileIndex.loadBorders());
+      final manifest = await GeographyTileIndex.load();
       if (!mounted) return;
-      index = loaded;
+      index = manifest;
       _refresh();
     } catch (error) {
-      if (mounted) {
-        recordDiagnostic('images_index_error', {'error': error.toString()});
-        setState(() => failed = true);
-        widget.onBusyChanged?.call(false);
-        _retryAfterFailure();
-      }
+      if (!mounted) return;
+      recordDiagnostic('images_index_error', {'error': error.toString()});
+      setState(() => failed = true);
+      widget.onBusyChanged?.call(false);
+      _retry();
     }
+  }
+
+  void _retry() {
+    if (!mounted || !widget.enabled || _retryTimer != null) return;
+    _retryTimer = Timer(
+      Duration(seconds: math.min(30, 1 << math.min(_retryAttempt++, 5))),
+      () {
+        _retryTimer = null;
+        if (!mounted) return;
+        index == null ? _loadIndex() : _refresh();
+      },
+    );
   }
 
   @override
   void didUpdateWidget(GeographyTiles old) {
     super.didUpdateWidget(old);
-    if (old.clip != widget.clip ||
-        old.rasterClip != widget.rasterClip ||
-        old.project != widget.project ||
-        old.boundaryLayer != widget.boundaryLayer ||
-        old.prefectureId != widget.prefectureId ||
-        old.nationalOverview != widget.nationalOverview) {
-      _clearDetailImages();
-    }
     if (old.transform != widget.transform) {
       old.transform.removeListener(_schedule);
       widget.transform.addListener(_schedule);
     }
+    // Ownership/progress/labels are deliberately absent from this dependency
+    // list. They never invalidate an image or initiate background work.
     if (old.transform != widget.transform ||
-        old.rasterClip != widget.rasterClip ||
         old.project != widget.project ||
         old.viewport != widget.viewport ||
         old.clip != widget.clip ||
         old.enabled != widget.enabled ||
-        old.prefectureId != widget.prefectureId ||
         old.nationalOverview != widget.nationalOverview ||
         old.boundaryLayer != widget.boundaryLayer) {
       _schedule();
@@ -434,14 +354,21 @@ class _GeographyTilesState extends State<GeographyTiles> {
   }
 
   void _schedule() {
+    revision++;
     timer?.cancel();
-    // Never stretch the previous border LOD for a debounce frame. Refresh the
-    // exact LOD synchronously on scale changes; cached tiles appear immediately.
-    if (widget.transform.value.getMaxScaleOnAxis() != refreshedZoom) {
-      _refresh();
-      return;
+    // Coalesce pinch/pan. The painter hides outdated borders immediately, so
+    // an old thin line is never stretched into a thick transient outline.
+    if (index != null &&
+        widget.transform.value.getMaxScaleOnAxis() != refreshedZoom) {
+      final a = widget.project(const math.Point(120.0, 48.0));
+      final b = widget.project(const math.Point(121.0, 47.0));
+      final zoom = widget.transform.value.getMaxScaleOnAxis();
+      final snapped = MapImageScale.scale(_level, (b.dy - a.dy).abs());
+      if ((zoom - snapped).abs() < 1e-8) {
+        _refresh();
+        return;
+      }
     }
-    // Panning and terrain images can keep their current raster while coalescing.
     timer = Timer(const Duration(milliseconds: 70), _refresh);
   }
 
@@ -453,32 +380,90 @@ class _GeographyTilesState extends State<GeographyTiles> {
     );
   }
 
+  List<(String, Rect, Rect)> _descriptors(int level) {
+    final manifest = index!;
+    final layer =
+        widget.boundaryLayer ??
+        (widget.nationalOverview ? 'overview' : 'background');
+    level = manifest
+        .layerLevel(level, layer)
+        .clamp(manifest.minLevel, manifest.maxLevel);
+    final scene = Rect.fromPoints(
+      widget.transform.toScene(Offset.zero),
+      widget.transform.toScene(widget.viewport.bottomRight(Offset.zero)),
+    ).intersect(widget.clip.getBounds());
+    if (scene.isEmpty) return [];
+    final origin = widget.project(const math.Point(120.0, 48.0));
+    final unit = widget.project(const math.Point(121.0, 47.0)) - origin;
+    final span = GeographyTileIndex.span(level);
+    final result = <(String, Rect, Rect)>[];
+    final xmin = ((scene.left - origin.dx) / unit.dx / span).floor();
+    final xmax = ((scene.right - origin.dx) / unit.dx / span).floor();
+    final ymin = ((scene.top - origin.dy) / unit.dy / span).floor();
+    final ymax = ((scene.bottom - origin.dy) / unit.dy / span).floor();
+    for (var x = xmin; x <= xmax; x++) {
+      for (var y = ymin; y <= ymax; y++) {
+        final target = _sceneRect(level, x, y);
+        var lod = level, sx = x, sy = y;
+        // Fine dry patches reuse the same prepared background. Water-containing
+        // patches always have their own fine bitmap. Borders never use parents.
+        while (true) {
+          final key = '${lod}_${sx}_${sy}_$layer';
+          if (manifest.available.contains(key)) {
+            result.add((key, _sceneRect(lod, sx, sy), target));
+            break;
+          }
+          if (layer != 'background' || lod <= 5) break;
+          lod--;
+          sx = (sx / 2).floor();
+          sy = (sy / 2).floor();
+        }
+      }
+    }
+    // Wide desktop windows can cover more cells than a phone. Decode finished
+    // tiles smaller there, without changing image level or border screen width.
+    var side = 512;
+    final count = result.map((d) => d.$1).toSet().length;
+    while (side > 128 &&
+        count * side * side * 4 >
+            MapImageBudget.shared.limit(MapImageKind.source) ~/ 2) {
+      side ~/= 2;
+    }
+    return side == 512
+        ? result
+        : [
+          for (final (key, rect, target) in result)
+            ('$key~$side', rect, target),
+        ];
+  }
+
+  int get _level {
+    final a = widget.project(const math.Point(120.0, 48.0));
+    final b = widget.project(const math.Point(121.0, 47.0));
+    return MapImageScale.level(
+      widget.transform.value.getMaxScaleOnAxis(),
+      (b.dy - a.dy).abs(),
+    ).clamp(index!.minLevel, index!.maxLevel);
+  }
+
   Future<void> _refresh() async {
     if (!mounted || index == null) return;
-    // Invalidate stale results immediately, but let their native work finish
-    // before starting the latest requested view. Keep only one pending request.
     revision++;
     _refreshPending = true;
-    if (_refreshing) {
-      if (widget.transform.value.getMaxScaleOnAxis() != refreshedZoom) {
-        setState(() => tiles = []);
-      }
-      return;
-    }
+    if (_refreshing) return;
+    _refreshing = true;
     _retryTimer?.cancel();
     _retryTimer = null;
-    _refreshing = true;
+    widget.onBusyChanged?.call(true);
     recordDiagnostic('images_load_start', {
       'imageScale': widget.transform.value.getMaxScaleOnAxis(),
       'imageCache': cache.diagnosticCounts,
     });
-    widget.onBusyChanged?.call(true);
     try {
       do {
         _refreshPending = false;
         failed = false;
         await _refreshOnce();
-        // Retired images are disposed after paint; don't unlock beforehand.
         await WidgetsBinding.instance.endOfFrame;
       } while (mounted && _refreshPending);
     } catch (error) {
@@ -490,16 +475,6 @@ class _GeographyTilesState extends State<GeographyTiles> {
         });
       }
     } finally {
-      if (widget.boundaryLayer == null) {
-        // The screen owns composed backgrounds, not their decoded input tiles.
-        // Keeping both duplicates GPU/CPU pixels and raises the next zoom peak.
-        if (mounted) {
-          cache.pin(this, {});
-        } else {
-          cache.release(this);
-        }
-        cache.clearUnused();
-      }
       _refreshing = false;
       recordDiagnostic('images_load_end', {
         'imageCache': cache.diagnosticCounts,
@@ -507,7 +482,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
       if (mounted) {
         widget.onBusyChanged?.call(false);
         if (failed) {
-          _retryAfterFailure();
+          _retry();
         } else {
           _retryAttempt = 0;
         }
@@ -516,457 +491,50 @@ class _GeographyTilesState extends State<GeographyTiles> {
   }
 
   Future<void> _refreshOnce() async {
-    final manifest = index;
-    if (!mounted || manifest == null) return;
-    final token = ++revision;
-    if (!widget.enabled) {
-      cache.pin(this, {});
-      _clearDetailImages();
-      setState(() {
-        tiles = [];
-        loading = false;
-      });
-      return;
-    }
-    final origin = widget.project(const math.Point(120.0, 48.0));
-    final unit = widget.project(const math.Point(121.0, 47.0)) - origin;
-    final zoom = widget.transform.value.getMaxScaleOnAxis();
-    final borders = widget.boundaryLayer != null;
-    refreshedZoom = zoom;
-    final pixelRatio = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
-    await _retireObsoleteDetailImages(zoom, pixelRatio);
-    await Future.wait(_retirements.toList());
-    if (!mounted || token != revision) return;
-    if (borders &&
-        (widget.boundaryPaths != null || widget.boundaryLayer == 'pref')) {
-      try {
-        await _refreshDetailImages(token, zoom, pixelRatio);
-      } catch (_) {
-        if (mounted && token == revision) {
-          setState(() {
-            failed = true;
-            loading = false;
-          });
-        }
-      }
-      return;
-    }
-    if (!borders) {
-      final (_, _, _, cells) = _rasterGrid(zoom, pixelRatio);
-      setState(() {
-        tiles = [
-          for (final (key, rect) in cells)
-            if (_detailImages[key] case final image?)
-              _Tile(image, rect, rect, 'background'),
-        ];
-        loading = tiles.length != cells.length;
-      });
-      if (!loading && !failed) {
-        cache.pin(this, {});
-        return;
-      }
-    }
-    var level = manifest.levelFor(
-      math.max(unit.dx.abs(), unit.dy.abs()) *
-          zoom *
-          math.min(borders ? 3.0 : 1.5, MediaQuery.devicePixelRatioOf(context)),
-      prefectureId: widget.prefectureId,
-    );
-    var scene = Rect.fromPoints(
-      widget.transform.toScene(Offset.zero),
-      widget.transform.toScene(widget.viewport.bottomRight(Offset.zero)),
-    );
-    if (!borders) {
-      final (_, _, _, cells) = _rasterGrid(zoom, pixelRatio);
-      if (cells.isNotEmpty) {
-        scene = cells
-            .map((cell) => cell.$2)
-            .reduce((a, b) => a.expandToInclude(b));
-      }
-    }
-    final detailLayer = widget.nationalOverview ? 'overview' : 'detail';
-    final layers =
-        widget.boundaryLayer == null
-            ? ['shade', detailLayer]
-            : [widget.boundaryLayer!];
-    List<(int, int)> visible(int lod) {
-      final span = GeographyTileIndex.span(lod);
-      // Thin boundaries need native display resolution. Loading a whole ring
-      // of offscreen border tiles used to exceed the cell budget and downgrade
-      // even small phone viewports by several image levels.
-      final margin =
-          borders ? 0.0 : span * math.max(unit.dx.abs(), unit.dy.abs());
-      final view = scene.inflate(margin).intersect(widget.clip.getBounds());
-      if (view.isEmpty) return [];
-      final xmin = ((view.left - origin.dx) / unit.dx / span).floor();
-      final xmax = ((view.right - origin.dx) / unit.dx / span).floor();
-      final ymin = ((view.top - origin.dy) / unit.dy / span).floor();
-      final ymax = ((view.bottom - origin.dy) / unit.dy / span).floor();
-      return [
-        for (var x = xmin; x <= xmax; x++)
-          for (var y = ymin; y <= ymax; y++)
-            if (layers.any((layer) => manifest.hasTile(lod, x, y, layer)))
-              (x, y),
-      ];
-    }
-
-    var cells = visible(level);
-    // Keep requests/memory bounded even on a very large or high-DPI viewport.
-    // 24 x 512px bounds the sharp border surface at 24 MiB, plus parents.
-    // Offscreen images still use the small shared LRU rather than staying pinned.
-    // Each cell may need two layers and two coarse fallback tiles. All
-    // reservations, including concurrent decodes, share the source byte pool.
-    final sourceBytes = MapImageBudget.shared.limit(MapImageKind.source);
-    final cellLimit =
-        borders
-            ? math.min(24, math.max(1, sourceBytes ~/ (512 * 512 * 4) - 2))
-            : math.min(24, math.max(1, sourceBytes ~/ (4 * 256 * 256 * 4)));
-    while (cells.length > cellLimit && level > manifest.minLevel) {
-      cells = visible(--level);
-    }
-    final wanted = <String>{};
-    final descriptors = <(String, Rect, String, Rect)>[];
-    for (final (x, y) in cells) {
-      final target = _sceneRect(level, x, y);
-      for (final layer in layers) {
-        final sourceLevel = manifest.layerLevel(level, layer);
-        if (!manifest.hasTile(level, x, y, layer)) continue;
-        // Only terrain may use coarse parents. Enlarged border parents would
-        // briefly show much thicker strokes while sharp tiles are loading.
-        final fallback =
-            widget.boundaryLayer == null ? manifest.minLevel : sourceLevel;
-        for (final lod in [sourceLevel, if (sourceLevel > fallback) fallback]) {
-          final divisor = 1 << (level - lod);
-          final parent = '${lod}_${x ~/ divisor}_${y ~/ divisor}_$layer';
-          if (!manifest.available.contains(parent)) continue;
-          wanted.add(parent);
-          descriptors.add((
-            parent,
-            _sceneRect(lod, x ~/ divisor, y ~/ divisor),
-            layer,
-            target,
-          ));
-        }
-      }
-    }
-    cache.pin(this, wanted);
-    var backgroundTiles = <_Tile>[];
-    void publish() {
-      if (!mounted || token != revision) return;
-      // Descriptors are sharpest-first, one image per target/layer.
-      final chosen = <(Rect, String)>{};
-      final ready = <_Tile>[];
-      for (final (key, rect, layer, target) in descriptors) {
-        final image = cache.peek(key);
-        if (image == null || !chosen.add((target, layer))) continue;
-        ready.add(_Tile(image, rect, target, layer));
-      }
-      if (!borders) {
-        backgroundTiles = ready;
-        return;
-      }
-      final changed =
-          ready.length != tiles.length ||
-          Iterable<int>.generate(
-            ready.length,
-          ).any((i) => !ready[i].same(tiles[i]));
-      if (changed) setState(() => tiles = ready);
-    }
-
-    publish();
-    final missing =
-        wanted.where((key) => cache.peek(key) == null).toList()
-          ..sort((a, b) => a.compareTo(b)); // low-resolution coverage first
-    if (missing.isNotEmpty && !loading) setState(() => loading = true);
-    for (var start = 0; start < missing.length; start += 2) {
-      if (!mounted || token != revision) return;
-      final results = await Future.wait(
-        missing.skip(start).take(2).map((key) async {
-          try {
-            await cache.load(key);
-            return true;
-          } catch (_) {
-            return false;
-          }
-        }),
-      );
-      if (!mounted || token != revision) return;
-      failed = results.contains(false) || failed;
-      publish();
-    }
-    cache.pin(this, wanted);
-    if (!mounted || token != revision) return;
-    if (!borders) {
-      if (failed) {
-        setState(() => loading = false);
-        return;
-      }
-      recordDiagnostic('background_sources_ready', {
-        'imageCache': cache.diagnosticCounts,
-      });
-      try {
-        await _refreshDetailImages(
-          token,
-          zoom,
-          pixelRatio,
-          background: backgroundTiles,
-        );
-      } catch (_) {
-        if (mounted && token == revision) {
-          setState(() {
-            failed = true;
-            loading = false;
-          });
-        }
-      }
-      if (mounted && token == revision) cache.pin(this, {});
-    } else {
-      setState(() => loading = false);
-    }
-  }
-
-  (int, double, double, List<(String, Rect)>) _rasterGrid(
-    double zoom,
-    double dpr,
-  ) {
-    // Sixteen image scales per doubling keep the apparent line within 4.3%
-    // of 0.65 logical pixels, including between the +/- button scales.
-    final exponent = (math.log(zoom) / math.ln2 * 16).ceil();
-    final renderZoom = math.pow(2, exponent / 16).toDouble();
-    Rect scene = Rect.fromPoints(
-      widget.transform.toScene(Offset.zero),
-      widget.transform.toScene(widget.viewport.bottomRight(Offset.zero)),
-    ).intersect(widget.clip.getBounds());
-    List<(String, Rect)> cells(double density) {
-      if (scene.isEmpty) return [];
-      final side = 512 / density;
-      return [
-        for (
-          var x = (scene.left / side).floor();
-          x <= (scene.right / side).floor();
-          x++
-        )
-          for (
-            var y = (scene.top / side).floor();
-            y <= (scene.bottom / side).floor();
-            y++
-          )
-            (
-              '$exponent@$density:$x:$y',
-              Rect.fromLTWH(x * side, y * side, side, side),
-            ),
-      ];
-    }
-
-    var density = renderZoom * dpr;
-    var wanted = cells(density);
-    final imageLimit = MapImageBudget.shared.rasterCells(
-      widget.boundaryLayer == null
-          ? MapImageKind.background
-          : MapImageKind.boundary,
-    );
-    while (wanted.length > imageLimit) {
-      density /= 2;
-      wanted = cells(density);
-    }
-    return (exponent, renderZoom, density, wanted);
-  }
-
-  // Rasterize only on a cache miss, never in paint() or on a game tap. Fixed
-  // 512px cells and quantized scale keep both the work and native memory bounded.
-  // Background images combine terrain, urban land and precise water at their
-  // native display resolution. Boundary images retain their thin white stroke.
-  Future<void> _refreshDetailImages(
-    int token,
-    double zoom,
-    double dpr, {
-    List<_Tile>? background,
-  }) {
-    // A layer may wait behind another map's raster. Hide previous-scale border
-    // images now, before that wait, so they cannot flash as thick stretched lines.
-    if (widget.boundaryLayer != null && mounted && token == revision) {
-      final (_, _, _, wanted) = _rasterGrid(zoom, dpr);
-      setState(() {
-        tiles = [
-          for (final (key, rect) in wanted)
-            if (_detailImages[key] case final image?)
-              _Tile(image, rect, rect, widget.boundaryLayer!),
-        ];
-        loading = tiles.length != wanted.length;
-      });
-    }
-    return _serialRaster(
-      () => _renderDetailImages(token, zoom, dpr, background: background),
-    );
-  }
-
-  Future<void> _retireObsoleteDetailImages(double zoom, double dpr) async {
-    final (exponent, _, _, wanted) = _rasterGrid(zoom, dpr);
-    final imageLimit = MapImageBudget.shared.rasterCells(
-      widget.boundaryLayer == null
-          ? MapImageKind.background
-          : MapImageKind.boundary,
-    );
-    final keep = wanted.map((cell) => cell.$1).toSet();
-    final retired = <ui.Image>[];
-    for (final key in _detailImages.keys.toList()) {
-      if (!keep.contains(key) &&
-          ((int.parse(key.split('@').first) - exponent).abs() > 1 ||
-              _detailImages.length > imageLimit - wanted.length)) {
-        retired.add(_detailImages.remove(key)!);
-      }
-    }
-    if (retired.isEmpty) return;
-    setState(() {
-      tiles = [
-        for (final (key, rect) in wanted)
-          if (_detailImages[key] case final image?)
-            _Tile(image, rect, rect, widget.boundaryLayer ?? 'background'),
-      ];
-      loading = tiles.length != wanted.length;
-    });
-    await _disposeImages(retired);
-    // Both background and borders can retire in the same frame. Finish all
-    // pending retirements before decoding even the first new source image.
-    await Future.wait(_retirements.toList());
-  }
-
-  Future<void> _renderDetailImages(
-    int token,
-    double zoom,
-    double dpr, {
-    List<_Tile>? background,
-  }) async {
-    if (!mounted || token != revision) return;
-    if (background == null) cache.pin(this, {});
-    final phase = background == null ? 'boundary' : 'background';
-    recordDiagnostic('${phase}_raster_start', {
-      'imageCache': cache.diagnosticCounts,
-    });
-    final (_, renderZoom, density, wanted) = _rasterGrid(zoom, dpr);
+    final token = revision;
+    final level = _level;
+    final descriptors =
+        widget.enabled ? _descriptors(level) : <(String, Rect, Rect)>[];
+    final wanted = descriptors.map((d) => d.$1).toSet();
+    final adjacentKeys = <String>{
+      if (widget.enabled)
+        for (final adjacent in [level - 1, level + 1])
+          if (adjacent >= index!.minLevel && adjacent <= index!.maxLevel)
+            ..._descriptors(adjacent).map((d) => d.$1),
+    };
+    cache.prefer(this, {...wanted, ...adjacentKeys});
+    cache.pin(this, {..._pinned, ...wanted});
+    refreshedZoom = widget.transform.value.getMaxScaleOnAxis();
     void publish() {
       if (!mounted || token != revision) return;
       setState(() {
         tiles = [
-          for (final (key, rect) in wanted)
-            if (_detailImages[key] case final image?)
-              _Tile(
-                image,
-                rect,
-                rect,
-                background != null ? 'background' : widget.boundaryLayer!,
-              ),
+          for (final (key, rect, target) in descriptors)
+            if (cache.peek(key) case final image?)
+              _Tile(image, rect, target, widget.boundaryLayer ?? 'background'),
         ];
-        loading = tiles.length != wanted.length;
+        loading = tiles.length != descriptors.length;
       });
     }
 
-    // Hide the enlarged offline/previous-scale image synchronously. A cold
-    // scale must never flash a thick border while its sharp image is prepared.
     publish();
+    await WidgetsBinding.instance.endOfFrame;
     if (!mounted || token != revision) return;
-    final outlines = [
-      for (final path in widget.boundaryPaths ?? const <Path>[])
-        (path, path.getBounds()),
-    ];
-    final mesh =
-        background == null && widget.boundaryPaths == null
-            ? await (_mesh ??= PrefectureBorderMesh.load(widget.project))
-            : null;
-    final water =
-        background != null
-            ? await (_waterMesh ??= WaterMesh.load(
-              widget.nationalOverview
-                  ? 'national'
-                  : widget.prefectureId ?? '29',
-              widget.project,
-            ))
-            : null;
-    var recordedPicture = false;
-    for (final (key, rect) in wanted) {
+    // The old paint has retired; only now may the LRU evict departing pixels.
+    _pinned = wanted;
+    cache.pin(this, wanted);
+    for (final key in wanted) {
       if (!mounted || token != revision) return;
-      if (_detailImages.containsKey(key)) continue;
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      canvas.scale(density);
-      canvas.translate(-rect.left, -rect.top);
-      final rasterClip =
-          background == null ? null : widget.rasterClip?.call(rect, density);
-      if (rasterClip != null) canvas.clipPath(rasterClip);
-      final combined = mesh?.path(rect, density) ?? Path();
-      for (final (path, bounds) in outlines) {
-        if (bounds.overlaps(rect.inflate(2 / density))) {
-          combined.addPath(path, Offset.zero);
-        }
-      }
-      if (background != null) {
-        // One high-resolution background image contains terrain, urban land
-        // and precise water. Nothing paints a separate water layer in the UI.
-        canvas.save();
-        canvas.translate(rect.left, rect.top);
-        _GeographyPainter(
-          background,
-          widget.clip,
-          rect.topLeft,
-        ).paint(canvas, rect.size);
-        canvas.restore();
-        water!.paint(canvas, rect, density);
-      } else {
-        canvas.drawPath(
-          combined,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..color = Colors.white
-            ..strokeWidth = 0.65 / renderZoom,
-        );
-      }
-      final picture = recorder.endRecording();
-      if (!recordedPicture) {
-        recordedPicture = true;
-        recordDiagnostic('${phase}_picture_ready', {
-          'imageCache': cache.diagnosticCounts,
-        });
-      }
-      late final ui.Image image;
-      final reservation = Object();
-      final kind =
-          background == null ? MapImageKind.boundary : MapImageKind.background;
-      if (!MapImageBudget.shared.reserve(
-        reservation,
-        kind,
-        MapImageBudget.mib,
-      )) {
-        picture.dispose();
-        combined.reset();
-        rasterClip?.reset();
-        throw StateError('Raster image budget exhausted');
-      }
-      try {
-        image = await picture.toImage(512, 512);
-      } catch (_) {
-        MapImageBudget.shared.release(reservation);
-        rethrow;
-      } finally {
-        picture.dispose();
-        combined.reset();
-        rasterClip?.reset();
-      }
-      MapImageBudget.shared.release(reservation);
-      if (!MapImageBudget.shared.reserve(image, kind, MapImageBudget.mib)) {
-        image.dispose();
-        return;
-      }
-      if (!mounted || token != revision) {
-        MapImageBudget.shared.release(image);
-        image.dispose();
-        return;
-      }
-      _detailImages[key] = image;
+      await cache.load(key);
       publish();
     }
-    recordDiagnostic('${phase}_raster_done', {
-      'imageCache': cache.diagnosticCounts,
-    });
+    if (!mounted || token != revision) return;
+    // Prefetch nearest levels only into spare capacity. It never evicts a
+    // visible image or replaces a warm adjacent level just to fill the budget.
+    for (final key in adjacentKeys) {
+      if (!mounted || token != revision || !cache.canPrefetch) return;
+      if (cache.peek(key) == null) await cache.load(key);
+    }
   }
 
   @override
@@ -976,8 +544,9 @@ class _GeographyTilesState extends State<GeographyTiles> {
     _retryTimer?.cancel();
     widget.transform.removeListener(_schedule);
     MapImageBudget.shared.removeListener(_budgetChanged);
-    cache.release(this);
-    _clearDetailImages();
+    // Keep references pinned until the outgoing display list has retired.
+    WidgetsBinding.instance.addPostFrameCallback((_) => cache.release(this));
+    WidgetsBinding.instance.ensureVisualUpdate();
     super.dispose();
   }
 
@@ -1031,7 +600,11 @@ class _GeographyTilesState extends State<GeographyTiles> {
                     child: IgnorePointer(
                       child: CustomPaint(
                         painter: _GeographyPainter(
-                          widget.enabled ? tiles : [],
+                          widget.enabled &&
+                                  widget.transform.value.getMaxScaleOnAxis() ==
+                                      refreshedZoom
+                              ? tiles
+                              : [],
                           widget.clip,
                           visible.topLeft,
                         ),
@@ -1069,33 +642,23 @@ class _GeographyPainter extends CustomPainter {
     canvas.clipRect(Offset.zero & size);
     canvas.translate(-origin.dx, -origin.dy);
     canvas.clipPath(clip);
-    for (final layer in [
-      'shade',
-      'detail',
-      'overview',
-      'background',
-      'pref',
-      'city',
-      'town',
-    ]) {
-      for (final tile in tiles.where((t) => t.layer == layer)) {
-        canvas.save();
-        canvas.clipRect(tile.target);
-        canvas.drawImageRect(
-          tile.image,
-          Rect.fromLTWH(
-            0,
-            0,
-            tile.image.width.toDouble(),
-            tile.image.height.toDouble(),
-          ),
-          tile.rect,
-          Paint()
-            ..filterQuality = FilterQuality.low
-            ..blendMode = BlendMode.srcOver,
-        );
-        canvas.restore();
-      }
+    for (final tile in tiles) {
+      canvas.save();
+      canvas.clipRect(tile.target);
+      canvas.drawImageRect(
+        tile.image,
+        Rect.fromLTWH(
+          0,
+          0,
+          tile.image.width.toDouble(),
+          tile.image.height.toDouble(),
+        ),
+        tile.rect,
+        Paint()
+          ..filterQuality = FilterQuality.low
+          ..blendMode = BlendMode.srcOver,
+      );
+      canvas.restore();
     }
     canvas.restore();
   }

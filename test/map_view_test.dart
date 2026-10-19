@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kunitori/game.dart';
+import 'package:kunitori/geography_tiles.dart';
+import 'dart:math' as math;
 import 'package:kunitori/main.dart';
 import 'package:kunitori/map_view.dart';
 import 'package:kunitori/save_store.dart';
@@ -45,7 +47,7 @@ void main() {
       final valid = store.loadMapView(atlas)!.toJson();
       for (final invalid in [
         {...valid, 'scale': 0},
-        {...valid, 'scale': 151},
+        {...valid, 'scale': 1025},
         {
           ...valid,
           'center': ['bad', 0],
@@ -57,6 +59,13 @@ void main() {
         await prefs.setString(SaveStore.mapViewKey, jsonEncode(invalid));
         expect(store.loadMapView(atlas), isNull);
         expect(store.load(atlas).toJson(), game.toJson());
+      }
+      for (final scale in [0.005, 150.0, 200.0]) {
+        await prefs.setString(
+          SaveStore.mapViewKey,
+          jsonEncode({...valid, 'scale': scale}),
+        );
+        expect(store.loadMapView(atlas)!.scale, scale);
       }
       await prefs.setString(SaveStore.mapViewKey, '{broken');
       expect(store.loadMapView(atlas), isNull);
@@ -84,19 +93,32 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      Future<void> settleMap() async {
+        // Image codecs and file reads need real async turns; pumpAndSettle
+        // alone only advances the fake clock while their spinners repaint.
+        for (var i = 0; i < 600; i++) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 50)),
+          );
+          await tester.pump(const Duration(milliseconds: 100));
+          final viewers = tester.widgetList<InteractiveViewer>(
+            find.byType(InteractiveViewer),
+          );
+          final statuses = tester
+              .widgetList<Semantics>(find.byType(Semantics))
+              .map((w) => w.properties.label ?? '');
+          if (viewers.length == 1 &&
+              viewers.single.scaleEnabled &&
+              statuses.contains('境界線画像の読込完了')) {
+            return;
+          }
+        }
+        fail('Map did not finish its asynchronous image reads');
+      }
+
       Future<void> launch() async {
         await tester.pumpWidget(const KunitoriApp());
-        for (
-          var i = 0;
-          i < 30 && find.byType(TerritoryMap).evaluate().isEmpty;
-          i++
-        ) {
-          await tester.runAsync(
-            () => Future<void>.delayed(const Duration(milliseconds: 100)),
-          );
-          await tester.pump();
-        }
-        await tester.pumpAndSettle();
+        await settleMap();
       }
 
       void expectCamera(Offset center, double scale) {
@@ -104,6 +126,14 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final viewport = tester.getSize(find.byType(TerritoryMap));
+        final geography =
+            tester
+                .widgetList<GeographyTiles>(find.byType(GeographyTiles))
+                .first;
+        final projection =
+            (geography.project(const math.Point(121.0, 47.0)).dy -
+                    geography.project(const math.Point(120.0, 48.0)).dy)
+                .abs();
         final actual = viewer.transformationController!.toScene(
           Offset(viewport.width / 2, viewport.height / 2),
         );
@@ -111,7 +141,7 @@ void main() {
         expect(actual.dy, closeTo(center.dy, 0.0001));
         expect(
           viewer.transformationController!.value.getMaxScaleOnAxis(),
-          closeTo(scale, 0.0001),
+          closeTo(MapImageScale.snap(scale, projection, 8), 0.0001),
         );
       }
 
@@ -145,7 +175,7 @@ void main() {
       expect(find.byTooltip('起伏・市街地・山名・川・池・湖を表示'), findsOneWidget);
 
       await tester.tap(find.byTooltip('1段上の地図を表示'));
-      await tester.pumpAndSettle();
+      await settleMap();
       final viewer = tester.widget<InteractiveViewer>(
         find.byType(InteractiveViewer),
       );
@@ -158,7 +188,7 @@ void main() {
               size.height / 2 - center.dy * scale,
             )
             ..scale(scale);
-      await tester.pumpAndSettle();
+      await settleMap();
       final prefs = await SharedPreferences.getInstance();
       final persisted = SaveStore(prefs).loadMapView(atlas)!;
       expect(persisted.cityId, isNull);
@@ -179,7 +209,7 @@ void main() {
       );
       expectCamera(center, scale);
       tester.view.physicalSize = const Size(360, 720);
-      await tester.pumpAndSettle();
+      await settleMap();
       expectCamera(center, scale);
       expect(find.byTooltip('起伏・市街地・山名・川・池・湖を表示'), findsOneWidget);
       expect(tester.takeException(), isNull);

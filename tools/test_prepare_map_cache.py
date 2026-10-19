@@ -13,7 +13,7 @@ class PackTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             originals = {}
-            for folder in ('map_tiles_uniform', 'border_tiles'):
+            for folder in ('map_images',):
                 directory = root/'assets/assets/data'/folder
                 directory.mkdir(parents=True)
                 for name in ('a.webp', 'b.webp', 'index.json'):

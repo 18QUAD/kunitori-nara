@@ -8,40 +8,55 @@ for folder in ['water','urban','relief','map_tiles','map_tiles_v2']:
     path = f'assets/data/{folder}/'
     assert path not in compiled, f'Unexpected live reference to source GIS: {path}'
     assert not (root/'assets'/path).exists(), f'Unused source GIS was bundled: {path}'
-assert 'assets/data/map_tiles_uniform/' in compiled
+assert 'assets/data/map_images/' in compiled
 assert 'assets/data/map_labels/' in compiled
-assert 'assets/data/water_mesh/' in compiled
-assert (root/'assets/assets/data/map_tiles_uniform/index-dry.json').is_file()
-assert len(list((root/'assets/assets/data/water_mesh').glob('*.bin'))) == 48
-assert not list((root/'assets/assets/data/map_tiles_uniform').glob('[0-9]*_detail.webp')), 'Blurred combined water was bundled'
-assert 'assets/data/border_tiles/' in compiled
-assert 'assets/data/prefecture_border_mesh.bin' in compiled
-assert (root/'assets/assets/data/prefecture_border_mesh.bin').is_file()
-assert (root/'assets/assets/data/border_tiles/index-slim.json').is_file()
-assert all(p.name.startswith(('slim_', 'slimshared_')) for p in (root/'assets/assets/data/border_tiles').glob('*.webp')), 'Outdated border style was bundled'
+for folder in ['map_tiles_uniform','border_tiles','water_mesh']:
+    assert f'assets/data/{folder}/' not in compiled
+    assert not (root/'assets/assets/data'/folder).exists()
+assert 'assets/data/prefecture_border_mesh.bin' not in compiled
+index=json.loads((root/'assets/assets/data/map_images/index.json').read_text())
+assert index['schema']==2 and index['sampling']==2
+for layer, maximum in index['layerMaxLevels'].items():
+    for level in range(index['minLevel'], maximum+1):
+        assert any(k.startswith(f'{level}_') and k.endswith('_'+layer) for k in index['tiles']), (layer,level)
+source=(root.parents[1]/'lib/geography_tiles.dart').read_text()
+assert 'PictureRecorder' not in source and '.toImage(' not in source
+assert 'WaterMesh' not in source and 'PrefectureBorderMesh' not in source
 inventory = json.loads((root/'map-image-manifest.json').read_text())
-assert inventory['packSchema'] == 1
+assert inventory['packSchema'] == 2
+assert len(index['prefectureCoverage']) == 47 and all(index['prefectureCoverage'].values())
 import hashlib
+assert hashlib.sha256((root/'assets/assets/data/map_images/index.json').read_bytes()).hexdigest() == inventory['indexSha256']
+pack_root = root
+if inventory.get('packBaseUrl'):
+    import re
+    assert re.fullmatch(r'https://raw\.githubusercontent\.com/18QUAD/kunitori-nara/[0-9a-f]{40}/data/prepared_maps/',inventory['packBaseUrl'])
+    pack_root = root.parents[1]/'data/prepared_maps'
+    assert not (root/'map-packs').exists(), 'Remote packs must not be duplicated on Pages'
 cursor = 0
 for name, digest, size, start, end in inventory['packs']:
     assert start == cursor and end > start
-    packed = (root/name).read_bytes()
+    assert size <= 1024 * 1024, 'Image packs must remain bounded'
+    packed = (pack_root/name).read_bytes()
     assert len(packed) == size and hashlib.sha256(packed).hexdigest() == digest
     offset = 0
-    for path, checksum, length in inventory['assets'][start:end]:
+    for filename, length in inventory['assets'][start:end]:
+        path = inventory['assetPrefix'] + filename
         data = packed[offset:offset+length]
-        assert len(data) == length and hashlib.sha256(data).hexdigest() == checksum, path
+        assert len(data) == length, path
+        # The complete pack's checksum was checked above. Also compare every
+        # slice to the actual prepared source to catch offset/index mistakes.
+        source_image = root.parents[1]/'assets/data/map_images'/filename
+        if source_image.exists(): assert data == source_image.read_bytes()
         if path.endswith('.json'):
             assert (root/path).read_bytes() == data
         else:
             assert not (root/path).exists(), 'Individual images duplicate pack bytes'
-            if '/border_tiles/' in path:
-                assert Path(path).name.startswith(('slim_', 'slimshared_'))
         offset += length
     assert offset == size
     cursor = end
 assert cursor == len(inventory['assets'])
-assert sum(entry[2] for entry in inventory['assets']) == inventory['bytes']
+assert sum(entry[1] for entry in inventory['assets']) == inventory['bytes']
 assert '__MAP_IMAGE_REVISION__' not in (root/'map-cache-worker.js').read_text(), 'Map worker was not prepared'
 assert inventory['revision'] in (root/'map-cache-worker.js').read_text()
 size = sum(p.stat().st_size for p in root.rglob('*') if p.is_file())

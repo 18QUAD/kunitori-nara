@@ -1,5 +1,7 @@
 # Miscellaneous
 data/raw/
+assets/data/map_images/*.webp
+assets/data/map_images/*.tmp
 desktop.ini
 .env
 .env.*

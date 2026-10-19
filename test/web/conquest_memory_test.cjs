@@ -99,7 +99,7 @@ let activePoll;
   await page.waitForTimeout(10000);await sample('settled');
   clearInterval(poll);
   const resources=await page.evaluate(offset=>performance.getEntriesByType('resource').slice(offset).map(e=>e.name),resourceOffset);
-  assert(!resources.some(url=>/\/(?:map_tiles_uniform|border_tiles|water_mesh|prefectures)\/|\/nara\.json/.test(url)),'A conquest must reuse current map geometry and background images');
+  assert(!resources.some(url=>/\/(?:map_images|map_tiles_uniform|border_tiles|water_mesh|prefectures)\/|\/nara\.json/.test(url)),'A conquest must reuse current map geometry and background images');
   console.log('new resources',resources);
   console.log('conquest peak renderer RSS',conquestPeakRss);
   fs.writeFileSync(output,JSON.stringify({beforeConquest,samples,conquestPeakRss,resources},null,2));

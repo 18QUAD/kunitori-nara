@@ -10,7 +10,6 @@ class BorderTiles extends GeographyTiles {
     required super.clip,
     required String layer,
     super.prefectureId,
-    super.boundaryPaths,
     super.onBusyChanged,
   }) : super(enabled: true, boundaryLayer: layer);
 }

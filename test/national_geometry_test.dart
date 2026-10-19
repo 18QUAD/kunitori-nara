@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/game.dart';
 import 'package:kunitori/national_atlas.dart';
@@ -153,11 +153,11 @@ void main() {
       expect(atlas.towns['29205043001']!.polygons, isNotEmpty);
       expect(peak, 1);
       fail = true;
-      await expectLater(
-        data.ensureGeometry('26'),
-        throwsA(isA<FlutterError>()),
-      );
+      final beforeRetry = reads['26']!;
+      // Temporary storage failures retry automatically; the caller remains
+      // blocked until complete geometry is ready.
       await data.ensureGeometry('26');
+      expect(reads['26'], beforeRetry + 2);
       expect(atlas.towns['26201001001']!.polygons, hasLength(1));
       expect(atlas.towns['29205043001']!.polygons, isEmpty);
       expect(game.toJson(), saved);

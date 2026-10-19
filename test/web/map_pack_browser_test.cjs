@@ -6,8 +6,11 @@ const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 const root = '/game/';
-const assets = Array.from({length:100}, (_, i) => [`assets/assets/data/map_tiles_uniform/${i}.webp`, Buffer.alloc(4096, i)]);
+const assets = Array.from({length:100}, (_, i) => [`assets/assets/data/map_images/${i}.webp`, Buffer.alloc(4096, i)]);
 let version = 1;
+const compact = process.env.COMPACT_MAP_INDEX === '1';
+const remote = process.env.REMOTE_MAP_PACKS === '1';
+let packBaseUrl;
 const requests = new Map();
 let active = 0, peak = 0, failure = true, corrupt = true;
 function fixture() {
@@ -19,11 +22,12 @@ function fixture() {
     contents.set(name, bytes);
     packs.push([name, sha(bytes), bytes.length, start, end]);
   }
-  return {manifest:{schema:1,packSchema:1,revision:String(version),bytes:409600,assets:entries,packs},contents};
+  return {manifest:{schema:1,packSchema:compact ? 2 : 1,revision:String(version),bytes:409600,assets:compact ? entries.map(e=>[e[0].split('/').pop(),e[2]]) : entries,assetPrefix:'assets/assets/data/map_images/',packBaseUrl,packs},contents};
 }
 const server = http.createServer((req, res) => {
   const name = new URL(req.url, 'http://localhost').pathname.slice(root.length);
   res.setHeader('Cache-Control','no-store');
+  res.setHeader('Access-Control-Allow-Origin','*');
   if (name === 'seed') {res.setHeader('Content-Type','text/html');res.end('<p>seed</p>');}
   else if (name === '') {
     res.setHeader('Content-Type','text/html');
@@ -49,12 +53,14 @@ const server = http.createServer((req, res) => {
     setTimeout(()=>res.end(bytes),150);
   } else {res.writeHead(404);res.end();} // Individual image files deliberately absent.
 });
+const packServer = http.createServer(server.listeners('request')[0]);
 let browser;
 async function cursor(page){return page.evaluate(async revision=>{
  const cache=await caches.open('kunitori-map-images-meta-v1');const r=await cache.match(new URL('__map_progress__/'+revision,location.href));return r?await r.json():{next:0};
 },String(version));}
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ if(remote){await new Promise(resolve=>packServer.listen(0,'127.0.0.1',resolve));packBaseUrl=`http://127.0.0.1:${packServer.address().port}${root}`;}
  const base=`http://127.0.0.1:${server.address().port}${root}`;
  browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});
  let context=await browser.newContext(),page=await context.newPage();
@@ -102,6 +108,7 @@ async function cursor(page){return page.evaluate(async revision=>{
  await page.evaluate(()=>kunitoriMapMemory.set(32));
  for (const pack of fixture().manifest.packs.slice(0,9))assert.equal(requests.get(pack[0]),counts.get(pack[0]));
  await context.close();
+ if(!compact) {
  // Migrate an interrupted old individual-image download without fetching its prefix.
  context=await browser.newContext();page=await context.newPage();
  await page.goto(base+'seed'); // Same origin, no loader.
@@ -119,6 +126,8 @@ async function cursor(page){return page.evaluate(async revision=>{
  assert.equal(await page.evaluate(async path=>new Uint8Array(await (await fetch(path)).arrayBuffer())[0],assets[10][0]),10);
  assert.equal(await page.evaluate(()=>localStorage.getItem('kunitori.nara.v1')),'legacy-save');
  assert.equal((await cursor(page)).legacy,20);
+ }
  console.log('PASS: packed download/resume; checksums; two bounded transfers; offline byte-exact images; legacy prefix/save migration; delta pack reuse.');
  await browser.close();await new Promise(resolve=>server.close(resolve));
-})().catch(async error=>{console.error(error);if(browser)await browser.close();server.close();process.exitCode=1;});
+ if(remote)await new Promise(resolve=>packServer.close(resolve));
+})().catch(async error=>{console.error(error);if(browser)await browser.close();server.close();packServer.close();process.exitCode=1;});

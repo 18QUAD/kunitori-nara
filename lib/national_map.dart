@@ -69,16 +69,12 @@ class _NationalMapState extends State<NationalMap> {
   String? error;
   Size? viewport;
   late final Offset Function(math.Point<double>) project;
-  late final RasterCoastMask coastMask;
 
   @override
   void initState() {
     super.initState();
     // A common projection retains Hokkaido and the southern islands in one scene.
     project = (p) => Offset(40 + (p.x - 122) * 42, 40 + (46 - p.y) * 50);
-    coastMask = RasterCoastMask([
-      for (final pref in widget.data.prefectures.values) ...pref.polygons,
-    ], project);
     for (final p in widget.data.prefectures.values) {
       paths[p.id] = _path(p.polygons);
       // Offshore islands must not pull the Tokyo label into the Pacific.
@@ -164,12 +160,13 @@ class _NationalMapState extends State<NationalMap> {
   }
 
   void _zoom(double factor) {
-    if (_imagesBusy) return;
+    if (_imagesBusy && factor != 1) return;
     final size = viewport!;
     final center = transform.toScene(size.center(Offset.zero));
-    final scale = (transform.value.getMaxScaleOnAxis() * factor).clamp(
-      0.08,
-      150.0,
+    final scale = MapImageScale.snap(
+      transform.value.getMaxScaleOnAxis() * factor,
+      50,
+      5,
     );
     transform.value =
         Matrix4.identity()
@@ -202,14 +199,16 @@ class _NationalMapState extends State<NationalMap> {
         if (!initialized) {
           initialized = true;
           final saved = widget.initialView;
-          final scale =
-              saved?.scale ??
-              math
-                  .min(
-                    c.maxWidth / sceneSize.width,
-                    c.maxHeight / sceneSize.height,
-                  )
-                  .clamp(0.08, 150.0);
+          final scale = MapImageScale.snap(
+            saved?.scale ??
+                math.min(
+                  c.maxWidth / sceneSize.width,
+                  c.maxHeight / sceneSize.height,
+                ),
+            50,
+            5,
+            fit: saved == null,
+          );
           final center = saved?.center ?? sceneSize.center(Offset.zero);
           transform.value =
               Matrix4.identity()
@@ -246,8 +245,9 @@ class _NationalMapState extends State<NationalMap> {
               child: InteractiveViewer(
                 transformationController: transform,
                 scaleEnabled: !_imagesBusy,
-                minScale: 0.08,
-                maxScale: 150,
+                minScale: MapImageScale.scale(MapImageScale.minLevel, 50),
+                maxScale: MapImageScale.scale(5, 50),
+                onInteractionEnd: (_) => _zoom(1),
                 constrained: false,
                 boundaryMargin: const EdgeInsets.all(2000),
                 child: GestureDetector(
@@ -286,7 +286,6 @@ class _NationalMapState extends State<NationalMap> {
                           onBusyChanged:
                               (busy) => _imageBusy('background', busy),
                           nationalOverview: true,
-                          rasterClip: coastMask.path,
                           transform: transform,
                           project: project,
                           viewport: size,
@@ -380,13 +379,30 @@ class _NationalMapState extends State<NationalMap> {
                           ),
                           IconButton.filledTonal(
                             tooltip: '拡大',
-                            onPressed: _imagesBusy ? null : () => _zoom(1.7),
+                            onPressed:
+                                _imagesBusy ||
+                                        MapImageScale.level(
+                                              transform.value
+                                                  .getMaxScaleOnAxis(),
+                                              50,
+                                            ) >=
+                                            5
+                                    ? null
+                                    : () => _zoom(2),
                             icon: const Icon(Icons.add),
                           ),
                           IconButton.filledTonal(
                             tooltip: '縮小',
                             onPressed:
-                                _imagesBusy ? null : () => _zoom(1 / 1.7),
+                                _imagesBusy ||
+                                        MapImageScale.level(
+                                              transform.value
+                                                  .getMaxScaleOnAxis(),
+                                              50,
+                                            ) <=
+                                            MapImageScale.minLevel
+                                    ? null
+                                    : () => _zoom(0.5),
                             icon: const Icon(Icons.remove),
                           ),
                           const SizedBox(height: 2),

@@ -31,6 +31,28 @@ async function inventory() {
       } else {
         value = await response.json();
       }
+      const assetCount = value.assets.length;
+      const byteOffsets = new Float64Array(assetCount + 1);
+      if (value.packSchema === 2) {
+        // Keep one short name plus typed offsets per image, not six boxed fields
+        // and two full URL strings. Construct the few visible entries on demand.
+        const names = new Array(assetCount);
+        const locations = new Uint32Array(assetCount * 3);
+        const byPath = new Map();
+        value.packs.forEach((pack, index) => {
+          let offset = 0;
+          for (let i=pack[3];i<pack[4];i++) {
+            const [name, length] = value.assets[i];
+            names[i] = name; byPath.set(name,i);
+            locations.set([length,index,offset], i*3);
+            byteOffsets[i+1] = byteOffsets[i]+length;
+            offset += length;
+          }
+          if (offset !== pack[2]) throw new Error('Map pack index mismatch');
+        });
+        const {assets, ...metadata} = value;
+        return {...metadata,names,locations,byPath,assetCount,byteOffsets};
+      }
       if (value.packSchema === 1) {
         value.packs.forEach((pack, index) => {
           let offset = 0;
@@ -42,17 +64,29 @@ async function inventory() {
         });
       }
       const byPath = new Map(value.assets.map(entry => [new URL(entry[0], ROOT).pathname, entry]));
-      const byteOffsets = new Float64Array(value.assets.length + 1);
       value.assets.forEach((entry, i) => {byteOffsets[i + 1] = byteOffsets[i] + entry[2];});
-      return {...value, byPath, byteOffsets};
+      return {...value, byPath, assetCount, byteOffsets};
     })().catch(error => {inventoryPromise = null; throw error;});
   }
   return inventoryPromise;
 }
 
+function assetEntry(data, index) {
+  if (index == null || index < 0 || index >= data.assetCount) return;
+  if (data.packSchema !== 2) return data.assets[index];
+  const p=index*3;
+  return [data.assetPrefix+data.names[index], null, data.locations[p],data.locations[p+1],data.locations[p+2],index];
+}
+function findAsset(data, pathname) {
+  if(data.packSchema !== 2) return data.byPath.get(pathname);
+  const prefix=ROOT.pathname+data.assetPrefix;
+  if(!pathname.startsWith(prefix)) return;
+  return assetEntry(data,data.byPath.get(pathname.slice(prefix.length)));
+}
+
 async function storedImage(entry, mustStore = false) {
   const data = await inventory();
-  if (data.packSchema === 1) return packedImage(data, entry);
+  if (data.packSchema >= 1) return packedImage(data, entry);
   const key = keyFor(entry);
   const store = await caches.open(STORE);
   const local = await store.match(key);
@@ -99,7 +133,7 @@ async function storedImage(entry, mustStore = false) {
 
 // Packs reduce tens of thousands of HTTP and CacheStorage operations to a few
 // hundred. Each transfer is <= 1 MiB (apart from a single larger source asset).
-async function storedPack(pack, storeName = PACK_STORE) {
+async function storedPack(pack, storeName = PACK_STORE, downloadBase = ROOT) {
   const key = keyFor(pack);
   const store = await caches.open(storeName);
   const cached = await store.match(key);
@@ -111,7 +145,7 @@ async function storedPack(pack, storeName = PACK_STORE) {
       const hash = new sha256.Hash();
       let length = 0;
       try {
-        const response = await fetch(key, {cache: 'no-store', signal: abort.signal});
+        const response = await fetch(new URL(`${pack[0]}?map-sha256=${pack[1]}`, downloadBase), {cache: 'no-store', signal: abort.signal});
         if (!response.ok) throw new Error(`Map pack HTTP ${response.status}`);
         const checked = response.body.pipeThrough(new TransformStream({
           transform(chunk, controller) {
@@ -140,7 +174,7 @@ async function storedPack(pack, storeName = PACK_STORE) {
 }
 
 // One eighth of the shared retained-image budget is compressed bytes;
-// Flutter owns the remaining source/background/boundary image shares.
+// Flutter owns the remaining shared decoded-background/boundary budget.
 // Foreground-only compressed LRU. Downloading never fills this memory cache.
 // Keep the selected byte limit resident and at most two one-pack disk reads in flight; these
 // bytes are not decoded pixels or GPU surfaces.
@@ -223,7 +257,7 @@ async function readStoredBytes(pack, storeName = PACK_STORE) {
 
 async function packedImage(data, entry) {
   const legacyKey = keyFor(entry);
-  const residentLegacy = packMemory.get(legacyKey);
+  const residentLegacy = data.packSchema === 1 && packMemory.get(legacyKey);
   if (residentLegacy) {
     packMemory.delete(legacyKey);
     packMemory.set(legacyKey, residentLegacy);
@@ -232,9 +266,9 @@ async function packedImage(data, entry) {
   const pack = data.packs[entry[3]];
   let bytes = await readStoredBytes(pack);
   if (!bytes) {
-    const legacy = await readStoredBytes(entry, STORE);
+    const legacy = data.packSchema === 1 && await readStoredBytes(entry, STORE);
     if (legacy) return imageResponse(legacy, entry, 0);
-    await storedPack(pack);
+    await storedPack(pack, PACK_STORE, data.packBaseUrl || ROOT);
     bytes = await readStoredBytes(pack);
   }
   if (!bytes) throw new Error('Stored map pack unavailable');
@@ -251,17 +285,17 @@ function imageResponse(bytes, entry, offset) {
 
 async function warmPacks(data, meta, progress) {
   const start = progress.next;
-  if (start === data.assets.length && progress.cleaned) return progressReport(data, start, true);
-  const first = data.assets[start]?.[3] ?? data.packs.length;
+  if (start === data.assetCount && progress.cleaned) return progressReport(data, start, true);
+  const first = assetEntry(data,start)?.[3] ?? data.packs.length;
   const batch = data.packs.slice(first, first + CONCURRENCY);
   // Wait for both operations even on failure: a retry must not overlap unfinished
   // storage writes from the preceding batch.
-  const results = await Promise.allSettled(batch.map(pack => storedPack(pack)));
+  const results = await Promise.allSettled(batch.map(pack => storedPack(pack, PACK_STORE, data.packBaseUrl || ROOT)));
   const failure = results.find(result => result.status === 'rejected');
   if (failure) throw failure.reason;
   const end = batch.length ? batch[batch.length - 1][4] : start;
   const legacy = progress.legacy ?? start;
-  const complete = end === data.assets.length;
+  const complete = end === data.assetCount;
   await meta.put(progressKey, new Response(JSON.stringify({next: end, legacy})));
   if (complete) {
     await removeOldVersions(data, meta);
@@ -272,6 +306,10 @@ async function warmPacks(data, meta, progress) {
 
 async function removeOldVersions(data, meta) {
   const store = await caches.open(STORE);
+  // All new prepared packs are verified before this point. The legacy image
+  // store is separate from game saves and can be retired in one operation,
+  // instead of tens of thousands of serialized Cache.delete calls on iOS.
+  if (data.packSchema === 2) await caches.delete(STORE);
   // Do not enumerate 44,000 CacheStorage Request objects. Only obsolete
   // manifests describe image versions that actually need deleting.
   for (const request of await meta.keys()) {
@@ -284,8 +322,8 @@ async function removeOldVersions(data, meta) {
         for (const pack of old.packs || []) {
           if (!currentPacks.has(keyFor(pack))) await packedStore.delete(keyFor(pack));
         }
-        for (const entry of old.assets) {
-          const current = data.byPath.get(new URL(entry[0], ROOT).pathname);
+        for (const entry of data.packSchema === 2 || old.packSchema === 2 ? [] : old.assets) {
+          const current = findAsset(data,new URL(entry[0], ROOT).pathname);
           if (!current || current[1] !== entry[1]) await store.delete(keyFor(entry));
         }
       }
@@ -295,7 +333,7 @@ async function removeOldVersions(data, meta) {
 }
 
 function progressReport(data, next, done) {
-  return {done, saved: next, total: data.assets.length, savedBytes: data.byteOffsets[next], bytes: data.bytes};
+  return {done, saved: next, total: data.assetCount, savedBytes: data.byteOffsets[next], bytes: data.bytes};
 }
 
 async function imageStorageStatus() {
@@ -303,7 +341,7 @@ async function imageStorageStatus() {
   const meta = await caches.open(META);
   const saved = await meta.match(progressKey);
   const progress = saved ? await saved.json() : {next: 0};
-  return progressReport(data, progress.next, progress.next === data.assets.length && !!progress.cleaned);
+  return progressReport(data, progress.next, progress.next === data.assetCount && !!progress.cleaned);
 }
 
 async function imageWarmBatch() {
@@ -311,17 +349,17 @@ async function imageWarmBatch() {
   const meta = await caches.open(META);
   const saved = await meta.match(progressKey);
   const progress = saved ? await saved.json() : {next: 0};
-  if (data.packSchema === 1) return warmPacks(data, meta, progress);
+  if (data.packSchema >= 1) return warmPacks(data, meta, progress);
   const start = progress.next;
-  if (start === data.assets.length && progress.cleaned) {
+  if (start === data.assetCount && progress.cleaned) {
     return progressReport(data, start, true);
   }
-  const end = Math.min(start + BATCH, data.assets.length);
+  const end = Math.min(start + BATCH, data.assetCount);
   let cursor = start;
   let failure;
   await Promise.all(Array.from({length: CONCURRENCY}, async () => {
     while (cursor < end && !failure) {
-      const entry = data.assets[cursor++];
+      const entry = assetEntry(data,cursor++);
       try { await storedImage(entry, true); } catch (error) { failure = error; }
     }
   }));
@@ -330,11 +368,11 @@ async function imageWarmBatch() {
   if (start !== end || !saved) {
     await meta.put(progressKey, new Response(JSON.stringify({next: end})));
   }
-  if (end === data.assets.length) {
+  if (end === data.assetCount) {
     await removeOldVersions(data, meta);
     await meta.put(progressKey, new Response(JSON.stringify({next: end, cleaned: true})));
   }
-  return progressReport(data, end, end === data.assets.length);
+  return progressReport(data, end, end === data.assetCount);
 }
 
 
@@ -422,11 +460,11 @@ self.addEventListener('fetch',event=>{
   const relative=url.pathname.slice(ROOT.pathname.length);
   const shell=relative===''||['index.html','flutter_bootstrap.js','map-cache.js','diagnostics.js'].includes(relative);
   const asset=relative==='main.dart.js'||relative.startsWith('assets/')||relative.startsWith('canvaskit/');
-  if(!shell&&!asset || ['map_tiles_uniform','border_tiles'].some(folder=>relative.startsWith(`assets/assets/data/${folder}/`))) return;
+  if(!shell&&!asset || relative.startsWith('assets/assets/data/map_images/') && relative.endsWith('.webp')) return;
   event.respondWith((async()=>{
     if(shell) {try {const response=await fetch(event.request);if(response.ok)return response;}catch(_) {}}
     const data=await runtimeInventory();
-    const file=data.byPath.get(url.pathname)|| (relative==='' ? data.byPath.get(new URL('index.html',ROOT).pathname):null);
+    const file=findAsset(data,url.pathname)|| (relative==='' ? data.byPath.get(new URL('index.html',ROOT).pathname):null);
     return file ? runtimeResponse(data,file) : fetch(event.request);
   })());
 });
@@ -486,13 +524,13 @@ function reportMemoryAfterRead() {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== ROOT.origin ||
-      !['map_tiles_uniform', 'border_tiles'].some(folder =>
+  if (event.request.method !== 'GET' || url.origin !== ROOT.origin || !url.pathname.endsWith('.webp') ||
+      !['map_images'].some(folder =>
         url.pathname.startsWith(`${ROOT.pathname}assets/assets/data/${folder}/`))) return;
   const response = (async () => {
     let data;
     try { data = await inventory(); } catch (_) { return fetch(event.request); }
-    const entry = data.byPath.get(url.pathname);
+    const entry = findAsset(data,url.pathname);
     return entry ? storedImage(entry) : fetch(event.request);
   })();
   event.respondWith(response);

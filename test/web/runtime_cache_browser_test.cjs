@@ -8,6 +8,7 @@ const text=Buffer.from(JSON.stringify({towns:Array.from({length:200},(_,i)=>({id
 const wasm=Buffer.from([0,97,115,109,1,0,0,0]);
 const source=Buffer.from('window.offlineCodeLoaded=true;');
 const runtimeFiles=[['assets/assets/data/prefectures/24.json',text,'application/json'],['canvaskit/canvaskit.wasm',wasm,'application/wasm'],['main.dart.js',source,'text/javascript']];
+runtimeFiles.push(['assets/assets/data/map_images/index.json',Buffer.from('{"schema":2,"tiles":{"5_1_2_background":512}}'),'application/json']);
 const chunks=[],files=[],contents=new Map();
 for(const [path,bytes,mime] of runtimeFiles){
  const packed=zlib.gzipSync(bytes);const ids=[];
@@ -46,9 +47,10 @@ const server=http.createServer((req,res)=>{
   const response=await fetch('canvaskit/canvaskit.wasm');
   await WebAssembly.instantiateStreaming(Promise.resolve(response));
   await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='main.dart.js?v=build';s.onload=resolve;s.onerror=reject;document.body.append(s);});
-  return {towns:json.towns.length,code:window.offlineCodeLoaded};
+  const index=await (await fetch('assets/assets/data/map_images/index.json')).json();
+  return {towns:json.towns.length,code:window.offlineCodeLoaded,index};
  });
- assert.deepEqual(result,{towns:200,code:true});
+ assert.deepEqual(result,{towns:200,code:true,index:{schema:2,tiles:{'5_1_2_background':512}}});
  assert.equal(requests.size,chunks.length);
  console.log('PASS: all runtime chunks saved before start; automatic retry/resume; offline versioned geometry, streamed gzip, JS and WASM; raw URLs absent.');
  await browser.close();server.close();

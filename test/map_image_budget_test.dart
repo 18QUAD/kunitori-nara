@@ -2,23 +2,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/map_image_budget.dart';
 
 void main() {
-  test('all four image pools together fit each selected budget', () {
+  test('background and boundary reservations share one selected budget', () {
     for (final mb in [32, 64, 128, 256]) {
       final budget = MapImageBudget()..configure(mb);
-      for (final kind in MapImageKind.values) {
-        expect(budget.reserve(kind, kind, budget.limit(kind)), isTrue);
-        expect(budget.reserve(Object(), kind, 1), isFalse);
-      }
+      final half = budget.limit(MapImageKind.background) ~/ 2;
+      expect(budget.reserve('a', MapImageKind.background, half), isTrue);
+      expect(budget.reserve('b', MapImageKind.boundary, half), isTrue);
+      expect(budget.reserve('c', MapImageKind.source, 1), isFalse);
       expect(
         budget.retainedBytes + budget.compressedBytes,
         mb * MapImageBudget.mib,
       );
-      expect(
-        budget.used(MapImageKind.background),
-        greaterThanOrEqualTo(
-          budget.rasterCells(MapImageKind.background) * MapImageBudget.mib,
-        ),
-      );
+      budget.release('a');
+      expect(budget.reserve('c', MapImageKind.boundary, half), isTrue);
       budget.dispose();
     }
   });

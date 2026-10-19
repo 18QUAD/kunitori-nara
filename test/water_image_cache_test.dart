@@ -15,10 +15,11 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     final semantics = tester.ensureSemantics();
     final transform =
-        TransformationController()..value = (Matrix4.identity()..scale(14.0));
+        TransformationController()
+          ..value = (Matrix4.identity()..scale(MapImageScale.scale(6, 600)));
     final clip = Path()..addRect(const Rect.fromLTWH(0, 0, 1100, 1500));
     Offset project(math.Point<double> p) =>
-        Offset((p.x - 136.12) * 600, (34.63 - p.y) * 600);
+        Offset((p.x - 136.108962) * 600, (34.620435 - p.y) * 600);
     Widget map() => MaterialApp(
       home: OverflowBox(
         alignment: Alignment.topLeft,
@@ -56,14 +57,16 @@ void main() {
     try {
       await tester.pumpWidget(map());
       final ready = find.bySemanticsLabel('背景地図の読込完了');
-      for (final zoom in [14.0, 48.0, 150.0, 8.0]) {
+      for (final level in [6, 7, 8, 6]) {
+        final zoom = MapImageScale.scale(level, 600);
         transform.value = Matrix4.identity()..scale(zoom);
+        await tester.pump(const Duration(milliseconds: 100));
         for (var frame = 0; frame < 150; frame++) {
           await tester.pump();
           for (final tile in tiles()) {
             expect(
               tile.image.width / (tile.rect.width * zoom),
-              greaterThanOrEqualTo(2),
+              greaterThanOrEqualTo(2 / math.pow(2, math.max(0, level - 5))),
               reason:
                   'No enlarged coarse water image, even on the first zoom frame',
             );
@@ -75,7 +78,17 @@ void main() {
         }
         expect(ready, findsOneWidget);
         expect(tiles(), isNotEmpty);
-        expect(tiles().length, lessThanOrEqualTo(12));
+        final waterPoint = project(const math.Point(136.109962, 34.619435));
+        final waterTile = tiles().firstWhere(
+          (tile) => tile.target.contains(waterPoint),
+        );
+        expect(
+          waterTile.image.width / (waterTile.rect.width * zoom),
+          closeTo(2, 1e-8),
+          reason:
+              'Original Nabari water contours must always use the current prepared level',
+        );
+        expect(tiles().length, lessThanOrEqualTo(16));
         expect(
           tiles().every((tile) => tile.layer == 'background'),
           isTrue,

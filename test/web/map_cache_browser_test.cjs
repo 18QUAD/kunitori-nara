@@ -14,7 +14,7 @@ const bootstrap = fs.readFileSync('web/flutter_bootstrap.js', 'utf8')
   .replaceAll('{{flutter_service_worker_version}}', 'fixture');
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'kunitori-map-cache-'));
 const root = '/kunitori-nara/';
-const imagePaths = Array.from({length: 100}, (_, i) => `assets/assets/data/map_tiles_uniform/dry_${i}_detail.webp`);
+const imagePaths = Array.from({length: 100}, (_, i) => `assets/assets/data/map_images/dry_${i}_detail.webp`);
 const contents = new Map(imagePaths.map((name, i) => [name, Buffer.from(`image-bytes-${i}`)]));
 let version = 1;
 let requests = new Map();

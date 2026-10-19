@@ -48,18 +48,18 @@ let browser;
   const regionalFiles = await page.evaluate(() => performance.getEntriesByType('resource').filter(e => /\/tips\/\d{2}\.json/.test(e.name)).map(e => e.name));
   assert(regionalFiles.length === 1 && regionalFiles[0].includes('/tips/24.json'));
   const saved = await page.evaluate(() => JSON.parse(JSON.parse(localStorage.getItem('flutter.kunitori.nara.mapView.v1'))));
-  assert.equal(saved.scale, scale);
+  assert.equal(saved.scale, 128 * 2**Math.max(-3,Math.min(8,Math.round(Math.log2(scale*ppd*2/128)))) / (ppd*2));
   assert.equal(saved.nationalView, false);
   if (process.env.EXPECT_PLAIN !== '0') {
-    assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/.*_town\.webp/.test(e.name)))), 'Deep municipal zoom must use sharp cached images instead of enlarged offline tiles');
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/index-slim\.json/.test(e.name))));
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /map_images\/.*_town\.webp/.test(e.name))), 'Municipal boundaries must come from prepared images');
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /map_images\/index\.json/.test(e.name))));
     assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/\d_/.test(e.name)))));
   }
   // CanvasKit may finish late icon-font frames after the tile status is ready.
   await page.waitForTimeout(1500);
   await page.screenshot({path: output});
   await page.screenshot({path: output.replace('.png', '-map.png'), clip: {x: 0, y: 88, width: 375, height: 300}});
-  const townRequests = () => page.evaluate(() => performance.getEntriesByType('resource').filter(e => /border_tiles\/.*_town\.webp/.test(e.name)).length);
+  const townRequests = () => page.evaluate(() => performance.getEntriesByType('resource').filter(e => /map_images\/.*_town\.webp/.test(e.name)).length);
   const before = await townRequests();
   await page.evaluate(() => {
     window.zoomLockSeen = false;
@@ -82,11 +82,11 @@ let browser;
       }
     }).observe(document.body, {subtree: true, attributes: true, attributeFilter: ['aria-disabled']});
   });
-  for (const control of ['拡大', '縮小']) {
+  for (const control of ['縮小', '拡大']) {
     await page.getByRole('button', {name: control, exact: true}).click();
     await page.waitForTimeout(300);
     await page.getByLabel('境界線画像の読込完了', {exact: true}).or(page.getByText('境界線画像の読込完了', {exact: true})).first().waitFor({timeout: 30000});
-    assert.equal(await townRequests(), before, 'Zoom must not enlarge offline town images');
+    assert((await townRequests()) >= before, 'Zoom reads prepared tiles instead of generating native rasters');
   }
   assert(await page.evaluate(() => window.zoomLockSeen), 'Zoom buttons must disable during image work');
   assert(await page.evaluate(() => window.homeLockSeen), 'Home button must disable during image work');

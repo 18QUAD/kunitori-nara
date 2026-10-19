@@ -222,8 +222,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       'flutterImageCount': cache.currentSize,
       'flutterLiveImages': cache.liveImageCount,
       'flutterPendingImages': cache.pendingImageCount,
-      'backgroundCache': GeographyImageCache.shared.diagnosticCounts,
-      'borderCache': GeographyImageCache.borders.diagnosticCounts,
+      'mapImageCache': GeographyImageCache.shared.diagnosticCounts,
     }, important: important);
   }
 
@@ -488,7 +487,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _diagnose('memory_pressure');
     PaintingBinding.instance.imageCache.clear();
     GeographyImageCache.shared.clearUnused();
-    GeographyImageCache.borders.clearUnused();
   }
 
   @override
@@ -1489,15 +1487,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     setState(() => _changingMap = true);
     await WidgetsBinding.instance.endOfFrame;
     await retireMapImages();
-    if (kIsWeb) {
-      try {
-        await releaseMapCacheMemory().timeout(const Duration(seconds: 3));
-      } catch (error) {
-        recordDiagnostic('map_memory_release_error', {
-          'error': error.toString(),
-        });
-      }
-    }
     _diagnose('map_images_retired');
   }
 
@@ -1514,15 +1503,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     // overlaps its native paths with the old scene's paths and raster images.
     await WidgetsBinding.instance.endOfFrame;
     await retireMapImages();
-    if (kIsWeb) {
-      try {
-        await releaseMapCacheMemory().timeout(const Duration(seconds: 3));
-      } catch (error) {
-        recordDiagnostic('map_memory_release_error', {
-          'error': error.toString(),
-        });
-      }
-    }
     if (mounted) {
       setState(() => _changingMap = false);
       _diagnose('show_national_retired');

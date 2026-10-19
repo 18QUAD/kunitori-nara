@@ -61,8 +61,10 @@ class MapViewState {
         x.abs() > 100000 ||
         y.abs() > 100000 ||
         !scale.isFinite ||
-        scale < 0.08 ||
-        scale > 150) {
+        // Prepared geographic levels use different scene scales per prefecture.
+        // Accept their range, then the map snaps/clamps to its own image levels.
+        scale <= 0 ||
+        scale > 1024) {
       return null;
     }
     return MapViewState(

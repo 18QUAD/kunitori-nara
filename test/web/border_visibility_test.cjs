@@ -37,12 +37,12 @@ let browser;
     await page.getByLabel(label, {exact: true}).or(page.getByText(label, {exact: true})).first().waitFor({timeout: 120000});
   }
   const saved = await page.evaluate(() => JSON.parse(JSON.parse(localStorage.getItem('flutter.kunitori.nara.mapView.v1'))));
-  assert.equal(saved.scale, scale);
+  assert.equal(saved.scale, 128 * 2**Math.max(-3,Math.min(5,Math.round(Math.log2(scale*100/128)))) / 100);
   assert.equal(saved.nationalView, true);
   if (process.env.EXPECT_PLAIN !== '0') {
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('prefecture_border_mesh.bin'))));
-    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/index-slim\.json/.test(e.name))));
-    assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /border_tiles\/\d_/.test(e.name)))));
+    assert(!(await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('prefecture_border_mesh.bin')))));
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /map_images\/index\.json/.test(e.name))));
+    assert(await page.evaluate(() => performance.getEntriesByType('resource').some(e => /map_images\/.*_pref\.webp/.test(e.name))));
   }
   // CanvasKit may finish late icon-font frames after the tile status is ready.
   await page.waitForTimeout(1500);

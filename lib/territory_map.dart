@@ -328,16 +328,23 @@ class _TerritoryMapState extends State<TerritoryMap> {
     if (view != null) widget.onViewChanged?.call(view);
   }
 
+  double get _projection =>
+      (project(const math.Point(121.0, 47.0)).dy -
+              project(const math.Point(120.0, 48.0)).dy)
+          .abs();
+  int get _maxImageLevel => MapImageScale.maximum(city: widget.cityId != null);
+
   void _applyView(MapViewState view) {
+    final scale = MapImageScale.snap(view.scale, _projection, _maxImageLevel);
     final size = viewport!;
     _initialized = true;
     controller.value =
         Matrix4.identity()
           ..translate(
-            size.width / 2 - view.center.dx * view.scale,
-            size.height / 2 - view.center.dy * view.scale,
+            size.width / 2 - view.center.dx * scale,
+            size.height / 2 - view.center.dy * scale,
           )
-          ..scale(view.scale);
+          ..scale(scale);
   }
 
   void _centerSelected() {
@@ -382,9 +389,13 @@ class _TerritoryMapState extends State<TerritoryMap> {
       final target = bounds[widget.selected]!;
       box = target.inflate(math.max(target.width, target.height) * 2 + 3);
     }
-    final scale =
-        math.min(size.width / box.width, size.height / box.height) *
-        widget.fitScale;
+    final scale = MapImageScale.snap(
+      math.min(size.width / box.width, size.height / box.height) *
+          widget.fitScale,
+      _projection,
+      _maxImageLevel,
+      fit: true,
+    );
     _initialized = true;
     controller.value =
         Matrix4.identity()
@@ -437,8 +448,12 @@ class _TerritoryMapState extends State<TerritoryMap> {
               transformationController: controller,
               constrained: false,
               scaleEnabled: !_imagesBusy,
-              minScale: 0.08,
-              maxScale: 150,
+              minScale: MapImageScale.scale(
+                MapImageScale.minLevel,
+                _projection,
+              ),
+              maxScale: MapImageScale.scale(_maxImageLevel, _projection),
+              onInteractionEnd: (_) => _zoom(1),
               boundaryMargin: const EdgeInsets.all(2000),
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -562,12 +577,6 @@ class _TerritoryMapState extends State<TerritoryMap> {
                       // Boundaries top territory colors; labels and attack highlights stay in front.
                       BorderTiles(
                         onBusyChanged: (busy) => _imageBusy('border', busy),
-                        boundaryPaths:
-                            widget.cityId == null
-                                ? cityOutlines.values
-                                : widget.atlas.byCity[widget.cityId]!.map(
-                                  (town) => townOutlines[town.id]!,
-                                ),
                         transform: controller,
                         project: project,
                         viewport: size,
@@ -675,14 +684,31 @@ class _TerritoryMapState extends State<TerritoryMap> {
                           ),
                           IconButton.filledTonal(
                             tooltip: '拡大',
-                            onPressed: _imagesBusy ? null : () => _zoom(1.7),
+                            onPressed:
+                                _imagesBusy ||
+                                        MapImageScale.level(
+                                              controller.value
+                                                  .getMaxScaleOnAxis(),
+                                              _projection,
+                                            ) >=
+                                            _maxImageLevel
+                                    ? null
+                                    : () => _zoom(2),
                             icon: const Icon(Icons.add),
                           ),
                           const SizedBox(height: 2),
                           IconButton.filledTonal(
                             tooltip: '縮小',
                             onPressed:
-                                _imagesBusy ? null : () => _zoom(1 / 1.7),
+                                _imagesBusy ||
+                                        MapImageScale.level(
+                                              controller.value
+                                                  .getMaxScaleOnAxis(),
+                                              _projection,
+                                            ) <=
+                                            MapImageScale.minLevel
+                                    ? null
+                                    : () => _zoom(0.5),
                             icon: const Icon(Icons.remove),
                           ),
                           const SizedBox(height: 2),
@@ -735,11 +761,15 @@ class _TerritoryMapState extends State<TerritoryMap> {
     },
   );
   void _zoom(double factor) {
-    if (_imagesBusy) return;
+    if (_imagesBusy && factor != 1) return;
     final size = viewport!;
     final old = controller.value;
     final scale = old.getMaxScaleOnAxis();
-    final desired = (scale * factor).clamp(0.08, 150.0);
+    final desired = MapImageScale.snap(
+      scale * factor,
+      _projection,
+      _maxImageLevel,
+    );
     factor = desired / scale;
     controller.value =
         Matrix4.identity()

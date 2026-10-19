@@ -104,7 +104,6 @@ void main() {
       final background = tester.widget<GeographyTiles>(
         find.byType(GeographyTiles),
       );
-      expect(background.rasterClip, isNotNull);
       expect(
         background.clip.computeMetrics().length,
         1,
