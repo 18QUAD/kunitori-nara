@@ -567,37 +567,76 @@ async function storedPack(pack) {
   await transfers.get(key);
 }
 
-async function packedImage(data, entry) {
-  const pack = data.packs[entry[3]];
-  const store = await caches.open(PACK_STORE);
-  let response = await store.match(keyFor(pack));
-  if (!response) {
-    // Previously saved individual images remain usable, including partial initial
-    // downloads. They are never downloaded again merely to change storage format.
-    const legacy = await (await caches.open(STORE)).match(keyFor(entry));
-    if (legacy) return legacy;
-    await storedPack(pack);
-    response = await store.match(keyFor(pack));
+// Foreground-only compressed LRU. Downloading never fills this memory cache.
+// Keep <= 8 MiB resident and at most two one-pack disk reads in flight; these
+// bytes are not decoded pixels or GPU surfaces.
+const PACK_MEMORY_BYTES = 8 * 1024 * 1024;
+const packMemory = new Map();
+const packReads = new Map();
+const packReadWaiters = [];
+let packMemoryBytes = 0;
+let packReading = 0;
+async function readStoredBytes(pack, storeName = PACK_STORE) {
+  const key = keyFor(pack);
+  const cached = packMemory.get(key);
+  if (cached) {
+    packMemory.delete(key);
+    packMemory.set(key, cached);
+    return cached;
   }
-  if (!response) throw new Error('Stored map pack unavailable');
-  // Read only the requested compressed bytes, cancel the remainder. No retained
-  // whole-pack buffers, decompression, image decoding, or unconsumed response tee.
-  const bytes = new Uint8Array(entry[2]);
-  const reader = response.body.getReader();
-  const start = entry[4], end = start + entry[2];
-  let position = 0;
-  try {
-    while (position < end) {
-      const {value, done} = await reader.read();
-      if (done) throw new Error('Stored map pack truncated');
-      const from = Math.max(start, position), to = Math.min(end, position + value.length);
-      if (to > from) bytes.set(value.subarray(from - position, to - position), from - start);
-      position += value.length;
+  if (packReads.has(key)) return packReads.get(key);
+  const pending = (async () => {
+    if (packReading < 2) packReading++;
+    else await new Promise(resolve => packReadWaiters.push(resolve));
+    try {
+      const response = await (await caches.open(storeName)).match(key);
+      if (!response) return;
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.length !== pack[2]) throw new Error('Stored map pack truncated');
+      if (bytes.length <= PACK_MEMORY_BYTES) {
+        while (packMemoryBytes + bytes.length > PACK_MEMORY_BYTES) {
+          const oldest = packMemory.keys().next().value;
+          packMemoryBytes -= packMemory.get(oldest).length;
+          packMemory.delete(oldest);
+        }
+        packMemory.set(key, bytes);
+        packMemoryBytes += bytes.length;
+      }
+      return bytes;
+    } finally {
+      if (packReadWaiters.length) packReadWaiters.shift()();
+      else packReading--;
     }
-  } finally {await reader.cancel();}
-  return new Response(bytes, {headers: {
+  })().finally(() => packReads.delete(key));
+  packReads.set(key, pending);
+  return pending;
+}
+
+async function packedImage(data, entry) {
+  const legacyKey = keyFor(entry);
+  const residentLegacy = packMemory.get(legacyKey);
+  if (residentLegacy) {
+    packMemory.delete(legacyKey);
+    packMemory.set(legacyKey, residentLegacy);
+    return imageResponse(residentLegacy, entry, 0);
+  }
+  const pack = data.packs[entry[3]];
+  let bytes = await readStoredBytes(pack);
+  if (!bytes) {
+    const legacy = await readStoredBytes(entry, STORE);
+    if (legacy) return imageResponse(legacy, entry, 0);
+    await storedPack(pack);
+    bytes = await readStoredBytes(pack);
+  }
+  if (!bytes) throw new Error('Stored map pack unavailable');
+  // Response copies only the requested image, not its entire compressed pack.
+  return imageResponse(bytes, entry, entry[4]);
+}
+
+function imageResponse(bytes, entry, offset) {
+  return new Response(bytes.subarray(offset, offset + entry[2]), {headers: {
     'Content-Type': entry[0].endsWith('.json') ? 'application/json' : 'image/webp',
-    'Content-Length': String(bytes.length),
+    'Content-Length': String(entry[2]),
   }});
 }
 
