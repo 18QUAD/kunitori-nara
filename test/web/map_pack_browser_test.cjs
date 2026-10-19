@@ -32,7 +32,11 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type','application/javascript');res.end(readFileSync('web/map-cache.js'));
   } else if (name === 'map-cache-worker.js') {
     res.setHeader('Content-Type','application/javascript');
-    res.end(`Response.prototype.clone=()=>{throw Error('No response tees');};` + readFileSync('web/map-cache-worker.js','utf8').replace('__MAP_IMAGE_REVISION__',String(version)));
+    res.end(`Response.prototype.clone=()=>{throw Error('No response tees');};
+      const buffer=Response.prototype.arrayBuffer;Response.prototype.arrayBuffer=function(){
+        if(this.url.includes('/map-packs/'))throw Error('Pack must stream to disk');
+        return buffer.call(this);
+      };` + (readFileSync('web/vendor/fast-sha256.js','utf8') + readFileSync('web/map-cache-worker.js','utf8')).replace('__MAP_IMAGE_REVISION__',String(version)));
   } else if (name === 'map-image-manifest.json') {
     res.setHeader('Content-Type','application/json');res.end(JSON.stringify(fixture().manifest));
   } else if (fixture().contents.has(name)) {

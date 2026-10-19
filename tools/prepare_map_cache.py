@@ -9,13 +9,18 @@ PACK_BYTES = 1024 * 1024
 PACK_FILES = 512
 
 
+def worker_source():
+    web = Path(__file__).resolve().parents[1]/'web'
+    return (web/'vendor/fast-sha256.js').read_text() + '\n' + (web/'map-cache-worker.js').read_text()
+
+
 def prepare(root):
     previous = root / 'map-image-manifest.json'
     if previous.exists() and not any((root/'assets/assets/data/map_tiles_uniform').glob('*.webp')):
         manifest = json.loads(previous.read_text())
         if manifest.get('packSchema') == 1:
             assert all((root/pack[0]).is_file() for pack in manifest['packs'])
-            source = (Path(__file__).resolve().parents[1] / 'web/map-cache-worker.js').read_text()
+            source = worker_source()
             (root/'map-cache-worker.js').write_text(source.replace('__MAP_IMAGE_REVISION__', manifest['revision']))
             print(f'Map packs already prepared: {len(manifest["packs"]):,}')
             return
@@ -56,7 +61,7 @@ def prepare(root):
         start = end
     manifest = dict(schema=1, packSchema=1, revision=revision, bytes=sum(a[2] for a in assets), assets=assets, packs=packs)
     (root / 'map-image-manifest.json').write_text(json.dumps(manifest, separators=(',', ':')) + '\n')
-    source = (Path(__file__).resolve().parents[1] / 'web/map-cache-worker.js').read_text()
+    source = worker_source()
     (root / 'map-cache-worker.js').write_text(source.replace('__MAP_IMAGE_REVISION__', revision))
     # The worker serves original asset URLs from packs. Do not double the Pages
     # release by shipping 44,396 separate images as well. Keep JSON indices direct.

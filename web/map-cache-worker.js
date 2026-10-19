@@ -108,17 +108,31 @@ async function storedPack(pack) {
     const pending = (async () => {
       const abort = new AbortController();
       const timeout = setTimeout(() => abort.abort(), 60000);
-      let bytes;
+      const hash = new sha256.Hash();
+      let length = 0;
       try {
         const response = await fetch(key, {cache: 'no-store', signal: abort.signal});
         if (!response.ok) throw new Error(`Map pack HTTP ${response.status}`);
-        bytes = await response.arrayBuffer();
-      } finally {clearTimeout(timeout);}
-      if (bytes.byteLength !== pack[2]) throw new Error('Map pack length mismatch');
-      const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))]
-        .map(byte => byte.toString(16).padStart(2, '0')).join('');
-      if (digest !== pack[1]) throw new Error('Map pack checksum mismatch');
-      await store.put(key, new Response(bytes));
+        const checked = response.body.pipeThrough(new TransformStream({
+          transform(chunk, controller) {
+            length += chunk.byteLength;
+            if (length > pack[2]) throw new Error('Map pack length mismatch');
+            hash.update(chunk);
+            controller.enqueue(chunk);
+          },
+          flush() {
+            if (length !== pack[2]) throw new Error('Map pack length mismatch');
+            const digest = [...hash.digest()].map(byte => byte.toString(16).padStart(2, '0')).join('');
+            if (digest !== pack[1]) throw new Error('Map pack checksum mismatch');
+          },
+        }));
+        // Consume the network stream once, validating it before Cache.put commits.
+        // Never materialize a whole pack or copy it into a second Response body.
+        await store.put(key, new Response(checked));
+      } catch (error) {
+        await store.delete(key);
+        throw error;
+      } finally {clearTimeout(timeout); hash.clean();}
     })().finally(() => transfers.delete(key));
     transfers.set(key, pending);
   }
