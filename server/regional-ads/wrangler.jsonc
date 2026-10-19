@@ -4,5 +4,21 @@
   "compatibility_date": "2026-10-01",
   "vars": {
     "ALLOWED_ORIGIN": "https://18quad.github.io"
-  }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "DIAGNOSTICS",
+        "class_name": "DiagnosticsStore"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "diagnostics-v1",
+      "new_sqlite_classes": [
+        "DiagnosticsStore"
+      ]
+    }
+  ]
 }

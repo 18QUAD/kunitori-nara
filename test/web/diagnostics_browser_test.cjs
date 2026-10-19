@@ -43,7 +43,16 @@ let browser;
     if (!localStorage.getItem('flutter.kunitori.nara.v1')) localStorage.setItem('flutter.kunitori.nara.v1', JSON.stringify(JSON.stringify(game)));
     if (!localStorage.getItem('flutter.kunitori.nara.mapView.v1')) localStorage.setItem('flutter.kunitori.nara.mapView.v1', JSON.stringify(JSON.stringify(view)));
   }, {game, view});
-  await page.context().route('**/*',r=>new URL(r.request().url()).origin===new URL(base).origin?r.continue():r.abort());
+  const automaticUploads=[];
+  await page.context().route('**/*',r=>{
+    const url=new URL(r.request().url());
+    if(url.pathname==='/diagnostics' && url.hostname.endsWith('.workers.dev')) {
+      if(r.request().method()==='POST')automaticUploads.push(JSON.parse(r.request().postData()));
+      return r.fulfill({status:200,contentType:'application/json',
+        headers:{'Access-Control-Allow-Origin':'*'},body:'{"ok":true}'});
+    }
+    return url.origin===new URL(base).origin?r.continue():r.abort();
+  });
   const errors=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('crash',()=>errors.push('Renderer crashed'));
   let documentLoads=0;page.on('load',()=>documentLoads++);
@@ -89,7 +98,9 @@ let browser;
   assert(report.sessions.find(s=>s.id===current.id).events.some(e=>e.event==='conquest_after'));
   const after=await page.evaluate(()=>({game:localStorage.getItem('flutter.kunitori.nara.v1'),view:localStorage.getItem('flutter.kunitori.nara.mapView.v1')}));
   assert.deepEqual(after,before);
+  await page.waitForTimeout(2500);
+  assert(automaticUploads.some(p=>p.sessions.some(s=>s.id===current.id && s.events.some(e=>e.event==='conquest_after'))), 'Recovered pre-crash log must upload automatically');
   assert.equal(errors.filter(e=>e!=='Renderer crashed').length,0,errors.join('\n'));
-  console.log('PASS browser: actual conquest/map/memory checkpoints, settings JSON download, renderer crash recovery and unchanged game/view saves.');
+  console.log('PASS browser: actual conquest/map/memory checkpoints, settings JSON download, renderer crash recovery, automatic upload and unchanged game/view saves.');
   await browser.close();
 })().catch(async error=>{console.error(error);if(browser)await browser.close();process.exitCode=1;});

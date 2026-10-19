@@ -1,3 +1,5 @@
+import {handleDiagnostics} from './diagnostics.mjs';
+export {DiagnosticsStore} from './diagnostics.mjs';
 import regions from './regions.json' with { type: 'json' };
 
 const ITEM_API = 'https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701';
@@ -132,6 +134,7 @@ export async function handleRequest(request, env, context, {
   cache, fetcher = fetch, pause, now = () => new Date(),
 } = {}) {
   const url = new URL(request.url);
+  if (url.pathname.startsWith('/diagnostics')) return handleDiagnostics(request, env);
   const origin = request.headers.get('Origin');
   const allowed = env.ALLOWED_ORIGIN ?? 'https://18quad.github.io';
   const headers = {'Content-Type': 'application/json; charset=utf-8',
