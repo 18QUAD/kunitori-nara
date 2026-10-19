@@ -1535,14 +1535,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       key: ValueKey('geometry:$prefectureFilter'),
       future: national!.ensureGeometry(prefectureFilter),
       builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(
-            child: TextButton(
-              onPressed: () => setState(() {}),
-              child: const Text('県の地図を再読み込み'),
-            ),
-          );
-        }
         if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
         }

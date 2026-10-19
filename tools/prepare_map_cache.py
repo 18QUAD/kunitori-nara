@@ -23,6 +23,9 @@ def prepare(root):
             source = worker_source()
             (root/'map-cache-worker.js').write_text(source.replace('__MAP_IMAGE_REVISION__', manifest['revision']))
             print(f'Map packs already prepared: {len(manifest["packs"]):,}')
+            if (root/'main.dart.js').exists():
+                from prepare_runtime_cache import prepare as prepare_runtime
+                prepare_runtime(root)
             return
     assets = []
     sources = []
@@ -69,6 +72,9 @@ def prepare(root):
         if path.suffix == '.webp':
             path.unlink()
     print(f'Map storage: {len(assets):,} assets, {len(packs):,} requests/writes, {manifest["bytes"]:,} bytes, revision {revision[:12]}')
+    if (root/'main.dart.js').exists():
+        from prepare_runtime_cache import prepare as prepare_runtime
+        prepare_runtime(root)
 
 
 if __name__ == '__main__':

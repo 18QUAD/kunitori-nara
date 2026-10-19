@@ -177,7 +177,18 @@ class NationalAtlas {
       return _requestedLoad!;
     }
     _requested = prefecture;
-    final load = _serial(() => _readGeometry(prefecture));
+    final load = _serial(() async {
+      var attempt = 0;
+      while (true) {
+        try {
+          await _readGeometry(prefecture);
+          return;
+        } catch (_) {
+          attempt++;
+          await Future<void>.delayed(Duration(seconds: min(10, attempt)));
+        }
+      }
+    });
     _requestedLoad = load;
     load.then<void>(
       (_) {

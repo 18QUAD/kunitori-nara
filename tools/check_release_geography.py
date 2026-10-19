@@ -47,3 +47,18 @@ assert inventory['revision'] in (root/'map-cache-worker.js').read_text()
 size = sum(p.stat().st_size for p in root.rglob('*') if p.is_file())
 assert size < 1024**3, f'Pages release exceeds 1 GiB: {size:,} bytes'
 print(f'PASS: runtime uses baked geography/border tiles and labels; no source GIS references; release {size:,} bytes (<1 GiB).')
+
+# Offline runtime aliases reconstruct exactly the original data and code.
+import gzip
+runtime = json.loads((root/'runtime-data-manifest.json').read_text())
+assert runtime['revision'] in (root/'map-cache-worker.js').read_text()
+for chunk in runtime['chunks']:
+    data=(root/chunk[0]).read_bytes()
+    assert len(data)==chunk[2] and len(data)<=1024*1024
+    assert hashlib.sha256(data).hexdigest()==chunk[1]
+for entry in runtime['files']:
+    packed=b''.join((root/runtime['chunks'][i][0]).read_bytes() for i in entry['chunks'])
+    data=gzip.decompress(packed)
+    assert len(data)==entry['bytes'] and hashlib.sha256(data).hexdigest()==entry['sha256'],entry['path']
+    if (root/entry['path']).exists(): assert (root/entry['path']).read_bytes()==data
+print(f'PASS: {len(runtime["files"])} runtime files reconstruct byte-for-byte from verified bounded local chunks.')
