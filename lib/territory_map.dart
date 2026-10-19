@@ -1017,5 +1017,5 @@ class _MapPainter extends CustomPainter {
               viewportSize != old.viewportSize ||
               reliefClip != old.reliefClip ||
               !snapshot.sameForeground(old.snapshot)
-          : !snapshot.sameColors(old.snapshot));
+          : colors && !snapshot.sameColors(old.snapshot));
 }

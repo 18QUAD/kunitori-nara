@@ -539,8 +539,8 @@ class _NationalPainter extends CustomPainter {
       colorOpacity != old.colorOpacity ||
       paths != old.paths ||
       labelBounds != old.labelBounds ||
-      territoryCount != old.territoryCount ||
+      (colors && territoryCount != old.territoryCount) ||
       (foreground
           ? !snapshot.sameForeground(old.snapshot)
-          : !snapshot.sameColors(old.snapshot));
+          : colors && !snapshot.sameColors(old.snapshot));
 }

@@ -558,6 +558,33 @@ void main() {
       expect(mapPainter(true).shouldRepaint(oldForeground), isFalse);
       expect(viewer.transformationController!.value, camera);
       expect(game.progress[target], 1);
+      dynamic staticBase() {
+        final current = tester.widget<InteractiveViewer>(
+          find.byType(InteractiveViewer),
+        );
+        final box = (current.child as GestureDetector).child as SizedBox;
+        return (((box.child as Stack).children.first as RepaintBoundary).child
+                as CustomPaint)
+            .painter;
+      }
+
+      final beforeConquestBase = staticBase();
+      final beforeConquestColors = mapPainter(false);
+      final beforeConquestForeground = mapPainter(true);
+      final beforeConquestBorder = borderPainter();
+      game.progress[target] = game.requiredTaps(atlas.towns[target]!) - 1;
+      expect(game.tap(target, DateTime.now()), isTrue);
+      await tester.pumpWidget(screen());
+      await tester.pump();
+      expect(
+        staticBase().shouldRepaint(beforeConquestBase),
+        isFalse,
+        reason: 'Acquiring a town must not repaint unchanged land geometry',
+      );
+      expect(mapPainter(false).shouldRepaint(beforeConquestColors), isTrue);
+      expect(mapPainter(true).shouldRepaint(beforeConquestForeground), isTrue);
+      expect(borderPainter().shouldRepaint(beforeConquestBorder), isFalse);
+      expect(viewer.transformationController!.value, camera);
       // Terrain cannot be toggled until both image workers finish.
       IconButton terrain() => tester
           .widgetList<IconButton>(find.byType(IconButton))
