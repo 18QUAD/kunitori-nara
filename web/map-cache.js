@@ -96,11 +96,17 @@ window.kunitoriMapStorage = (async () => {
     },
     async release() {
       await window.kunitoriMapStorage;
-      return (await request('map-memory-release')).bytes;
+      const memory = await request('map-memory-release');
+      window.kunitoriDiagnostics?.record?.('map_memory_released', JSON.stringify({
+        mapCacheLimitMb: memory.megabytes, mapCacheBytes: memory.bytes,
+      }));
+      return memory.bytes;
     },
     async set(megabytes) {
       await window.kunitoriMapStorage;
-      return (await request('map-memory-set', {megabytes})).megabytes;
+      const memory = await request('map-memory-set', {megabytes});
+      window.kunitoriDiagnostics?.record?.('map_memory_setting', JSON.stringify({mapCacheLimitMb: memory.megabytes}));
+      return memory.megabytes;
     },
   };
   let checkingMemory = false;
