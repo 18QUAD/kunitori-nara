@@ -102,6 +102,8 @@ async function waitUntil(check, message) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}${root}`;
   let page = await open(base);
+  // A visibility event between setup failure and its retry used to cancel recovery.
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   await page.getByText('全国の地図データをダウンロード中', {exact: true}).waitFor();
   assert.equal(await page.evaluate(() => window.loaderStarts), 0, 'Game must not load while initial download is running');
   const bar = page.getByRole('progressbar', {name: '地図データのダウンロード', exact: true});
