@@ -94,11 +94,26 @@ window.kunitoriMapStorage = (async () => {
       await window.kunitoriMapStorage;
       return (await request('map-memory-get')).megabytes;
     },
+    async release() {
+      await window.kunitoriMapStorage;
+      return (await request('map-memory-release')).bytes;
+    },
     async set(megabytes) {
       await window.kunitoriMapStorage;
       return (await request('map-memory-set', {megabytes})).megabytes;
     },
   };
+  let checkingMemory = false;
+  setInterval(async () => {
+    if (!connected || !done || document.hidden || checkingMemory) return;
+    checkingMemory = true;
+    try {
+      const memory = await request('map-memory-get');
+      window.kunitoriDiagnostics?.record?.('map_memory', JSON.stringify({
+        mapCacheLimitMb: memory.megabytes, mapCacheBytes: memory.bytes,
+      }), false);
+    } catch (_) {} finally {checkingMemory = false;}
+  }, 5000);
   let lastCheckpoint = 0;
   function checkpoint(result, force = false) {
     if (!force && Date.now() - lastCheckpoint < 5000) return;

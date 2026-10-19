@@ -18,7 +18,7 @@ test('sanitize allowlist never stores saves or arbitrary fields',()=>{
 });
 test('download progress counters survive private report sanitization',()=>{
   const report=sample();
-  const counters={mapDownloadSaved:480,mapDownloadTotal:44400,mapDownloadBytes:1234567,mapDownloadTotalBytes:302822453};
+  const counters={mapCacheLimitMb:256,mapCacheBytes:12345678,mapDownloadSaved:480,mapDownloadTotal:44400,mapDownloadBytes:1234567,mapDownloadTotalBytes:302822453};
   Object.assign(report.sessions[0].events[0].state,counters);
   const state=sanitizeReport(report).sessions[0].events[0].state;
   for(const [key,value] of Object.entries(counters))assert.equal(state[key],value);

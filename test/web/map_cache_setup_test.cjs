@@ -43,7 +43,7 @@ async function scenario(scope = 'https://example.test/game/') {
   const window = new EventTarget();
   window.kunitoriDiagnostics = {record: event => records.push(event)};
   const context = {window, document, navigator:{serviceWorker:sw,onLine:true}, URL, MessageChannel:Channel,
-    setTimeout:schedule, clearTimeout:id=>timers.delete(id)};
+    setInterval:()=>0, setTimeout:schedule, clearTimeout:id=>timers.delete(id)};
   vm.runInNewContext(fs.readFileSync('web/map-cache.js','utf8'), context);
   window.kunitoriMapDownload.then(() => {finished = true;});
   await flush();

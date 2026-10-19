@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'game.dart';
 import 'office_marker.dart';
 import 'national_tips.dart';
+import 'diagnostics.dart';
 
 /// Population and adjacency are resident; detailed polygons are loaded by prefecture.
 class NationalAtlas {
@@ -196,6 +197,9 @@ class NationalAtlas {
     if (_resident == prefecture) return;
     _releaseGeometry();
 
+    recordDiagnostic('geometry_load_start', {
+      'destinationPrefecture': prefecture,
+    });
     try {
       final data =
           jsonDecode(
@@ -251,7 +255,14 @@ class NationalAtlas {
       atlas.cityPolygons.addAll(cityShapes);
       if (outline != null) atlas.prefecturePolygons[prefecture] = outline;
       _resident = prefecture;
-    } catch (_) {
+      recordDiagnostic('geometry_load_done', {
+        'destinationPrefecture': prefecture,
+      });
+    } catch (error) {
+      recordDiagnostic('geometry_load_error', {
+        'destinationPrefecture': prefecture,
+        'error': error.toString(),
+      });
       rethrow;
     }
   }

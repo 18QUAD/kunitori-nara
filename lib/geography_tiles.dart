@@ -103,6 +103,10 @@ Future<void> _serialRaster(Future<void> Function() action) {
 /// Call after the departing map has been unmounted for a frame. No new scene
 /// should allocate geometry until its in-flight rasters and retirements finish.
 Future<void> retireMapImages() async {
+  await Future.wait([
+    GeographyImageCache.shared.drain(),
+    GeographyImageCache.borders.drain(),
+  ]);
   await _serialRaster(() async {});
   await Future.wait(_retirements.toList());
   GeographyImageCache.shared.clearUnused();
@@ -153,6 +157,15 @@ class GeographyImageCache {
       _decoding--;
     }
     _trim();
+  }
+
+  Future<void> drain() async {
+    while (_pending.isNotEmpty) {
+      await Future.wait([
+        for (final pending in _pending.values.toList())
+          pending.then<void>((_) {}, onError: (Object _, StackTrace __) {}),
+      ]);
+    }
   }
 
   int get length => _images.length;

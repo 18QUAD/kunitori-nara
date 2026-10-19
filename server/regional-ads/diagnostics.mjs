@@ -5,7 +5,7 @@ const fields = new Set(['map','prefecture','city','selected','scale','centerX','
   'terrain','changingMap','totalTaps','territories','attackTarget','flutterImageBytes',
   'flutterImageCount','flutterLiveImages','flutterPendingImages','backgroundCache',
   'borderCache','destinationPrefecture','imageScale','imageCache','persisted','error',
-  'mapDownloadSaved','mapDownloadTotal','mapDownloadBytes','mapDownloadTotalBytes']);
+  'mapCacheLimitMb','mapCacheBytes','mapDownloadSaved','mapDownloadTotal','mapDownloadBytes','mapDownloadTotalBytes']);
 function scalar(value) {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (typeof value === 'boolean' || value == null) return value;

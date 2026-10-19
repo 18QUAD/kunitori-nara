@@ -16,6 +16,7 @@ import 'tip_presenter.dart';
 import 'quiz_stage.dart';
 import 'tip_settings.dart';
 import 'map_cache_settings.dart';
+import 'map_cache_bridge.dart';
 import 'save_store.dart';
 import 'map_view.dart';
 import 'territory_map.dart';
@@ -773,11 +774,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _select(townId, startQuiz: false);
   }
 
-  void _focusCampaign() {
+  Future<void> _focusCampaign() async {
+    if (_changingMap) return;
     _diagnose('home_start');
     final target = game!.attackTarget ?? game!.home;
     if (target == null) return;
+    final destination = atlas!.towns[target]!.cityId.substring(0, 2);
+    if (nationalView || destination != prefectureFilter) {
+      await _retireMapBeforeNavigation();
+      if (!mounted) return;
+    }
     setState(() {
+      _changingMap = false;
       _clearConquestFor(target);
       selected = target;
       factIndex = 0;
@@ -1449,10 +1457,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _selectPrefecture(String id) {
+  Future<void> _selectPrefecture(String id) async {
+    if (_changingMap) return;
     recordDiagnostic('select_prefecture_start', {'destinationPrefecture': id});
     _diagnose('leave_map');
+    await _retireMapBeforeNavigation();
+    if (!mounted) return;
     setState(() {
+      _changingMap = false;
       prefectureFilter = id;
       nationalView = false;
       cityFilter = null;
@@ -1463,6 +1475,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _rememberVisibleFact();
     _startTipsTimer();
     _save();
+  }
+
+  Future<void> _retireMapBeforeNavigation() async {
+    setState(() => _changingMap = true);
+    await WidgetsBinding.instance.endOfFrame;
+    await retireMapImages();
+    if (kIsWeb) {
+      try {
+        await releaseMapCacheMemory().timeout(const Duration(seconds: 3));
+      } catch (error) {
+        recordDiagnostic('map_memory_release_error', {
+          'error': error.toString(),
+        });
+      }
+    }
+    _diagnose('map_images_retired');
   }
 
   Future<void> _showNational() async {
@@ -1478,6 +1506,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     // overlaps its native paths with the old scene's paths and raster images.
     await WidgetsBinding.instance.endOfFrame;
     await retireMapImages();
+    if (kIsWeb) {
+      try {
+        await releaseMapCacheMemory().timeout(const Duration(seconds: 3));
+      } catch (error) {
+        recordDiagnostic('map_memory_release_error', {
+          'error': error.toString(),
+        });
+      }
+    }
     if (mounted) {
       setState(() => _changingMap = false);
       _diagnose('show_national_retired');

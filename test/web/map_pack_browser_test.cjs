@@ -89,6 +89,12 @@ async function cursor(page){return page.evaluate(async revision=>{
  await page.evaluate(async paths=>{for(const path of paths)await (await fetch(path)).arrayBuffer();},assets.map(entry=>entry[0]));
  assert.equal(await context.serviceWorkers()[0].evaluate(()=>self.packDiskReads),beforeRepeat,'Repeated visible images must reuse compressed memory');
  await context.setOffline(false);
+ const limit=await page.evaluate(()=>kunitoriMapMemory.get());
+ assert.equal(await page.evaluate(()=>kunitoriMapMemory.release()),0);
+ assert.equal(await context.serviceWorkers()[0].evaluate(()=>packMemoryBytes),0,'Map transitions release compressed bytes');
+ assert.equal(await page.evaluate(()=>kunitoriMapMemory.get()),limit,'Releasing memory preserves the chosen capacity');
+ await page.evaluate(async path=>await (await fetch(path)).arrayBuffer(),assets[0][0]);
+ assert.deepEqual(requests,counts,'Released memory must be reloaded from disk, not downloaded');
  // A content update only transfers the one changed pack.
  assets[95][1]=Buffer.alloc(4096,201);version=2;
  await page.reload();await page.evaluate(()=>kunitoriMapStorage);await page.waitForFunction(()=>window.started,{},{timeout:30000});
