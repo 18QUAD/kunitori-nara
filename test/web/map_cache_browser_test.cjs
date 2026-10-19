@@ -32,7 +32,15 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'application/javascript'); res.end(clientSource);
   } else if (name === 'map-cache-worker.js') {
     res.setHeader('Content-Type', 'application/javascript');
-    res.end(workerSource.replace('__MAP_IMAGE_REVISION__', String(version)));
+    // Enumerating every stored image would create tens of thousands of Request
+    // objects on the phone. Fail if the worker attempts that operation.
+    const guard = `const originalOpen = caches.open.bind(caches);
+      caches.open = async name => {
+        const cache = await originalOpen(name);
+        if (name === 'kunitori-map-images-v1') cache.keys = () => {throw new Error('Image-store enumeration exceeds memory budget');};
+        return cache;
+      };`;
+    res.end(guard + workerSource.replace('__MAP_IMAGE_REVISION__', String(version)));
   } else if (name === 'map-image-manifest.json') {
     res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(manifest()));
   } else if (contents.has(name)) {

@@ -70,13 +70,18 @@ async function storedImage(entry, mustStore = false) {
 
 async function removeOldVersions(data, meta) {
   const store = await caches.open(STORE);
-  for (const request of await store.keys()) {
-    const entry = data.byPath.get(new URL(request.url).pathname);
-    if (!entry || request.url !== keyFor(entry)) await store.delete(request);
-  }
+  // Do not enumerate 44,000 CacheStorage Request objects. Only obsolete
+  // manifests describe image versions that actually need deleting.
   for (const request of await meta.keys()) {
     if (request.url !== progressKey &&
         request.url !== new URL(`map-image-manifest.json?v=${REVISION}`, ROOT).href) {
+      if (new URL(request.url).pathname.endsWith('/map-image-manifest.json')) {
+        const old = await (await meta.match(request)).json();
+        for (const entry of old.assets) {
+          const current = data.byPath.get(new URL(entry[0], ROOT).pathname);
+          if (!current || current[1] !== entry[1]) await store.delete(keyFor(entry));
+        }
+      }
       await meta.delete(request);
     }
   }
