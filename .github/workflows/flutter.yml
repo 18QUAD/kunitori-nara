@@ -61,7 +61,9 @@ jobs:
         run: flutter build apk --debug --no-pub
 
       - name: Build Web preview bundle
-        run: flutter build web --release --no-pub
+        run: |
+          flutter build web --release --no-pub
+          python3 tools/prepare_map_cache.py build/web
 
       - name: Store Android APK
         uses: actions/upload-artifact@v4

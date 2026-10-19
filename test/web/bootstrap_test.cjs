@@ -36,22 +36,11 @@ async function run(serviceWorker) {
 
 (async () => {
   assert.deepEqual(await run(), {loaded: 1, reloaded: 0});
-  let unregistered = 0, unrelated = 0;
-  const own = {scope: 'https://18quad.github.io/kunitori-nara/',
-    async unregister() {unregistered++; return true;}};
-  const other = {scope: 'https://18quad.github.io/other/',
-    async unregister() {unrelated++; return true;}};
+  // Worker registration/migration belongs to map-cache.js. Bootstrap must not
+  // unregister a persistent map store or force a reload on each visit.
   assert.deepEqual(await run({
-    controller: {scriptURL: 'https://18quad.github.io/kunitori-nara/flutter_service_worker.js?v=old'},
-    async getRegistrations() {return [own, other];},
-  }), {loaded: 0, reloaded: 1});
-  assert.equal(unregistered, 1);
-  assert.equal(unrelated, 0);
-  assert.deepEqual(await run({controller: null,
-    async getRegistrations() {return [];},
+    controller: {scriptURL: 'https://18quad.github.io/kunitori-nara/map-cache-worker.js?v=current'},
+    async getRegistrations() {throw new Error('Bootstrap must not enumerate or unregister workers');},
   }), {loaded: 1, reloaded: 0});
-  assert.deepEqual(await run({
-    async getRegistrations() {throw new Error('unavailable');},
-  }), {loaded: 1, reloaded: 0});
-  console.log('Bootstrap checks passed: versioned entrypoint, legacy migration, unrelated scope, fresh load, failure fallback.');
+  console.log('Bootstrap checks passed: versioned entrypoint and no worker removal or forced reload.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

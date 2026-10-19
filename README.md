@@ -23,6 +23,7 @@ flutter analyze
 flutter build apk --debug
 flutter run -d chrome
 flutter build web --release
+python3 tools/prepare_map_cache.py build/web
 ```
 
 APK: `build/app/outputs/flutter-apk/app-debug.apk`
@@ -424,3 +425,9 @@ DIAGNOSTICS_PLATFORM=all node tools/diagnostics/fetch.mjs /workspace/remote-diag
 ローカルの秘密鍵で復号し、読み取り権限を制限したJSONへ保存します。
 利用者によるファイル添付は不要です。ブラウザが新版を一度も実行していない端末のローカルログは、
 新版の起動までサーバーには届きません。
+
+地図画像は初回起動後に全国分を CacheStorage へ自動保存します。
+次回以降は保存済み画像を優先し、画像内容のハッシュが変わった分だけ取得します。
+ダウンロードが中断した場合も保存済み分から再開します。画像を一括デコードしません。
+Web ビルド後は上記の `prepare_map_cache.py` を必ず実行してください。
+保存先はブラウザ管理のため、サイトデータが削除された場合は不足分を再取得します。

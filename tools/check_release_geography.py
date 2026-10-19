@@ -1,5 +1,6 @@
 """Guard deployed geography assets and the Pages size budget after a build."""
 from pathlib import Path
+import json
 
 root = Path(__file__).resolve().parents[1]/'build/web'
 compiled = (root/'main.dart.js').read_text()
@@ -18,6 +19,16 @@ assert 'assets/data/prefecture_border_mesh.bin' in compiled
 assert (root/'assets/assets/data/prefecture_border_mesh.bin').is_file()
 assert (root/'assets/assets/data/border_tiles/index-slim.json').is_file()
 assert all(p.name.startswith(('slim_', 'slimshared_')) for p in (root/'assets/assets/data/border_tiles').glob('*.webp')), 'Outdated border style was bundled'
+inventory = json.loads((root/'map-image-manifest.json').read_text())
+expected_images = {
+    str(p.relative_to(root))
+    for folder in ('map_tiles_uniform', 'border_tiles')
+    for p in (root/'assets/assets/data'/folder).iterdir()
+    if p.suffix in ('.webp', '.json')
+}
+assert {entry[0] for entry in inventory['assets']} == expected_images, 'Incomplete local map inventory'
+assert '__MAP_IMAGE_REVISION__' not in (root/'map-cache-worker.js').read_text(), 'Map worker was not prepared'
+assert inventory['revision'] in (root/'map-cache-worker.js').read_text()
 size = sum(p.stat().st_size for p in root.rglob('*') if p.is_file())
 assert size < 1024**3, f'Pages release exceeds 1 GiB: {size:,} bytes'
 print(f'PASS: runtime uses baked geography/border tiles and labels; no source GIS references; release {size:,} bytes (<1 GiB).')
