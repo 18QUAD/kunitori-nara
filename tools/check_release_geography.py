@@ -14,6 +14,10 @@ for folder in ['map_tiles_uniform','border_tiles','water_mesh']:
     assert f'assets/data/{folder}/' not in compiled
     assert not (root/'assets/assets/data'/folder).exists()
 assert 'assets/data/prefecture_border_mesh.bin' not in compiled
+for name in ['japan_relief.png','japan_relief.json','nara_relief.png',
+             'nara_relief.json','nara_water.json','nara_urban.json']:
+    assert f'assets/data/{name}' not in compiled
+    assert not (root/'assets/assets/data'/name).exists(), f'Unused source GIS: {name}'
 index=json.loads((root/'assets/assets/data/map_images/index.json').read_text())
 assert index['schema']==2 and index['sampling']==2
 for layer, maximum in index['layerMaxLevels'].items():

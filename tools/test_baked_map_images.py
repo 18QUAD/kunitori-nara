@@ -13,6 +13,34 @@ from optimize_map_images import DELIVERY_MARKER, encode
 
 
 class BakedImagesTest(unittest.TestCase):
+    def test_overview_water_does_not_inflate_subpixel_rivers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            land = [bake.box(135,31,141,37)]
+            river = [LineString([(136.1,34),(139.9,34)]),
+                     bake.box(137.3,34.4,137.301,34.401)]
+            with patch.multiple(bake, create=True, OUT=Path(tmp), SOURCE_KEYS=set(),
+                                LAND=land, LAND_TREE=bake.STRtree(land),
+                                WATER=river, WATER_TREE=bake.STRtree(river),
+                                WATER_SCALE=1539.6892863648495):
+                key, _ = bake.render_background((0,4,3,'background'))
+            with Image.open(Path(tmp)/f'{key}.webp') as image:
+                rgba = image.convert('RGBA')
+                # A 0.03-pixel blue river must retain partial coverage instead
+                # of being forced into an opaque half-pixel line over Japan.
+                self.assertLess(max(pixel[2] for pixel in rgba.getdata()),130)
+
+    def test_merging_shared_borders_does_not_double_their_alpha(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); output = root/'output'; output.mkdir()
+            source = root/'source.webp'
+            Image.new('RGBA', (512,512), (255,255,255,128)).save(source, lossless=True)
+            with patch.object(bake, 'OUT', output):
+                bake.merge_border(('single.webp', [source]))
+                bake.merge_border(('shared.webp', [source,source]))
+            self.assertEqual((output/'single.webp').read_bytes(), source.read_bytes())
+            with Image.open(output/'shared.webp') as image:
+                self.assertEqual(image.getchannel('A').getextrema(), (128,128))
+
     def test_large_public_packs_use_committed_immutable_bytes_and_stable_keys(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo=Path(tmp);prepared=repo/'data/prepared_maps';prepared.mkdir(parents=True)

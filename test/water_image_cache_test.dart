@@ -20,6 +20,7 @@ void main() {
     final clip = Path()..addRect(const Rect.fromLTWH(0, 0, 1100, 1500));
     Offset project(math.Point<double> p) =>
         Offset((p.x - 136.108962) * 600, (34.620435 - p.y) * 600);
+    var busy = true;
     Widget map() => MaterialApp(
       home: OverflowBox(
         alignment: Alignment.topLeft,
@@ -29,6 +30,7 @@ void main() {
           width: 1100,
           height: 1500,
           child: GeographyTiles(
+            onBusyChanged: (value) => busy = value,
             enabled: true,
             transform: transform,
             project: project,
@@ -71,12 +73,13 @@ void main() {
                   'No enlarged coarse water image, even on the first zoom frame',
             );
           }
-          if (ready.evaluate().isNotEmpty) break;
+          if (ready.evaluate().isNotEmpty && !busy) break;
           await tester.runAsync(
             () => Future<void>.delayed(const Duration(milliseconds: 20)),
           );
         }
         expect(ready, findsOneWidget);
+        expect(busy, isFalse);
         expect(tiles(), isNotEmpty);
         final waterPoint = project(const math.Point(136.109962, 34.619435));
         final waterTile = tiles().firstWhere(

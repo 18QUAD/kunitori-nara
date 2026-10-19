@@ -88,6 +88,17 @@ python tools/prepare_map_cache.py build/web
 python tools/check_release_geography.py
 ```
 
+完成ビルドを `/kunitori-nara/` でローカル配信した状態で、Playwrightによる実画面検証を実行できます。専用テストプロファイルに架空の進行データを設定し、初回保存完了後にオフラインへ切り替えて、地図の往復・拡大縮小・100タップ・領土獲得・縦向き画面のサイズ変更を検証します。画像予算、画像再生成の不在、保存結果、再読み込みの不在も確認します。`PROFILE_DIR` を再利用すると、次回は保存済みの画像パックを利用します。
+
+```sh
+BASE_URL=http://127.0.0.1:8770/kunitori-nara/ \
+PROFILE_DIR=/tmp/kunitori-map-test-profile \
+OUTPUT_DIR=/tmp/kunitori-map-test-results \
+node test/web/prepared_maps_test.cjs
+```
+
+Node.jsのPlaywrightとChromiumが必要です。Chromiumの場所は `CHROMIUM_PATH` で指定できます。
+
 元の町ID・人口・隣接・ゲームの保存キーは変更しません。テストは完成パックから必要な画像だけを読み込み、通常のタップ・領土獲得・縮尺の往復での再利用と、オフライン読み込みを確認します。
 
 ## 保存

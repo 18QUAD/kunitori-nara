@@ -1,6 +1,6 @@
 """Reduce download bytes without changing tile resolution or geometry.
 
-Q50 WebPs preserve native water edges and keep the bundle inside the Pages limit.
+Q50 WebPs retain native water sampling while reducing initial download bytes.
 The renderer writes delivery images directly. A marker and source/delivery hashes
 also allow older master images to be upgraded once without repeated lossy encodes.
 """

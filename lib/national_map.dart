@@ -289,8 +289,7 @@ class _NationalMapState extends State<NationalMap> {
                           transform: transform,
                           project: project,
                           viewport: size,
-                          // Sea is masked once inside each cached image, with
-                          // only its visible contours at image-pixel precision.
+                          // The prepared image already excludes the sea.
                           clip: boundaryClip,
                           enabled: showGeography,
                         ),

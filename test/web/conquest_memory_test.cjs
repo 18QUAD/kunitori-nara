@@ -53,6 +53,8 @@ let activePoll;
   await page.locator('flt-semantics-placeholder').waitFor({state:'attached',timeout:120000});
   await page.locator('flt-semantics-placeholder').evaluate(e=>e.click());
   for(const label of ['背景地図の読込完了','境界線画像の読込完了']) await page.getByLabel(label,{exact:true}).or(page.getByText(label,{exact:true})).first().waitFor({timeout:120000});
+  // Exclude the preceding map's adjacent-level prefetch from the conquest.
+  await page.getByRole('button',{name:'攻略中の町へ',exact:true}).click({trial:true,timeout:120000});
   const started=await page.evaluate(()=>performance.timeOrigin);
   const cdp=await page.context().newCDPSession(page);await cdp.send('Performance.enable');
   const processSession=await browser.newBrowserCDPSession();

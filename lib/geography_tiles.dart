@@ -380,7 +380,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     );
   }
 
-  List<(String, Rect, Rect)> _descriptors(int level) {
+  List<(String, Rect, Rect)> _descriptors(int level, {bool adjacent = false}) {
     final manifest = index!;
     final layer =
         widget.boundaryLayer ??
@@ -388,10 +388,22 @@ class _GeographyTilesState extends State<GeographyTiles> {
     level = manifest
         .layerLevel(level, layer)
         .clamp(manifest.minLevel, manifest.maxLevel);
-    final scene = Rect.fromPoints(
+    var scene = Rect.fromPoints(
       widget.transform.toScene(Offset.zero),
       widget.transform.toScene(widget.viewport.bottomRight(Offset.zero)),
-    ).intersect(widget.clip.getBounds());
+    );
+    if (adjacent) {
+      // The zoom buttons keep the viewport center. Prefetch the area that will
+      // actually be visible at that scale, rather than four times too many
+      // fine cells or too small an area when zooming out.
+      final ratio = math.pow(2, _level - level);
+      scene = Rect.fromCenter(
+        center: scene.center,
+        width: scene.width * ratio,
+        height: scene.height * ratio,
+      );
+    }
+    scene = scene.intersect(widget.clip.getBounds());
     if (scene.isEmpty) return [];
     final origin = widget.project(const math.Point(120.0, 48.0));
     final unit = widget.project(const math.Point(121.0, 47.0)) - origin;
@@ -500,7 +512,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
       if (widget.enabled)
         for (final adjacent in [level - 1, level + 1])
           if (adjacent >= index!.minLevel && adjacent <= index!.maxLevel)
-            ..._descriptors(adjacent).map((d) => d.$1),
+            ..._descriptors(adjacent, adjacent: true).map((d) => d.$1),
     };
     cache.prefer(this, {...wanted, ...adjacentKeys});
     cache.pin(this, {..._pinned, ...wanted});
@@ -554,14 +566,16 @@ class _GeographyTilesState extends State<GeographyTiles> {
       widget.boundaryLayer != null
           ? (failed
               ? '境界線画像の読込失敗'
-              : loading
+              : loading ||
+                  widget.transform.value.getMaxScaleOnAxis() != refreshedZoom
               ? '境界線画像を読み込み中'
               : '境界線画像の読込完了')
           : !widget.enabled
           ? '背景地図は非表示'
           : failed
           ? '背景地図の読込失敗'
-          : loading
+          : loading ||
+              widget.transform.value.getMaxScaleOnAxis() != refreshedZoom
           ? '背景地図を読み込み中'
           : '背景地図の読込完了';
 

@@ -134,25 +134,34 @@ def render_background(item):
     image = Image.new('RGBA', (SIZE, SIZE), (67, 97, 106, 255))
     image.alpha_composite(source_layer(level, x, y, 'shade'))
     image.alpha_composite(source_layer(level, x, y, 'detail'))
-    visible_water = [part for hit in water_hits for part in water_parts(
+    visible_water = [part for hit in water_hits
+        # A subpixel pond must not become a full raster sample at overview
+        # scales. Fine backgrounds still retain the original small water areas.
+        if not (level <= 4 and water[int(hit)].geom_type == 'Polygon'
+                and water[int(hit)].area * ppd * ppd < .25)
+        for part in water_parts(
         shapely.clip_by_rect(water[int(hit)], west-margin, north-span-margin,
                             west+span+margin, north+margin))]
     # Two antialiased passes reproduce the existing Nara water widths/caps.
     for color, width in [((18, 61, 89), .625), ((121, 217, 255), .375)]:
         mask = Image.new('L', (SIZE*AA, SIZE*AA))
         draw = ImageDraw.Draw(mask)
-        stroke = max(1, round(width / WATER_SCALE * ppd * AA))
+        pixel_width = width / WATER_SCALE * ppd * AA
+        stroke = max(1, round(pixel_width))
+        coverage = round(255 * min(1, pixel_width))
         for shape in visible_water:
             rings = [shape.coords] if shape.geom_type == 'LineString' else [shape.exterior.coords, *[r.coords for r in shape.interiors]]
             for r, ring in enumerate(rings):
                 points = [((lon-west)*ppd*AA, (north-lat)*ppd*AA) for lon, lat in ring]
                 if shape.geom_type == 'Polygon' and color == (121, 217, 255):
                     draw.polygon(points, fill=255 if r == 0 else 0)
-                draw.line(points, fill=255, width=stroke, joint='curve')
+                    if coverage < 255:
+                        continue
+                draw.line(points, fill=coverage, width=stroke, joint='curve')
                 if shape.geom_type == 'LineString' and stroke > 1:
                     radius = stroke/2
                     for px, py in (points[0], points[-1]):
-                        draw.ellipse((px-radius, py-radius, px+radius, py+radius), fill=255)
+                        draw.ellipse((px-radius, py-radius, px+radius, py+radius), fill=coverage)
         mask = mask.resize((SIZE, SIZE), Image.Resampling.LANCZOS)
         overlay = Image.new('RGBA', (SIZE, SIZE), (*color, 0))
         overlay.putalpha(mask)
@@ -251,9 +260,21 @@ def prefecture_borders(pid):
 
 
 def merge_border(item):
+    import shutil
     name, paths = item
     target = OUT/name
     if target.exists(): return
+    temporary = target.with_suffix('.merge.tmp')
+    if len(paths) == 1:
+        with Image.open(paths[0]) as source:
+            histogram = source.getchannel('A').histogram()
+        if all(not count or value == 255 or value % 32 == 0
+               for value, count in enumerate(histogram)):
+            # Most fine cells belong to one prefecture. Their pixels already
+            # have the final alpha coverage; copying avoids a second encode.
+            shutil.copyfile(paths[0], temporary)
+            temporary.replace(target)
+            return
     alpha = Image.new('L',(SIZE,SIZE))
     for path in paths:
         with Image.open(path) as im: alpha = ImageChops.lighter(alpha, im.getchannel('A'))
@@ -262,7 +283,8 @@ def merge_border(item):
     alpha = alpha.point(lambda value: min(255, round(value/32)*32))
     image = Image.new('RGBA',(SIZE,SIZE),(255,255,255,0))
     image.putalpha(alpha)
-    image.save(target, lossless=True, method=4)
+    image.save(temporary, format='WEBP', lossless=True, method=4)
+    temporary.replace(target)
 
 
 def borders(workers):
