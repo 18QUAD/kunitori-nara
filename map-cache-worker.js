@@ -567,19 +567,23 @@ async function storedPack(pack) {
   await transfers.get(key);
 }
 
+// One eighth of the shared retained-image budget is compressed bytes;
+// Flutter owns the remaining source/background/boundary image shares.
 // Foreground-only compressed LRU. Downloading never fills this memory cache.
 // Keep the selected byte limit resident and at most two one-pack disk reads in flight; these
 // bytes are not decoded pixels or GPU surfaces.
 const MEMORY_CHOICES = [32, 64, 128, 256];
 const memorySettingsKey = new URL('__map_memory_settings__', ROOT).href;
-let packMemoryLimit = 32 * 1024 * 1024;
+let mapMemoryMegabytes = 32;
+let packMemoryLimit = mapMemoryMegabytes * 1024 * 1024 / 8;
 let memorySettingsPromise;
 let memorySettingsQueue = Promise.resolve();
 function loadMemorySettings() {
   if (!memorySettingsPromise) memorySettingsPromise = (async () => {
     const response = await (await caches.open(META)).match(memorySettingsKey);
     const value = response ? (await response.json()).megabytes : 32;
-    packMemoryLimit = (MEMORY_CHOICES.includes(value) ? value : 32) * 1024 * 1024;
+    mapMemoryMegabytes = MEMORY_CHOICES.includes(value) ? value : 32;
+    packMemoryLimit = mapMemoryMegabytes * 1024 * 1024 / 8;
   })().catch(() => {memorySettingsPromise = null;});
   return memorySettingsPromise;
 }
@@ -595,7 +599,8 @@ function setMemorySettings(megabytes) {
     if (!MEMORY_CHOICES.includes(megabytes)) throw new Error('Invalid map memory size');
     await loadMemorySettings();
     await (await caches.open(META)).put(memorySettingsKey, new Response(JSON.stringify({megabytes})));
-    packMemoryLimit = megabytes * 1024 * 1024;
+    mapMemoryMegabytes = megabytes;
+    packMemoryLimit = megabytes * 1024 * 1024 / 8;
     trimPackMemory();
     return {megabytes};
   });
@@ -774,7 +779,7 @@ self.addEventListener('message', event => {
           packMemory.clear();
           packMemoryBytes = 0;
         }
-        return {megabytes: packMemoryLimit / 1024 / 1024, bytes: packMemoryBytes};
+        return {megabytes: mapMemoryMegabytes, bytes: packMemoryBytes};
       });
     event.waitUntil(operation.then(
       result => event.ports[0].postMessage(result),
@@ -804,7 +809,7 @@ function reportMemoryAfterRead() {
       try {
         const clients = await self.clients.matchAll({type: 'window'});
         for (const client of clients) client.postMessage({
-          type: 'map-memory-state', megabytes: packMemoryLimit / 1024 / 1024,
+          type: 'map-memory-state', megabytes: mapMemoryMegabytes,
           bytes: packMemoryBytes,
         });
       } catch (_) {} finally {memoryNotice = null; resolve();}
