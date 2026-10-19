@@ -22,6 +22,9 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
   bool _portraitAllowed = true;
   Rect? _rect;
   bool _placementPending = false;
+  final _contacts = <int>{};
+  late final JSFunction _releaseContact;
+  late final JSFunction _resetContacts;
 
   void _update() {
     final button = _button;
@@ -108,6 +111,12 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     browserInsets.removeListener(_schedulePlacement);
+    for (final type in ['pointerup', 'pointercancel']) {
+      web.document.removeEventListener(type, _releaseContact, true.toJS);
+    }
+    web.window.removeEventListener('blur', _resetContacts);
+    web.document.removeEventListener('visibilitychange', _resetContacts);
+    _contacts.clear();
     _button?.remove();
     _button = null;
     super.dispose();
@@ -130,18 +139,34 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
     _button = button;
     button.type = 'button';
     button.className = 'attack-tap-native';
-    // Count every contact, including non-primary touch pointers. Waiting for a
-    // browser click loses overlapping fingers. Map gestures stay outside this
-    // button; touch-action:none prevents its contacts becoming browser gestures.
+    // One contact group counts once, on its first press. Every finger in the
+    // group must be released/canceled before a new group can count. Capture the
+    // document's releases so dragging outside the button cannot leave it stuck.
+    _releaseContact =
+        ((web.PointerEvent event) {
+          _contacts.remove(event.pointerId);
+        }).toJS;
+    for (final type in ['pointerup', 'pointercancel']) {
+      web.document.addEventListener(type, _releaseContact, true.toJS);
+    }
+    _resetContacts =
+        ((web.Event event) {
+          if (event.type == 'blur' || web.document.hidden) _contacts.clear();
+        }).toJS;
+    web.window.addEventListener('blur', _resetContacts);
+    web.document.addEventListener('visibilitychange', _resetContacts);
     button.addEventListener(
       'pointerdown',
       ((web.PointerEvent event) {
         event.stopPropagation();
-        if (event.button == 0 &&
-            mounted &&
-            _routeCurrent &&
-            _portraitAllowed &&
-            !button.disabled) {
+        if (event.button != 0 ||
+            !mounted ||
+            !_routeCurrent ||
+            !_portraitAllowed) {
+          return;
+        }
+        final first = _contacts.isEmpty;
+        if (_contacts.add(event.pointerId) && first && !button.disabled) {
           widget.onPressed?.call();
         }
       }).toJS,

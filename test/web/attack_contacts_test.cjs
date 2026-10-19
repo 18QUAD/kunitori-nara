@@ -41,20 +41,30 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
  const cdp=await context.newCDPSession(page);
  const touch=(type,touchPoints)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints});
  await touch('touchStart',[left]);await assertCount(++expected); // Still held.
- await touch('touchStart',[left,right]);await assertCount(++expected); // Non-primary finger.
+ await touch('touchStart',[left,right]);await page.waitForTimeout(150);await assertCount(); // Same group.
  await page.waitForTimeout(900);await assertCount();
- await touch('touchEnd',[left]);await touch('touchEnd',[]);await page.waitForTimeout(150);await assertCount();
- console.log('PASS: both fingers counted on contact before release; hold/release add nothing');
+ await touch('touchEnd',[left]);
+ await touch('touchStart',[left,right]);await page.waitForTimeout(150);await assertCount();
+ await touch('touchEnd',[right]);
+ await touch('touchStart',[left,right]);await page.waitForTimeout(150);await assertCount();
+ await touch('touchEnd',[]);await page.waitForTimeout(150);await assertCount();
+ console.log('PASS: overlapping and alternating fingers count one group until all release');
  for(let i=0;i<25;i++){
-  await touch('touchStart',[left,right]);expected+=2;
+  await touch('touchStart',[left,right]);expected++;
   await touch('touchEnd',[]);
  }
- await assertCount();console.log('PASS: 50 rapid contacts counted exactly');
+ await assertCount();console.log('PASS: 25 simultaneous two-finger groups count exactly 25');
+ for(let i=0;i<25;i++){
+  await touch('touchStart',[left]);expected++;
+  await touch('touchEnd',[]);
+ }
+ await assertCount();console.log('PASS: 25 rapidly released single-finger groups count exactly 25');
  await touch('touchStart',[left]);await assertCount(++expected);
  await touch('touchMove',[{...left,y:y+10}]);
  await touch('touchCancel',[]);await page.waitForTimeout(150);await assertCount();
  await page.mouse.move(left.x,y);await page.mouse.down();await assertCount(++expected);
- await page.mouse.up();await page.waitForTimeout(150);await assertCount();
+ await page.mouse.move(0,0);await page.mouse.up();await page.waitForTimeout(150);await assertCount();
+ await page.mouse.click(left.x,y);await assertCount(++expected);
  await page.mouse.click(left.x,y,{button:'right'});await page.waitForTimeout(150);await assertCount();
  await attack.focus();await attack.press('Enter');await assertCount(++expected);
  await attack.press('Space');await assertCount(++expected);
@@ -62,7 +72,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
  await attack.evaluate(e=>e.dispatchEvent(new PointerEvent('click',{bubbles:true,pointerType:'touch',detail:0})));
  await page.waitForTimeout(150);await assertCount();
  console.log('PASS: cancellation/mouse release/right click do not add; keyboard and accessible-style click add once');
- await attack.evaluate(e=>{e.disabled=true;e.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerType:'touch'}));e.click();e.disabled=false;});
+ await attack.evaluate(e=>{e.disabled=true;e.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerType:'touch'}));e.click();e.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:0}));e.disabled=false;});
  await page.waitForTimeout(150);await assertCount();
  await page.getByRole('button',{name:'設定',exact:true}).click();
  await page.waitForFunction(()=>getComputedStyle(document.querySelector('button.attack-tap-native')).visibility==='hidden');
@@ -77,6 +87,6 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
  assert.equal(saved.cityTaps['24208'],484+expected);
  assert.deepEqual(errors,[]);
  fs.writeFileSync(path.join(output,'attack-contacts.json'),JSON.stringify({expected,initial,contacts,errors,offline:true},null,2));
- console.log('PASS: modal blocks contacts, no reload/errors; total accepted contacts/activations:',expected);
+ console.log('PASS: modal blocks contacts, no reload/errors; total accepted groups/activations:',expected);
  } finally {await context.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

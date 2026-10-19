@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/attack_button.dart';
 
 void main() {
-  testWidgets('each contact counts on down, with no release or hold repeats', (
+  testWidgets('a contact group counts once until every finger releases', (
     tester,
   ) async {
     var count = 0;
@@ -39,16 +39,20 @@ void main() {
     );
     expect(
       count,
-      2,
-      reason: 'The second finger counts before either is lifted',
+      1,
+      reason: 'An overlapping second finger belongs to the same group',
     );
     await tester.pump(const Duration(seconds: 1));
-    expect(count, 2);
-    await left.moveBy(const Offset(0, 30));
+    expect(count, 1);
+    await left.moveBy(const Offset(0, 300));
     await left.up();
+    final overlap = await tester.startGesture(center, pointer: 6);
+    expect(count, 1, reason: 'One remaining finger keeps the group active');
     await right.cancel();
+    expect(count, 1);
+    await overlap.up();
     await tester.pump();
-    expect(count, 2, reason: 'Moves, releases and cancellation add nothing');
+    expect(count, 1, reason: 'Moves, releases and cancellation add nothing');
     for (var i = 0; i < 50; i++) {
       final a = await tester.startGesture(
         center - const Offset(60, 0),
@@ -61,9 +65,18 @@ void main() {
       await a.up();
       await b.up();
     }
+    expect(count, 51, reason: '50 two-finger groups count exactly 50 times');
+    for (var i = 0; i < 50; i++) {
+      await tester.tap(find.byKey(const Key('attack')));
+    }
+    expect(count, 101, reason: 'No delay is required between released groups');
+    final canceled = await tester.startGesture(center, pointer: 7);
     expect(count, 102);
+    await canceled.cancel();
+    await tester.tap(find.byKey(const Key('attack')));
+    expect(count, 103, reason: 'Cancellation releases the final contact');
     await tester.pumpAndSettle();
-    expect(count, 102);
+    expect(count, 103);
     final secondary = await tester.startGesture(
       center,
       kind: PointerDeviceKind.mouse,
@@ -71,17 +84,17 @@ void main() {
       pointer: 5,
     );
     await secondary.up();
-    expect(count, 102);
+    expect(count, 103);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
-    expect(count, 103, reason: 'Keyboard activation is still one action');
+    expect(count, 104, reason: 'Keyboard activation is still one action');
     final handle = tester.ensureSemantics();
     final node = tester.getSemantics(find.bySemanticsLabel('進軍'));
     expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
     node.owner!.performAction(node.id, SemanticsAction.tap);
-    expect(count, 104, reason: 'Accessible activation remains available');
+    expect(count, 105, reason: 'Accessible activation remains available');
     handle.dispose();
   });
 
@@ -110,10 +123,20 @@ void main() {
     );
     expect(count, 1);
     await tester.pumpWidget(button(false));
+    await tester.pumpWidget(button(true));
+    final second = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('attack'))),
+      pointer: 9,
+    );
+    expect(count, 1, reason: 'A rebuild must not reset the held group');
     await held.up();
+    await second.cancel();
+    await tester.tap(find.byKey(const Key('attack')));
+    expect(count, 2);
+    await tester.pumpWidget(button(false));
     await tester.tap(find.byKey(const Key('attack')));
     await tester.pump();
-    expect(count, 1);
+    expect(count, 2);
     final handle = tester.ensureSemantics();
     final node = tester.getSemantics(find.bySemanticsLabel('進軍不可'));
     expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isFalse);
