@@ -104,7 +104,7 @@ async function waitUntil(check, message) {
   let page = await open(base);
   // A visibility event between setup failure and its retry used to cancel recovery.
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-  await page.getByText('全国の地図データをダウンロード中', {exact: true}).waitFor();
+  await page.getByText('地図・ゲームデータを端末に保存中', {exact: true}).waitFor();
   assert.equal(await page.evaluate(() => window.loaderStarts), 0, 'Game must not load while initial download is running');
   const bar = page.getByRole('progressbar', {name: '地図データのダウンロード', exact: true});
   assert.equal(await bar.evaluate(element => element.value), 0);
