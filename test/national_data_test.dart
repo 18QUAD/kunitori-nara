@@ -173,13 +173,12 @@ void main() {
           for (final town in nara.towns.values) {
             expect(atlas.towns[town.id]!.polygons, town.polygons);
           }
-        } else {
-          expect(atlas.prefecturePolygons[pref], isNotEmpty);
         }
+        expect(atlas.prefecturePolygons[pref], isNotEmpty);
         for (final city in atlas.cities.keys.where(
           (id) => id.startsWith(pref),
         )) {
-          if (pref != '29') expect(atlas.cityPolygons[city], isNotEmpty);
+          expect(atlas.cityPolygons[city], isNotEmpty);
         }
         if (previous != null) {
           expect(

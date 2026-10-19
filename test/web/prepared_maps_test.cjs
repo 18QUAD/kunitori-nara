@@ -63,6 +63,9 @@ let context,page,ticker;const result={actions:[],samples:[],errors:[]};let phase
  await action('city-to-pref',()=>page.getByRole('button',{name:'1段上の地図を表示',exact:true}).click());
  await action('pref-to-national',()=>page.getByRole('button',{name:'1段上の地図を表示',exact:true}).click());
  await action('national-to-nara',()=>page.getByRole('button',{name:'奈良県',exact:true}).evaluate(e=>e.click()));
+ const naraPreparation=result.actions.at(-1).events.find(e=>e.event==='geometry_paths_ready');
+ assert.equal(naraPreparation?.data.prebuiltCities,39,'Nara must use prepared outlines for every municipality');
+ console.log('Nara path preparation',naraPreparation.data.durationMs,'ms');
  await action('nara-to-sakurai',()=>page.getByRole('button',{name:/^桜井市/}).first().evaluate(e=>e.click()));
  for(let n=0;n<5 && await page.getByRole('button',{name:'拡大',exact:true}).isEnabled();n++)await action('sakurai-zoom-'+n,()=>page.getByRole('button',{name:'拡大',exact:true}).click());
  if(!process.env.SKIP_SHOTS)await page.screenshot({timeout:60000,path:output('prepared-sakurai-fine.png')});

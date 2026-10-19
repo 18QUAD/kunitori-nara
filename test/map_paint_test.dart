@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/game.dart';
+import 'package:kunitori/national_atlas.dart';
 import 'package:kunitori/territory_map.dart';
 import 'package:kunitori/geography_tiles.dart';
 
@@ -22,6 +23,20 @@ void main() {
     final atlas = Atlas.fromJson(
       jsonDecode(File('assets/data/nara.json').readAsStringSync()),
     );
+    final prepared =
+        jsonDecode(File('assets/data/nara_outlines.json').readAsStringSync())
+            as Map<String, dynamic>;
+    for (final row in prepared['cities'] as List) {
+      final city = Prefecture.fromJson(row as Map<String, dynamic>);
+      atlas.cityPolygons[city.id] = city.polygons;
+    }
+    atlas.prefecturePolygons['29'] =
+        Prefecture.fromJson({
+          'id': '29',
+          'name': '奈良県',
+          'polygons': prepared['polygons'],
+        }).polygons;
+    expect(atlas.cityPolygons.length, 39);
     final game = Game(atlas);
     await tester.pumpWidget(
       MaterialApp(
@@ -99,6 +114,26 @@ void main() {
     expect(painter().water, same(originalWater));
     expect(painter().mountains, same(withRelief.mountains));
     expect(game.owned, isEmpty);
+    // Reuse the county scene: Nara town selection outlines are built only now.
+    final selected = atlas.byCity[city]!.firstWhere((t) => t.name == '池之内');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TerritoryMap(
+          atlas: atlas,
+          game: game,
+          selected: selected.id,
+          cityId: city,
+          focusVersion: 0,
+          onSelected: (_) {},
+          onCitySelected: (_) {},
+        ),
+      ),
+    );
+    await tester.pump();
+    final Path selectedOutline = painter().outlines[selected.id];
+    final Path selectedFill = painter().paths[selected.id];
+    expect(selectedOutline.computeMetrics(), isNotEmpty);
+    expect(selectedOutline.getBounds(), selectedFill.getBounds());
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });

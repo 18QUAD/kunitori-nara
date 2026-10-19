@@ -13,6 +13,7 @@ import 'map_compass.dart';
 import 'border_tiles.dart';
 import 'map_paint_snapshot.dart';
 import 'map_controls.dart';
+import 'diagnostics.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -121,8 +122,18 @@ class _TerritoryMapState extends State<TerritoryMap> {
     _pendingRestore = widget.initialView;
     showGeography = widget.initialView?.showGeography ?? true;
     controller.addListener(_publishView);
+    final preparation = Stopwatch()..start();
     _buildPaths();
     _buildCities();
+    recordDiagnostic('geometry_paths_ready', {
+      'destinationPrefecture': widget.prefectureId,
+      'city': widget.cityId,
+      'durationMs': preparation.elapsedMilliseconds,
+      'prebuiltCities':
+          widget.atlas.cityPolygons.keys
+              .where((id) => id.startsWith(widget.prefectureId))
+              .length,
+    });
     officePoints = {
       for (final o in widget.atlas.mapOffices.values.where(
         (o) => o.cityId.startsWith(widget.prefectureId),
@@ -194,10 +205,13 @@ class _TerritoryMapState extends State<TerritoryMap> {
         }
         parts.add(part);
       }
-      final detailed = widget.prefectureId == '29' || t.cityId == widget.cityId;
+      final detailed = t.cityId == widget.cityId;
+      // Preserve legacy Nara fill/hit semantics for overlapping source parts.
+      // Only its selection outlines can wait until the city is displayed.
+      final merge = detailed || widget.prefectureId == '29';
       final path =
-          detailed ? _union(parts) : (Path()..fillType = PathFillType.evenOdd);
-      if (!detailed) {
+          merge ? _union(parts) : (Path()..fillType = PathFillType.evenOdd);
+      if (!merge) {
         for (final part in parts) {
           path.addPath(part, Offset.zero);
         }
@@ -214,12 +228,15 @@ class _TerritoryMapState extends State<TerritoryMap> {
 
   final Set<String> detailedCities = {};
   void _detailCity(String? city) {
-    if (widget.prefectureId == '29' ||
-        city == null ||
-        !detailedCities.add(city)) {
+    if (city == null || !detailedCities.add(city)) {
       return;
     }
     for (final town in widget.atlas.byCity[city]!) {
+      if (widget.prefectureId == '29') {
+        townOutlines[town.id]?.reset();
+        townOutlines[town.id] = exteriorOutline(paths[town.id]!);
+        continue;
+      }
       final parts = [
         for (final polygon in town.polygons) _polygonPath([polygon]),
       ];

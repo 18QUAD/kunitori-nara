@@ -70,6 +70,7 @@ flutter:
     - assets/characters/nara_guide_sad.png
     - assets/characters/nara_guide_sad_face_parts.png
     - assets/data/nara.json
+    - assets/data/nara_outlines.json
     - assets/data/nara_metadata.json
     - assets/data/tips/
     - assets/data/japan.json

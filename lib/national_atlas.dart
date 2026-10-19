@@ -212,18 +212,21 @@ class NationalAtlas {
       'destinationPrefecture': prefecture,
     });
     try {
-      final data =
-          jsonDecode(
-                await (prefecture == '29'
-                    ? rootBundle.loadString(
-                      'assets/data/nara.json',
-                      cache: false,
-                    )
-                    : loadCoastalAsset(
-                      'assets/data/prefectures/$prefecture.json',
-                    )),
-              )
-              as Map<String, dynamic>;
+      final files = await Future.wait([
+        prefecture == '29'
+            ? rootBundle.loadString('assets/data/nara.json', cache: false)
+            : loadCoastalAsset('assets/data/prefectures/$prefecture.json'),
+        if (prefecture == '29')
+          rootBundle.loadString('assets/data/nara_outlines.json', cache: false),
+      ]);
+      final data = jsonDecode(files.first) as Map<String, dynamic>;
+      // Legacy Nara town coordinates and save IDs stay untouched. Its parent
+      // shapes are prepared offline, just like those of every other prefecture.
+      if (prefecture == '29') {
+        final outlines = jsonDecode(files[1]) as Map<String, dynamic>;
+        data['cities'] = outlines['cities'];
+        data['polygons'] = outlines['polygons'];
+      }
       // Decode everything before changing the live atlas, so retry is safe.
       final decoded = <String, List<List<List<Point<double>>>>>{};
       final rows = data['towns'] as List;
