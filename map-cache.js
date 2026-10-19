@@ -31,7 +31,7 @@ window.kunitoriMapStorage = (async () => {
       panel.id = 'map-download-status';
       panel.setAttribute('aria-label', '地図データのダウンロード状況');
       const title = document.createElement('p');
-      title.textContent = '全国の地図データをダウンロード中';
+      title.textContent = '地図・ゲームデータを端末に保存中';
       const bar = document.createElement('progress');
       bar.max = 100;
       bar.setAttribute('aria-label', '地図データのダウンロード');
@@ -56,7 +56,7 @@ window.kunitoriMapStorage = (async () => {
     }
     panel.querySelector('p').textContent = waiting
       ? (navigator.onLine ? '地図データのダウンロードを再開しています' : '接続を待っています。続きから再開します')
-      : '全国の地図データをダウンロード中';
+      : '地図・ゲームデータを端末に保存中';
   }
   function request(type, data = {}) {
     return new Promise((resolve, reject) => {
@@ -143,7 +143,7 @@ window.kunitoriMapStorage = (async () => {
     const script = navigator.serviceWorker.controller?.scriptURL;
     if (!script) return false;
     const active = new URL(script);
-    return active.origin === worker.origin && active.pathname === worker.pathname;
+    return active.origin === worker.origin && active.pathname === worker.pathname && active.search === worker.search;
   }
   async function connect() {
     if (connecting || connected || done) return;
@@ -155,7 +155,10 @@ window.kunitoriMapStorage = (async () => {
     let phase = 'registration';
     try {
       record('map_storage_register_start');
-      registration = await bounded(navigator.serviceWorker.register(worker, {scope: root.href, updateViaCache: 'none'}), 'registration');
+      const existing = await navigator.serviceWorker.getRegistration?.(root.href);
+      registration = existing?.active?.scriptURL === worker.href && !existing.installing && !existing.waiting
+        ? existing
+        : await bounded(navigator.serviceWorker.register(worker, {scope: root.href, updateViaCache: 'none'}), 'registration');
       record('map_storage_registered');
       phase = 'activation';
       const pending = registration.installing || registration.waiting;

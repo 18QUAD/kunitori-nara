@@ -527,9 +527,9 @@ async function storedImage(entry, mustStore = false) {
 
 // Packs reduce tens of thousands of HTTP and CacheStorage operations to a few
 // hundred. Each transfer is <= 1 MiB (apart from a single larger source asset).
-async function storedPack(pack) {
+async function storedPack(pack, storeName = PACK_STORE) {
   const key = keyFor(pack);
-  const store = await caches.open(PACK_STORE);
+  const store = await caches.open(storeName);
   const cached = await store.match(key);
   if (cached) {await cached.body?.cancel(); return;}
   if (!transfers.has(key)) {
@@ -726,7 +726,7 @@ function progressReport(data, next, done) {
   return {done, saved: next, total: data.assets.length, savedBytes: data.byteOffsets[next], bytes: data.bytes};
 }
 
-async function storageStatus() {
+async function imageStorageStatus() {
   const data = await inventory();
   const meta = await caches.open(META);
   const saved = await meta.match(progressKey);
@@ -734,7 +734,7 @@ async function storageStatus() {
   return progressReport(data, progress.next, progress.next === data.assets.length && !!progress.cleaned);
 }
 
-async function warmBatch() {
+async function imageWarmBatch() {
   const data = await inventory();
   const meta = await caches.open(META);
   const saved = await meta.match(progressKey);
@@ -764,6 +764,100 @@ async function warmBatch() {
   }
   return progressReport(data, end, end === data.assets.length);
 }
+
+
+// All non-image runtime files are verified on disk too. Large files use bounded
+// gzip chunks; neither initial download nor disk reads buffer a complete county.
+const RUNTIME_REVISION = '540137b4fd35026eb60aba2ba3ad06ec7363521a3833df2f25a857939c63beb1';
+const RUNTIME_STORE = 'kunitori-runtime-data-v1';
+const RUNTIME_META = 'kunitori-runtime-meta-v1';
+let runtimeInventoryPromise;
+async function runtimeInventory() {
+  // Source-only legacy fixtures have no prepared runtime manifest.
+  if (RUNTIME_REVISION.startsWith('__')) return {chunks:[],files:[],bytes:0,byPath:new Map()};
+  if (!runtimeInventoryPromise) runtimeInventoryPromise = (async () => {
+    const meta = await caches.open(RUNTIME_META);
+    const key = new URL(`runtime-data-manifest.json?v=${RUNTIME_REVISION}`, ROOT).href;
+    let response = await meta.match(key), data;
+    if (response) data = await response.json();
+    else {
+      response = await fetch(key,{cache:'no-cache'});
+      if (!response.ok) throw Error(`Runtime inventory HTTP ${response.status}`);
+      data = await response.json();
+      if (data.revision !== RUNTIME_REVISION) throw Error('Runtime inventory version mismatch');
+      await meta.put(key,new Response(JSON.stringify(data)));
+    }
+    data.byPath = new Map(data.files.map(f=>[new URL(f.path,ROOT).pathname,f]));
+    return data;
+  })().catch(error=>{runtimeInventoryPromise=null;throw error;});
+  return runtimeInventoryPromise;
+}
+async function runtimeProgress(data, warm=false) {
+  const meta = await caches.open(RUNTIME_META);
+  const key = new URL(`__runtime_progress__/${RUNTIME_REVISION}`,ROOT).href;
+  const saved = await meta.match(key);
+  let next = saved ? (await saved.json()).next : 0;
+  if (warm && next<data.chunks.length) {
+    const end = Math.min(next+CONCURRENCY,data.chunks.length);
+    const results = await Promise.allSettled(data.chunks.slice(next,end).map(c=>storedPack(c,RUNTIME_STORE)));
+    const failed = results.find(r=>r.status==='rejected');
+    if (failed) throw failed.reason;
+    next=end;
+    await meta.put(key,new Response(JSON.stringify({next})));
+  }
+  return {done:next===data.chunks.length,saved:next,total:data.chunks.length,
+    savedBytes:data.chunks.slice(0,next).reduce((n,c)=>n+c[2],0),bytes:data.bytes};
+}
+function combinedProgress(images,runtime) {
+  return {done:images.done&&runtime.done,saved:images.saved+runtime.saved,total:images.total+runtime.total,
+    savedBytes:images.savedBytes+runtime.savedBytes,bytes:images.bytes+runtime.bytes};
+}
+async function storageStatus() {
+  return combinedProgress(await imageStorageStatus(),await runtimeProgress(await runtimeInventory()));
+}
+async function warmBatch() {
+  const images=await imageWarmBatch();
+  return combinedProgress(images,await runtimeProgress(await runtimeInventory(),images.done));
+}
+async function runtimeResponse(data,file) {
+  let index=0, reader;
+  const stream = new ReadableStream({
+    async pull(controller) {
+      try {
+        for (;;) {
+          if (!reader) {
+            if (index===file.chunks.length) {controller.close();return;}
+            const chunk=data.chunks[file.chunks[index++]];
+            let response=await (await caches.open(RUNTIME_STORE)).match(keyFor(chunk));
+            if (!response) {await storedPack(chunk,RUNTIME_STORE);response=await (await caches.open(RUNTIME_STORE)).match(keyFor(chunk));}
+            reader=response.body.getReader();
+          }
+          const result=await reader.read();
+          if (result.done) {reader.releaseLock();reader=null;continue;}
+          controller.enqueue(result.value);return;
+        }
+      } catch(error) {controller.error(error);}
+    },
+    cancel(reason) {return reader?.cancel(reason);},
+  });
+  return new Response(stream.pipeThrough(new DecompressionStream('gzip')),{headers:{
+    'Content-Type':file.mime,'Content-Length':String(file.bytes),
+  }});
+}
+self.addEventListener('fetch',event=>{
+  const url=new URL(event.request.url);
+  if(event.request.method!=='GET'||url.origin!==ROOT.origin) return;
+  const relative=url.pathname.slice(ROOT.pathname.length);
+  const shell=relative===''||['index.html','flutter_bootstrap.js','map-cache.js','diagnostics.js'].includes(relative);
+  const asset=relative==='main.dart.js'||relative.startsWith('assets/')||relative.startsWith('canvaskit/');
+  if(!shell&&!asset || ['map_tiles_uniform','border_tiles'].some(folder=>relative.startsWith(`assets/assets/data/${folder}/`))) return;
+  event.respondWith((async()=>{
+    if(shell) {try {const response=await fetch(event.request);if(response.ok)return response;}catch(_) {}}
+    const data=await runtimeInventory();
+    const file=data.byPath.get(url.pathname)|| (relative==='' ? data.byPath.get(new URL('index.html',ROOT).pathname):null);
+    return file ? runtimeResponse(data,file) : fetch(event.request);
+  })());
+});
 
 self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
