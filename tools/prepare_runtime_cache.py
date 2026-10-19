@@ -50,7 +50,7 @@ def prepare(root):
     # These large raw files are served from the verified gzip chunks by the worker.
     # Canonical source assets remain untouched. Avoid duplicating 428 MiB on Pages.
     for entry in files:
-        if entry['path'].startswith('assets/assets/data/prefectures/') or entry['path']=='assets/assets/data/japan.json':
+        if entry['path'].startswith(('assets/assets/data/prefectures/', 'assets/assets/data/national_territories/')) or entry['path']=='assets/assets/data/japan.json':
             (root/entry['path']).unlink()
     worker = root/'map-cache-worker.js'
     worker.write_text(worker.read_text().replace('__RUNTIME_DATA_REVISION__',revision))

@@ -16,7 +16,8 @@ let context,page,ticker;const result={actions:[],samples:[],errors:[]};let phase
  await context.route('**/*',r=>(new URL(r.request().url()).origin===new URL(base).origin||new URL(r.request().url()).hostname==='raw.githubusercontent.com')?r.continue():r.abort());page=context.pages()[0];for(const other of context.pages().slice(1))await other.close();
  const all=JSON.parse(fs.readFileSync(path.join(root,'assets/data/japan.json'))).towns;
  const target=all.find(t=>t.id==='242080620');
- const owned=[...new Set([...all.filter(t=>t.id.startsWith('24')).slice(0,560).map(t=>t.id),...target.neighbors,'242080940'])];
+ const syntheticOwned=JSON.parse(fs.readFileSync(path.join(root,'test/fixtures/national_transition_owned.json')));
+ const owned=[...new Set([...syntheticOwned,...target.neighbors,'242080940'])];
  await context.addInitScript(owned=>{
   if(window.top!==window)return;
   {
@@ -49,7 +50,7 @@ let context,page,ticker;const result={actions:[],samples:[],errors:[]};let phase
  const readyTimeOrigin=await page.evaluate(()=>performance.timeOrigin);assert.equal(await page.evaluate(()=>kunitoriMapMemory.get()),32);await context.setOffline(true);
  const report=async(name)=>{const h=await cdp.send('Runtime.getHeapUsage');const wasm=await page.evaluate(()=>window.flutterCanvasKit?.HEAPU8?.buffer?.byteLength);console.log(name,'JS',Math.round(h.usedSize/1048576),'WASM',Math.round(wasm/1048576));};
  async function save(){fs.writeFileSync(output('prepared-map-browser.json'),JSON.stringify({...result,audit:await page.evaluate(()=>audit)},null,2));}
- async function action(name,fn){phase=name;const e0=await page.evaluate(()=>audit.events.length);const t=Date.now();await fn();await page.waitForFunction(n=>audit.events.slice(n).some(e=>e.event==='images_load_start'),e0,{timeout:120000});await ready();await page.waitForTimeout(150);await ready();const events=await page.evaluate(e0=>audit.events.slice(e0),e0);result.actions.push({name,ms:Date.now()-t,events});console.log('ACTION',name,Date.now()-t);await report(name);await save();}
+ async function action(name,fn){phase=name;const e0=await page.evaluate(()=>audit.events.length);const t=Date.now();await fn();await page.waitForFunction(n=>audit.events.slice(n).some(e=>e.event==='images_load_start'),e0,{timeout:120000});await ready();await page.waitForTimeout(150);await ready();const events=await page.evaluate(e0=>audit.events.slice(e0),e0);if(name.endsWith('to-national')){assert(!events.some(e=>e.event==='geometry_load_start'),'National colors must never load detailed prefecture geometry');assert(events.some(e=>e.event==='national_territory_done'),'National colors must use selective territory streams');}result.actions.push({name,ms:Date.now()-t,events});console.log('ACTION',name,Date.now()-t);await report(name);await save();}
  console.log('CANVASES',JSON.stringify(await page.evaluate(()=>audit.canvases.slice(-12))));await report('national-ready');await cdp.send('HeapProfiler.collectGarbage');await report('national-after-gc');await cdp.send('Profiler.start');
  if(!process.env.SKIP_SHOTS)await page.screenshot({timeout:60000,path:output('prepared-national.png')});
  await action('home-city',()=>page.getByRole('button',{name:'攻略中の町へ',exact:true}).click());
@@ -88,7 +89,7 @@ let context,page,ticker;const result={actions:[],samples:[],errors:[]};let phase
  assert(!won.events.some(e=>e.event==='images_load_start'));assert(!won.resources.some(p=>p.includes('/map_images/')));console.log('PASS conquest: no background/boundary loads or regeneration');
  phase='idle';await page.waitForTimeout(2000);await cdp.send('HeapProfiler.collectGarbage');await report('idle-after-gc');
  fs.writeFileSync(output('prepared-map-actions.cpuprofile'),JSON.stringify((await cdp.send('Profiler.stop')).profile));await save();
- const audit=await page.evaluate(()=>audit);assert(!audit.events.some(e=>/images_(?:load|index)_error/.test(e.event)),JSON.stringify(audit.events.filter(e=>e.event.includes('error'))));
+ const audit=await page.evaluate(()=>audit);assert(!audit.events.some(e=>/images_(?:load|index)_error/.test(e.event)||e.event==='national_territory_error'),JSON.stringify(audit.events.filter(e=>e.event.includes('error'))));
  for(const e of audit.events){const cache=e.data.imageCache;if(!cache)continue;assert.equal(cache.runtimeRasters,0);assert(cache.budget.retainedImageBytes+cache.budget.compressedLimitBytes<=32*1048576);}
  assert.equal(await page.evaluate(()=>performance.timeOrigin),readyTimeOrigin,'A ready game must not reload');assert.deepEqual(result.errors,[]);console.log('PASS: offline navigation/zoom, 32 MiB image budget, no runtime map raster generation, no reload/errors');
  clearInterval(ticker);await context.close();

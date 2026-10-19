@@ -11,6 +11,7 @@ import 'border_tiles.dart';
 import 'map_paint_snapshot.dart';
 import 'map_controls.dart';
 import 'raster_geometry.dart';
+import 'national_territory.dart';
 
 class NationalMap extends StatefulWidget {
   const NationalMap({
@@ -112,15 +113,23 @@ class _NationalMapState extends State<NationalMap> {
       for (final id in widget.game.owned) {
         ids.addAll(widget.data.atlas.towns[id]!.neighbors);
       }
-      if (ids.isEmpty) await widget.data.releaseGeometry();
+      await widget.data.releaseGeometry();
       for (final pref in ids.map((id) => id.substring(0, 2)).toSet()) {
         if (!mounted) return;
-        await widget.data.withGeometry(pref, () {
-          if (!mounted) return;
-          for (final id in ids.where((id) => id.startsWith(pref))) {
-            converted[id] = _path(widget.data.atlas.towns[id]!.polygons);
+        final loaded = await loadNationalTerritory(
+          prefecture: pref,
+          towns: ids.where((id) => id.startsWith(pref)).toSet(),
+          sourceToTown: widget.data.atlas.sourceToTown,
+          project: project,
+          isCurrent: () => mounted,
+        );
+        if (!mounted) {
+          for (final path in loaded.values) {
+            path.reset();
           }
-        });
+          return;
+        }
+        converted.addAll(loaded);
       }
       if (!mounted) return;
       for (final path in territoryPaths.values) {

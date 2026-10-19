@@ -14,6 +14,7 @@ class RuntimeTest(unittest.TestCase):
             root=Path(tmp)
             files={'assets/assets/data/japan.json':b'{"population":123}',
                    'assets/assets/data/prefectures/24.json':b'{"towns":[]}',
+                   'assets/assets/data/national_territories/24.bin':b'KNT3-test-index',
                    'assets/example.bin':random.Random(1).randbytes(2*1024*1024+73),
                    'main.dart.js':b'window.started=true;',
                    'canvaskit/canvaskit.wasm':b'\0asm\1\0\0\0'}
@@ -23,6 +24,7 @@ class RuntimeTest(unittest.TestCase):
             build.prepare(root)
             first=json.loads((root/'runtime-data-manifest.json').read_text())
             self.assertFalse((root/'assets/assets/data/prefectures/24.json').exists())
+            self.assertFalse((root/'assets/assets/data/national_territories/24.bin').exists())
             for f in first['files']:
                 packed=b''.join((root/first['chunks'][i][0]).read_bytes() for i in f['chunks'])
                 self.assertEqual(gzip.decompress(packed),files[f['path']])

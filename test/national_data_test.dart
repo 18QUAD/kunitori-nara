@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/game.dart';
 import 'package:kunitori/national_atlas.dart';
+import 'package:kunitori/national_territory.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -202,6 +205,68 @@ void main() {
         expect(towns.fold<int>(0, (sum, t) => sum + t.polygons.length), count);
       }
       expect(national.residentGeometry, '47');
+    },
+  );
+  test(
+    'national streams preserve exact merged paths without resident geometry',
+    () async {
+      Offset project(math.Point<double> p) =>
+          Offset(40 + (p.x - 122) * 42, 40 + (46 - p.y) * 50);
+      for (final pref in ['24', '26', '29', '01', '13', '47']) {
+        await national.ensureGeometry(pref);
+        final towns =
+            national.atlas.towns.values
+                .where((t) => t.id.startsWith(pref))
+                .toList();
+        towns.sort((a, b) => b.polygons.length.compareTo(a.polygons.length));
+        final selected = {
+          towns.first.id,
+          towns[towns.length ~/ 2].id,
+          towns.last.id,
+        };
+        final expected = <String, Path>{};
+        for (final id in selected) {
+          final path = Path()..fillType = PathFillType.evenOdd;
+          for (final polygon in national.atlas.towns[id]!.polygons) {
+            for (final ring in polygon) {
+              if (ring.isEmpty) continue;
+              final first = project(ring.first);
+              path.moveTo(first.dx, first.dy);
+              for (final point in ring.skip(1)) {
+                final p = project(point);
+                path.lineTo(p.dx, p.dy);
+              }
+              path.close();
+            }
+          }
+          expected[id] = path;
+        }
+        await national.releaseGeometry();
+        final actual = await loadNationalTerritory(
+          prefecture: pref,
+          towns: selected,
+          sourceToTown: national.atlas.sourceToTown,
+          project: project,
+          isCurrent: () => true,
+        );
+        expect(actual.keys.toSet(), selected);
+        expect(national.residentGeometry, isNull);
+        expect(national.atlas.cityPolygons, isEmpty);
+        for (final id in selected) {
+          expect(
+            actual[id]!.getBounds(),
+            expected[id]!.getBounds(),
+            reason: id,
+          );
+          expect(
+            actual[id]!.computeMetrics().map((m) => m.length).toList(),
+            expected[id]!.computeMetrics().map((m) => m.length).toList(),
+            reason: id,
+          );
+          actual[id]!.reset();
+          expected[id]!.reset();
+        }
+      }
     },
   );
 }
