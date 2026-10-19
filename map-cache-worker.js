@@ -568,15 +568,47 @@ async function storedPack(pack) {
 }
 
 // Foreground-only compressed LRU. Downloading never fills this memory cache.
-// Keep <= 8 MiB resident and at most two one-pack disk reads in flight; these
+// Keep the selected byte limit resident and at most two one-pack disk reads in flight; these
 // bytes are not decoded pixels or GPU surfaces.
-const PACK_MEMORY_BYTES = 8 * 1024 * 1024;
+const MEMORY_CHOICES = [32, 64, 128, 256];
+const memorySettingsKey = new URL('__map_memory_settings__', ROOT).href;
+let packMemoryLimit = 32 * 1024 * 1024;
+let memorySettingsPromise;
+let memorySettingsQueue = Promise.resolve();
+function loadMemorySettings() {
+  if (!memorySettingsPromise) memorySettingsPromise = (async () => {
+    const response = await (await caches.open(META)).match(memorySettingsKey);
+    const value = response ? (await response.json()).megabytes : 32;
+    packMemoryLimit = (MEMORY_CHOICES.includes(value) ? value : 32) * 1024 * 1024;
+  })().catch(() => {memorySettingsPromise = null;});
+  return memorySettingsPromise;
+}
+function trimPackMemory() {
+  while (packMemoryBytes > packMemoryLimit) {
+    const oldest = packMemory.keys().next().value;
+    packMemoryBytes -= packMemory.get(oldest).length;
+    packMemory.delete(oldest);
+  }
+}
+function setMemorySettings(megabytes) {
+  const operation = memorySettingsQueue.then(async () => {
+    if (!MEMORY_CHOICES.includes(megabytes)) throw new Error('Invalid map memory size');
+    await loadMemorySettings();
+    await (await caches.open(META)).put(memorySettingsKey, new Response(JSON.stringify({megabytes})));
+    packMemoryLimit = megabytes * 1024 * 1024;
+    trimPackMemory();
+    return {megabytes};
+  });
+  memorySettingsQueue = operation.catch(() => {});
+  return operation;
+}
 const packMemory = new Map();
 const packReads = new Map();
 const packReadWaiters = [];
 let packMemoryBytes = 0;
 let packReading = 0;
 async function readStoredBytes(pack, storeName = PACK_STORE) {
+  await loadMemorySettings();
   const key = keyFor(pack);
   const cached = packMemory.get(key);
   if (cached) {
@@ -593,8 +625,8 @@ async function readStoredBytes(pack, storeName = PACK_STORE) {
       if (!response) return;
       const bytes = new Uint8Array(await response.arrayBuffer());
       if (bytes.length !== pack[2]) throw new Error('Stored map pack truncated');
-      if (bytes.length <= PACK_MEMORY_BYTES) {
-        while (packMemoryBytes + bytes.length > PACK_MEMORY_BYTES) {
+      if (bytes.length <= packMemoryLimit) {
+        while (packMemoryBytes + bytes.length > packMemoryLimit) {
           const oldest = packMemory.keys().next().value;
           packMemoryBytes -= packMemory.get(oldest).length;
           packMemory.delete(oldest);
@@ -666,7 +698,7 @@ async function removeOldVersions(data, meta) {
   // Do not enumerate 44,000 CacheStorage Request objects. Only obsolete
   // manifests describe image versions that actually need deleting.
   for (const request of await meta.keys()) {
-    if (request.url !== progressKey &&
+    if (request.url !== memorySettingsKey && request.url !== progressKey &&
         request.url !== new URL(`map-image-manifest.json?packs=1&v=${REVISION}`, ROOT).href) {
       if (new URL(request.url).pathname.endsWith('/map-image-manifest.json')) {
         const old = await (await meta.match(request)).json();
@@ -732,6 +764,19 @@ self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 self.addEventListener('message', event => {
   if (!event.ports[0]) return;
+  if (['map-memory-get', 'map-memory-set'].includes(event.data?.type)) {
+    const operation = event.data.type === 'map-memory-set'
+      ? setMemorySettings(event.data.megabytes)
+      : memorySettingsQueue.then(async () => {
+        await loadMemorySettings();
+        return {megabytes: packMemoryLimit / 1024 / 1024};
+      });
+    event.waitUntil(operation.then(
+      result => event.ports[0].postMessage(result),
+      error => event.ports[0].postMessage({error: String(error)}),
+    ));
+    return;
+  }
   if (event.data?.type === 'map-images-status') {
     event.waitUntil(storageStatus().then(
       result => event.ports[0].postMessage(result),
