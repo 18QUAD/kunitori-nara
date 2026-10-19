@@ -172,8 +172,11 @@ async function warmPacks(data, meta, progress) {
   const end = batch.length ? batch[batch.length - 1][4] : start;
   const legacy = progress.legacy ?? start;
   const complete = end === data.assets.length;
-  await meta.put(progressKey, new Response(JSON.stringify({next: end, legacy, cleaned: complete})));
-  if (complete) await removeOldVersions(data, meta);
+  await meta.put(progressKey, new Response(JSON.stringify({next: end, legacy})));
+  if (complete) {
+    await removeOldVersions(data, meta);
+    await meta.put(progressKey, new Response(JSON.stringify({next: end, legacy, cleaned: true})));
+  }
   return progressReport(data, end, complete);
 }
 
