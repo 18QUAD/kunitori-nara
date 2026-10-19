@@ -15,6 +15,7 @@ import 'tip_appearance.dart';
 import 'tip_presenter.dart';
 import 'quiz_stage.dart';
 import 'tip_settings.dart';
+import 'map_cache_settings.dart';
 import 'save_store.dart';
 import 'map_view.dart';
 import 'territory_map.dart';
@@ -965,6 +966,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               if (value == 'help') _about();
               if (value == 'tips') _tipSettings();
               if (value == 'diagnostics') _showDiagnostics();
+              if (value == 'map-cache') _mapCacheSettings();
             },
             itemBuilder:
                 (_) => const [
@@ -989,6 +991,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       title: Text('戦績'),
                     ),
                   ),
+                  if (kIsWeb)
+                    PopupMenuItem(
+                      value: 'map-cache',
+                      child: ListTile(
+                        leading: Icon(Icons.memory_outlined),
+                        title: Text('地図キャッシュ'),
+                      ),
+                    ),
                   if (kIsWeb)
                     PopupMenuItem(
                       value: 'diagnostics',
@@ -1243,6 +1253,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
     return ad == null ? AbsorbPointer(child: presenter) : presenter;
   }
+
+  void _mapCacheSettings() => showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    backgroundColor: panel,
+    builder: (_) => const MapCacheSettings(),
+  );
 
   void _tipSettings() => showModalBottomSheet<void>(
     context: context,

@@ -73,6 +73,10 @@ async function cursor(page){return page.evaluate(async revision=>{
  assert.equal(requests.get(packs[0][0]),1);assert.equal(requests.get(packs[1][0]),1);
  assert(requests.get(packs[2][0])>=2);assert(requests.get(packs[3][0])>=2);
  assert.equal(await context.serviceWorkers()[0].evaluate(()=>self.packDiskReads||0),0,'Initial download must stream, not fill memory');
+ assert.equal(await page.evaluate(()=>kunitoriMapMemory.get()),32,'New installations default to 32 MB');
+ for(const size of [32,64,128,256])assert.equal(await page.evaluate(size=>kunitoriMapMemory.set(size),size),size);
+ assert.equal(await page.evaluate(()=>kunitoriMapMemory.get()),256);
+ await assert.rejects(page.evaluate(()=>kunitoriMapMemory.set(8)),/Invalid/);
  const counts=new Map(requests);
  await context.setOffline(true);
  const decoded=await page.evaluate(async paths=>Promise.all(paths.map(async path=>{
@@ -88,6 +92,8 @@ async function cursor(page){return page.evaluate(async revision=>{
  // A content update only transfers the one changed pack.
  assets[95][1]=Buffer.alloc(4096,201);version=2;
  await page.reload();await page.evaluate(()=>kunitoriMapStorage);await page.waitForFunction(()=>window.started,{},{timeout:30000});
+ assert.equal(await page.evaluate(()=>kunitoriMapMemory.get()),256,'Selection survives worker upgrade and old-version cleanup');
+ await page.evaluate(()=>kunitoriMapMemory.set(32));
  for (const pack of fixture().manifest.packs.slice(0,9))assert.equal(requests.get(pack[0]),counts.get(pack[0]));
  await context.close();
  // Migrate an interrupted old individual-image download without fetching its prefix.

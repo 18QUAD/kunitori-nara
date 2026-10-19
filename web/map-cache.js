@@ -58,7 +58,7 @@ window.kunitoriMapStorage = (async () => {
       ? (navigator.onLine ? '地図データのダウンロードを再開しています' : '接続を待っています。続きから再開します')
       : '全国の地図データをダウンロード中';
   }
-  function request(type) {
+  function request(type, data = {}) {
     return new Promise((resolve, reject) => {
       const channel = new MessageChannel();
       const timeout = setTimeout(() => {channel.port1.close(); reject(new Error('Map storage batch timeout'));}, 90000);
@@ -67,7 +67,7 @@ window.kunitoriMapStorage = (async () => {
         channel.port1.close();
         event.data.error ? reject(new Error(event.data.error)) : resolve(event.data);
       };
-      navigator.serviceWorker.controller.postMessage({type}, [channel.port2]);
+      navigator.serviceWorker.controller.postMessage({type, ...data}, [channel.port2]);
     });
   }
   async function next() {
@@ -89,6 +89,16 @@ window.kunitoriMapStorage = (async () => {
       retry = Math.min(retry * 2, 30000);
     } finally {running = false;}
   }
+  window.kunitoriMapMemory = {
+    async get() {
+      await window.kunitoriMapStorage;
+      return (await request('map-memory-get')).megabytes;
+    },
+    async set(megabytes) {
+      await window.kunitoriMapStorage;
+      return (await request('map-memory-set', {megabytes})).megabytes;
+    },
+  };
   let lastCheckpoint = 0;
   function checkpoint(result, force = false) {
     if (!force && Date.now() - lastCheckpoint < 5000) return;
