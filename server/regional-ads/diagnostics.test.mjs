@@ -43,3 +43,17 @@ test('bounded 128 clients, expiry alarm and iOS filter',async()=>{
   await backend.alarm();assert(!db.prepare('SELECT client FROM reports WHERE client=?').get('expired'));assert(alarm()>Date.now());
   const r=await backend.fetch(new Request('https://internal/reports?limit=2&platform=ios'));assert.equal((await r.json()).reports.length,2);
 });
+
+test('image-budget accounting is retained while arbitrary nested data is discarded',()=>{
+  const report=sample();
+  report.sessions[0].events[0].state.imageCache={images:4,bytes:1048576,budget:{
+    limitBytes:33554432,compressedLimitBytes:4194304,sourceBytes:1048576,
+    backgroundBytes:9437184,boundaryBytes:9437184,retainedImageBytes:19922944,
+    save:'DO NOT STORE',
+  }};
+  const cache=sanitizeReport(report).sessions[0].events[0].state.imageCache;
+  assert.equal(cache.bytes,1048576);
+  assert.equal(cache.budget.limitBytes,33554432);
+  assert.equal(cache.budget.retainedImageBytes,19922944);
+  assert.equal(cache.budget.save,undefined);
+});

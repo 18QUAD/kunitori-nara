@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'map_cache_bridge.dart';
+import 'map_image_budget.dart';
 
 class MapCacheSettings extends StatefulWidget {
   const MapCacheSettings({super.key});
@@ -32,6 +33,7 @@ class _MapCacheSettingsState extends State<MapCacheSettings> {
     });
     try {
       await saveMapCacheMegabytes(next);
+      MapImageBudget.shared.configure(next);
       if (mounted) setState(() => value = next);
     } catch (_) {
       if (mounted) setState(() => error = '設定を保存できませんでした');
@@ -62,7 +64,7 @@ class _MapCacheSettingsState extends State<MapCacheSettings> {
               ),
             ],
           ),
-          const Text('よく使う地図データをメモリに保持する容量です。'),
+          const Text('圧縮画像・展開済み画像・合成画像を合わせた地図キャッシュの容量です。'),
           for (final size in [32, 64, 128, 256])
             RadioListTile<int>(
               title: Text(size == 32 ? '32 MB（標準）' : '$size MB'),

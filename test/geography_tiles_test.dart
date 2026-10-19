@@ -5,6 +5,7 @@ import 'package:kunitori/water_mesh.dart';
 import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/geography_tiles.dart';
+import 'package:kunitori/map_image_budget.dart';
 import 'package:kunitori/water.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -39,6 +40,19 @@ void main() {
           'shade',
         ),
         isTrue,
+      );
+      // Even the complete national overview must fit the decoded source pool.
+      final overviewSources =
+          index.available
+              .where(
+                (key) =>
+                    key.startsWith('0_') &&
+                    (key.endsWith('_shade') || key.endsWith('_overview')),
+              )
+              .length;
+      expect(
+        overviewSources * 256 * 256 * 4,
+        lessThanOrEqualTo(MapImageBudget.shared.limit(MapImageKind.source)),
       );
       expect(index.levelFor(20), 0);
       expect(index.levelFor(65), 1);
@@ -167,6 +181,7 @@ void main() {
       final index = await GeographyTileIndex.load();
       final keys =
           index.available.where((k) => k.endsWith('_shade')).take(3).toList();
+      final beforeBytes = MapImageBudget.shared.retainedBytes;
       final cache = GeographyImageCache(capacity: 2);
       final owner = Object();
       cache.pin(owner, {keys.first});
@@ -175,10 +190,13 @@ void main() {
         cache.load(keys.first),
       ]);
       expect(identical(pair[0], pair[1]), isTrue);
+      final imageBytes = pair.first.width * pair.first.height * 4;
+      expect(MapImageBudget.shared.retainedBytes - beforeBytes, imageBytes);
       await cache.load(keys[1]);
       await cache.load(keys[2]);
       cache.pin(owner, {keys.first});
       expect(cache.length, 2);
+      expect(MapImageBudget.shared.retainedBytes - beforeBytes, imageBytes * 2);
       expect(cache.peek(keys.first), same(pair.first));
       cache.clearUnused();
       expect(cache.length, 1);
@@ -186,6 +204,7 @@ void main() {
       cache.release(owner);
       cache.clearUnused();
       expect(cache.length, 0);
+      expect(MapImageBudget.shared.retainedBytes, beforeBytes);
     },
   );
   testWidgets('background raster surface stays viewport-sized at deep zoom', (

@@ -23,18 +23,18 @@ test('compressed LRU bounds bytes, shares reads, evicts oldest and retries faile
   await Promise.all(Array.from({length:20},()=>context.read(entry(0))));
   assert.equal(reads,1,'Concurrent images from one pack must share a disk read');
   for(let i=1;i<40;i++)await context.read(entry(i));
-  assert.equal(context.snapshot().bytes,32*1024*1024);
-  assert.equal(context.snapshot().count,32);
+  assert.equal(context.snapshot().bytes,4*1024*1024);
+  assert.equal(context.snapshot().count,4);
   const before=reads;await context.read(entry(39));assert.equal(reads,before);
   await context.read(entry(0));assert.equal(reads,before+1,'Evicted packs load again');
   await context.configure(64);
   for(let i=40;i<52;i++)await context.read(entry(i));
-  assert(context.snapshot().bytes>32*1024*1024);
+  assert(context.snapshot().bytes>4*1024*1024);
   await context.configure(32);
-  assert(context.snapshot().bytes<=32*1024*1024,'Lowering the limit immediately evicts old bytes');
+  assert(context.snapshot().bytes<=4*1024*1024,'Lowering the limit immediately evicts old bytes');
   for(const size of [64,128,256,32]){
     await context.configure(size);
-    assert.equal(context.snapshot().limit,size*1024*1024);
+    assert.equal(context.snapshot().limit,size*1024*1024/8);
     assert.equal(JSON.parse([...settings.values()][0]).megabytes,size);
   }
   await assert.rejects(context.configure(8),/Invalid/);
@@ -42,5 +42,5 @@ test('compressed LRU bounds bytes, shares reads, evicts oldest and retries faile
   await context.read(entry(60));assert.equal(context.snapshot().pending,0);
   await Promise.all(Array.from({length:12},(_,i)=>context.read(entry(70+i))));
   assert(peak<=2,'At most two disk buffers in flight');
-  assert(context.snapshot().bytes<=32*1024*1024);
+  assert(context.snapshot().bytes<=4*1024*1024);
 });

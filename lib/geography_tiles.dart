@@ -1,4 +1,5 @@
 import 'diagnostics.dart';
+import 'map_image_budget.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -130,6 +131,25 @@ class GeographyImageCache {
     filenamePrefix: 'slim_',
     layerFilenamePrefixes: const {'pref': 'slimshared_'},
   );
+  static final _reservations = <ui.Image, Object>{};
+  static void _disposeSource(ui.Image image) {
+    MapImageBudget.shared.release(_reservations.remove(image));
+    image.dispose();
+  }
+
+  static void _makeSourceRoom(int bytes) {
+    for (final cache in [shared, borders]) {
+      final pinned = cache._pins.values.expand((keys) => keys).toSet();
+      for (final key in cache._images.keys.toList()) {
+        if (MapImageBudget.shared.used(MapImageKind.source) + bytes <=
+            MapImageBudget.shared.limit(MapImageKind.source)) {
+          return;
+        }
+        if (!pinned.contains(key)) _disposeSource(cache._images.remove(key)!);
+      }
+    }
+  }
+
   final int capacity;
   final String assetDirectory, filenamePrefix;
   final Map<String, String> layerFilenamePrefixes;
@@ -171,6 +191,11 @@ class GeographyImageCache {
   int get length => _images.length;
   Map<String, Object?> get diagnosticCounts => {
     'images': _images.length,
+    'bytes': _images.values.fold<int>(
+      0,
+      (n, image) => n + image.width * image.height * 4,
+    ),
+    'budget': MapImageBudget.shared.diagnosticCounts,
     'decoding': _decoding,
     'queued': _waiting.length,
     'owners': _pins.length,
@@ -194,15 +219,16 @@ class GeographyImageCache {
   void clearUnused() {
     final pinned = _pins.values.expand((keys) => keys).toSet();
     for (final key in _images.keys.toList()) {
-      if (!pinned.contains(key)) _images.remove(key)!.dispose();
+      if (!pinned.contains(key)) _disposeSource(_images.remove(key)!);
     }
   }
 
   void _trim() {
+    _makeSourceRoom(0);
     final pinned = _pins.values.expand((s) => s).toSet();
     for (final key in _images.keys.toList()) {
       if (_images.length <= capacity) break;
-      if (!pinned.contains(key)) _images.remove(key)!.dispose();
+      if (!pinned.contains(key)) _disposeSource(_images.remove(key)!);
     }
   }
 
@@ -214,7 +240,19 @@ class GeographyImageCache {
     }
     return _pending.putIfAbsent(key, () async {
       await _acquire();
+      final reservation = Object();
+      var retained = false;
       try {
+        final side = assetDirectory.endsWith('border_tiles') ? 512 : 256;
+        final size = side * side * 4;
+        _makeSourceRoom(size);
+        if (!MapImageBudget.shared.reserve(
+          reservation,
+          MapImageKind.source,
+          size,
+        )) {
+          throw StateError('Source image budget exhausted');
+        }
         final bytes = await rootBundle.load(
           '$assetDirectory/${prefixFor(key)}$key.webp',
         );
@@ -223,12 +261,19 @@ class GeographyImageCache {
         );
         try {
           final image = (await codec.getNextFrame()).image;
+          if (image.width * image.height * 4 != size) {
+            image.dispose();
+            throw StateError('Unexpected map image dimensions');
+          }
+          _reservations[image] = reservation;
+          retained = true;
           _images[key] = image;
           return image;
         } finally {
           codec.dispose();
         }
       } finally {
+        if (!retained) MapImageBudget.shared.release(reservation);
         _pending.remove(key);
         _release();
       }
@@ -296,6 +341,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     _retirements.add(complete.future);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       for (final image in retired) {
+        MapImageBudget.shared.release(image);
         image.dispose();
       }
       _retirements.remove(complete.future);
@@ -331,7 +377,13 @@ class _GeographyTilesState extends State<GeographyTiles> {
   void initState() {
     super.initState();
     widget.transform.addListener(_schedule);
+    MapImageBudget.shared.addListener(_budgetChanged);
     _loadIndex();
+  }
+
+  void _budgetChanged() {
+    _clearDetailImages();
+    _refresh();
   }
 
   Future<void> _loadIndex() async {
@@ -483,6 +535,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     refreshedZoom = zoom;
     final pixelRatio = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
     await _retireObsoleteDetailImages(zoom, pixelRatio);
+    await Future.wait(_retirements.toList());
     if (!mounted || token != revision) return;
     if (borders &&
         (widget.boundaryPaths != null || widget.boundaryLayer == 'pref')) {
@@ -561,7 +614,13 @@ class _GeographyTilesState extends State<GeographyTiles> {
     // Keep requests/memory bounded even on a very large or high-DPI viewport.
     // 24 x 512px bounds the sharp border surface at 24 MiB, plus parents.
     // Offscreen images still use the small shared LRU rather than staying pinned.
-    final cellLimit = 24;
+    // Each cell may need two layers and two coarse fallback tiles. All
+    // reservations, including concurrent decodes, share the source byte pool.
+    final sourceBytes = MapImageBudget.shared.limit(MapImageKind.source);
+    final cellLimit =
+        borders
+            ? math.min(24, math.max(1, sourceBytes ~/ (512 * 512 * 4) - 2))
+            : math.min(24, math.max(1, sourceBytes ~/ (4 * 256 * 256 * 4)));
     while (cells.length > cellLimit && level > manifest.minLevel) {
       cells = visible(--level);
     }
@@ -701,7 +760,11 @@ class _GeographyTilesState extends State<GeographyTiles> {
 
     var density = renderZoom * dpr;
     var wanted = cells(density);
-    final imageLimit = widget.boundaryLayer == null ? 12 : 24;
+    final imageLimit = MapImageBudget.shared.rasterCells(
+      widget.boundaryLayer == null
+          ? MapImageKind.background
+          : MapImageKind.boundary,
+    );
     while (wanted.length > imageLimit) {
       density /= 2;
       wanted = cells(density);
@@ -739,7 +802,11 @@ class _GeographyTilesState extends State<GeographyTiles> {
 
   Future<void> _retireObsoleteDetailImages(double zoom, double dpr) async {
     final (exponent, _, _, wanted) = _rasterGrid(zoom, dpr);
-    final imageLimit = widget.boundaryLayer == null ? 12 : 24;
+    final imageLimit = MapImageBudget.shared.rasterCells(
+      widget.boundaryLayer == null
+          ? MapImageKind.background
+          : MapImageKind.boundary,
+    );
     final keep = wanted.map((cell) => cell.$1).toSet();
     final retired = <ui.Image>[];
     for (final key in _detailImages.keys.toList()) {
@@ -861,14 +928,36 @@ class _GeographyTilesState extends State<GeographyTiles> {
         });
       }
       late final ui.Image image;
+      final reservation = Object();
+      final kind =
+          background == null ? MapImageKind.boundary : MapImageKind.background;
+      if (!MapImageBudget.shared.reserve(
+        reservation,
+        kind,
+        MapImageBudget.mib,
+      )) {
+        picture.dispose();
+        combined.reset();
+        rasterClip?.reset();
+        throw StateError('Raster image budget exhausted');
+      }
       try {
         image = await picture.toImage(512, 512);
+      } catch (_) {
+        MapImageBudget.shared.release(reservation);
+        rethrow;
       } finally {
         picture.dispose();
         combined.reset();
         rasterClip?.reset();
       }
+      MapImageBudget.shared.release(reservation);
+      if (!MapImageBudget.shared.reserve(image, kind, MapImageBudget.mib)) {
+        image.dispose();
+        return;
+      }
       if (!mounted || token != revision) {
+        MapImageBudget.shared.release(image);
         image.dispose();
         return;
       }
@@ -886,6 +975,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     timer?.cancel();
     _retryTimer?.cancel();
     widget.transform.removeListener(_schedule);
+    MapImageBudget.shared.removeListener(_budgetChanged);
     cache.release(this);
     _clearDetailImages();
     super.dispose();

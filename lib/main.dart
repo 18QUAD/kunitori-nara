@@ -26,6 +26,7 @@ import 'action_button_style.dart';
 import 'regional_ads.dart';
 import 'regional_ad_card.dart';
 import 'geography_tiles.dart';
+import 'map_image_budget.dart';
 import 'rendering_memory.dart';
 import 'diagnostics.dart';
 
@@ -42,6 +43,13 @@ Future<void> main() async {
     previousErrorHandler?.call(details);
   };
   await configureRenderingMemory();
+  try {
+    MapImageBudget.shared.configure(
+      await readMapCacheMegabytes().timeout(const Duration(seconds: 3)),
+    );
+  } catch (error) {
+    recordDiagnostic('map_budget_setting_error', {'error': error.toString()});
+  }
   if (!kIsWeb) {
     await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }

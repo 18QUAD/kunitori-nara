@@ -17,8 +17,13 @@ function snapshot(value) {
   for (const [key,item] of Object.entries(value)) {
     if (!fields.has(key)) continue;
     if (['backgroundCache','borderCache','imageCache'].includes(key)) {
-      result[key] = Object.fromEntries(['images','decoding','queued','owners'].map(k=>[k,
+      result[key] = Object.fromEntries(['images','bytes','decoding','queued','owners'].map(k=>[k,
         typeof item?.[k] === 'number' ? scalar(item[k]) : null]));
+      if (item?.budget && typeof item.budget === 'object') {
+        result[key].budget = Object.fromEntries(
+          ['limitBytes','compressedLimitBytes','sourceBytes','backgroundBytes','boundaryBytes','retainedImageBytes']
+            .map(k => [k, typeof item.budget[k] === 'number' ? scalar(item.budget[k]) : null]));
+      }
     } else result[key] = scalar(item);
   }
   return result;
