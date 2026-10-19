@@ -1439,7 +1439,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           child: protectAttackTap(
             onPressed: can ? _attack : null,
             child: FilledButton(
-              key: const Key('attack'),
               onPressed: can ? _attack : null,
               child: Semantics(
                 label:

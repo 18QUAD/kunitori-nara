@@ -58,7 +58,7 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
         '-webkit-appearance:none;'
         'background:#${background.substring(2)}${background.substring(0, 2)} url("$image") '
         'center / ${enabled ? 56 : 48}px ${enabled ? 56 : 48}px no-repeat;'
-        'touch-action:manipulation;-webkit-user-select:none;user-select:none;'
+        'touch-action:none;-webkit-user-select:none;user-select:none;'
         '-webkit-touch-callout:none;';
   }
 
@@ -130,10 +130,23 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
     _button = button;
     button.type = 'button';
     button.className = 'attack-tap-native';
-    // This button sits above Flutter's transparent text hit targets and owns
-    // its events. No touch defaults are canceled and no clicks synthesized.
-    for (final type in [
+    // Count every contact, including non-primary touch pointers. Waiting for a
+    // browser click loses overlapping fingers. Map gestures stay outside this
+    // button; touch-action:none prevents its contacts becoming browser gestures.
+    button.addEventListener(
       'pointerdown',
+      ((web.PointerEvent event) {
+        event.stopPropagation();
+        if (event.button == 0 &&
+            mounted &&
+            _routeCurrent &&
+            _portraitAllowed &&
+            !button.disabled) {
+          widget.onPressed?.call();
+        }
+      }).toJS,
+    );
+    for (final type in [
       'pointerup',
       'pointermove',
       'pointercancel',
@@ -149,9 +162,19 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
     }
     button.addEventListener(
       'click',
-      ((web.Event event) {
+      ((web.MouseEvent event) {
         event.stopPropagation();
-        if (mounted && _routeCurrent && _portraitAllowed) {
+        // Physical contacts were already counted on pointerdown. Keyboard,
+        // assistive activation and element.click() have no physical pointer.
+        final physicalPointer =
+            event.isA<web.PointerEvent>() &&
+            (event as web.PointerEvent).pointerType.isNotEmpty;
+        if (event.detail == 0 &&
+            !physicalPointer &&
+            mounted &&
+            _routeCurrent &&
+            _portraitAllowed &&
+            !button.disabled) {
           widget.onPressed?.call();
         }
       }).toJS,
