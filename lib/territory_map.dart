@@ -52,6 +52,7 @@ class TerritoryMap extends StatefulWidget {
 
 class _TerritoryMapState extends State<TerritoryMap> {
   final controller = TransformationController();
+  final labelCache = MapLabelCache();
   late Map<String, Path> paths;
   late Map<String, Path> townOutlines;
   late Map<String, Rect> bounds;
@@ -151,6 +152,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
   void dispose() {
     controller.removeListener(_publishView);
     controller.dispose();
+    labelCache.dispose();
     // Release native path storage eagerly when leaving a detailed map.
     for (final path in {
       ...paths.values,
@@ -645,6 +647,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                             size,
                             paths,
                             foreground: true,
+                            labelCache: labelCache,
                           ),
                         ),
                       ),
@@ -843,12 +846,14 @@ class _MapPainter extends CustomPainter {
     this.reliefClip,
     this.viewportSize,
     this.townPaths, {
+    this.labelCache,
     this.foreground = false,
     this.colors = false,
     this.colorOpacity = 1.0,
   }) : snapshot = MapPaintSnapshot(game),
        super(repaint: foreground ? transform : null);
   final MapPaintSnapshot snapshot;
+  final MapLabelCache? labelCache;
   final bool foreground;
   final bool colors;
   final double colorOpacity;
@@ -899,66 +904,82 @@ class _MapPainter extends CustomPainter {
       }
       return;
     }
+    final viewport = Rect.fromPoints(
+      transform.toScene(Offset.zero),
+      transform.toScene(viewportSize.bottomRight(Offset.zero)),
+    );
     final occupiedLabels = <Rect>[
       for (final e in officePoints.entries)
         if (overview || e.key == cityId)
           Rect.fromCircle(center: e.value, radius: 11 / zoom),
     ];
-    // Labels and selection remain above the terrain and water.
-    for (final e in paths.entries) {
-      if (!overview && atlas.towns[e.key]!.cityId != cityId) continue;
-      // Static city/town outlines are supplied by BorderTiles.
-      if (!overview && e.key == selected) {
-        canvas.drawPath(
-          e.value,
-          Paint()..color = Colors.white.withValues(alpha: 0.2),
-        );
-      }
+    // Selection fill is independent of whether its name anchor is visible.
+    if (!overview &&
+        selected != null &&
+        atlas.towns[selected]?.cityId == cityId &&
+        paths.containsKey(selected)) {
+      canvas.drawPath(
+        paths[selected]!,
+        Paint()..color = Colors.white.withValues(alpha: 0.2),
+      );
+    }
+    final candidates =
+        paths.entries.where((e) {
+          if (!overview && atlas.towns[e.key]!.cityId != cityId) return false;
+          final box = bounds[e.key]!;
+          final name =
+              overview ? atlas.cities[e.key]! : atlas.towns[e.key]!.name;
+          if (!Rect.fromCenter(
+            center: box.center,
+            width: (name.length * 12 + 16) / zoom,
+            height: 64 / zoom,
+          ).overlaps(viewport)) {
+            return false;
+          }
+          return overview || e.key == selected || box.height * zoom >= 12;
+        }).toList();
+    labelCache!.beginFrame(
+      candidates.map(
+        (e) => overview ? atlas.cities[e.key]! : atlas.towns[e.key]!.name,
+      ),
+      zoom,
+    );
+    for (final e in candidates) {
       final box = bounds[e.key]!;
-      final label = TextPainter(
-        text: TextSpan(
-          text: overview ? atlas.cities[e.key] : atlas.towns[e.key]!.name,
-          style: TextStyle(
-            fontFamily: 'NotoSansJP',
-            fontSize: 12 / zoom,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      if (overview ||
-          e.key == selected ||
-          (label.width < box.width && label.height < box.height)) {
-        var labelCenter = box.center;
-        final labelRect = Rect.fromCenter(
-          center: labelCenter,
-          width: label.width + 4 / zoom,
-          height: label.height + 4 / zoom,
-        );
-        if (occupiedLabels.any((r) => r.overlaps(labelRect))) {
-          labelCenter += Offset(0, 18 / zoom);
+      final name = overview ? atlas.cities[e.key]! : atlas.towns[e.key]!.name;
+      final label = labelCache!.obtain(name, zoom);
+      try {
+        if (overview ||
+            e.key == selected ||
+            (label.width < box.width && label.height < box.height)) {
+          var labelCenter = box.center;
+          final labelRect = Rect.fromCenter(
+            center: labelCenter,
+            width: label.width + 4 / zoom,
+            height: label.height + 4 / zoom,
+          );
+          if (occupiedLabels.any((r) => r.overlaps(labelRect))) {
+            labelCenter += Offset(0, 18 / zoom);
+          }
+          final placedLabel = Rect.fromCenter(
+            center: labelCenter,
+            width: label.width + 4 / zoom,
+            height: label.height + 4 / zoom,
+          );
+          if (!e.key.startsWith('29') &&
+              e.key != selected &&
+              occupiedLabels.any((r) => r.overlaps(placedLabel))) {
+            continue;
+          }
+          occupiedLabels.add(placedLabel);
+          label.paint(
+            canvas,
+            labelCenter - Offset(label.width / 2, label.height / 2),
+          );
         }
-        final placedLabel = Rect.fromCenter(
-          center: labelCenter,
-          width: label.width + 4 / zoom,
-          height: label.height + 4 / zoom,
-        );
-        if (!e.key.startsWith('29') &&
-            e.key != selected &&
-            occupiedLabels.any((r) => r.overlaps(placedLabel))) {
-          label.dispose();
-          continue;
-        }
-        occupiedLabels.add(placedLabel);
-        paintMapLabel(
-          canvas,
-          label,
-          labelCenter - Offset(label.width / 2, label.height / 2),
-          zoom,
-        );
+      } finally {
+        labelCache!.release(label);
       }
-      label.dispose();
     }
     water?.paintLabels(
       canvas,

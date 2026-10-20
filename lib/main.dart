@@ -36,7 +36,9 @@ const ink = Color(0xFF101C2B),
     gold = Color(0xFFEEC47C);
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  recordDiagnostic('flutter_start', {});
+  recordDiagnostic('flutter_start', {
+    'appBuild': 'map-pan-runtime-20261020-v1',
+  });
   final previousErrorHandler = FlutterError.onError;
   FlutterError.onError = (details) {
     recordDiagnostic('flutter_error', {'error': details.exceptionAsString()});

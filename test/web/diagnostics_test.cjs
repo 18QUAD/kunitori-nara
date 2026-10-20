@@ -22,6 +22,7 @@ function boot(localStorage, sessionStorage = storage(), options = {}) {
     report: () => JSON.parse(window.kunitoriDiagnostics.report()),
   };
 }
+const buildLocal=storage(), buildTab=storage();const actual=boot(buildLocal,buildTab);actual.api.record('flutter_start',JSON.stringify({appBuild:'actual-running-build'}),true);assert.equal(actual.report().sessions.at(-1).build,'actual-running-build');actual.docHandlers.webglcontextlost();assert(actual.report().sessions.at(-1).events.some(e=>e.event==='webglcontextlost'));
 const local = storage(), tab = storage();
 local.setItem('flutter.kunitori.nara.v1','original-game');
 local.setItem('flutter.kunitori.nara.mapView.v1','original-view');

@@ -1,9 +1,15 @@
 """Guard deployed geography assets and the Pages size budget after a build."""
 from pathlib import Path
 import json
+import re
 
 root = Path(__file__).resolve().parents[1]/'build/web'
 compiled = (root/'main.dart.js').read_text()
+build = re.search(r'diagnostics\.js\?v=([a-zA-Z0-9-]+)', (root/'index.html').read_text()).group(1)
+assert build in compiled, 'Dart code and HTML must identify the same release'
+assert build in (root/'diagnostics.js').read_text(), 'Diagnostic identity must match the release'
+assert f"const APP_BUILD = '{build}';" in (root/'map-cache-worker.js').read_text(), 'Worker and runtime must match the release'
+
 for folder in ['water','urban','relief','map_tiles','map_tiles_v2']:
     path = f'assets/data/{folder}/'
     assert path not in compiled, f'Unexpected live reference to source GIS: {path}'
