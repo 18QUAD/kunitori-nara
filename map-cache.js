@@ -165,6 +165,9 @@ window.kunitoriMapStorage = (async () => {
       registration = existing?.active?.scriptURL === worker.href && !existing.installing && !existing.waiting
         ? existing
         : await bounded(navigator.serviceWorker.register(worker, {scope: root.href, updateViaCache: 'none'}), 'registration');
+      if (existing === registration && navigator.onLine && registration.update) {
+        try {await bounded(registration.update(), 'update');} catch (_) {}
+      }
       record('map_storage_registered');
       phase = 'activation';
       const pending = registration.installing || registration.waiting;
@@ -201,6 +204,17 @@ window.kunitoriMapStorage = (async () => {
       }
       connected = true;
       record('map_storage_controller_ready', {error: null});
+      const identity = await request('map-runtime-version');
+      if (identity.build && identity.build !== version) {
+        // An old cached document may install a newer worker. Do not start its
+        // old bootstrap against new data. The worker serves this pinned entry
+        // from the verified current runtime, even when the HTTP cache is stale.
+        record('map_build_replaced', {error: `${version} -> ${identity.build}`});
+        const current = new URL(root);
+        current.searchParams.set('app-build', identity.build);
+        window.location.replace(current.href);
+        return;
+      }
       navigator.storage?.persist?.().catch(() => {});
       // Read the saved cursor before starting work: resumed downloads keep their
       // percentage, and completed downloads never flash a new progress panel.

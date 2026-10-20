@@ -23,7 +23,7 @@
   const previous = read().find(s => s.id === previousId);
   // Only associate a predecessor from this tab, never another tab's open session.
   const session = {
-    id: run, tab: previous?.tab || tab, build: 'prepared-town-shapes-20261020-v1',
+    id: run, tab: previous?.tab || tab, build: 'map-pan-runtime-20261020-v1',
     startedAt: new Date().toISOString(),
     navigation: performance.getEntriesByType?.('navigation')?.[0]?.type || 'unknown',
     wasDiscarded: document.wasDiscarded === true,
@@ -72,6 +72,7 @@
   }
   function record(event, data, important = true) {
     try {
+      if (event === 'flutter_start' && typeof data?.appBuild === 'string') session.build = data.appBuild;
       if (data) state = {...state, ...clean(data)};
       const now = Date.now();
       if (!important && now - lastWrite < 1000) return;
@@ -140,6 +141,9 @@
   window.addEventListener('pageshow', e => { ended = false; record('pageshow', {persisted: e.persisted}); });
   document.addEventListener('visibilitychange', () => {record('visibilitychange');if(document.visibilityState==='hidden')void upload();});
   window.addEventListener('online', () => {void upload();});
+  for (const type of ['webglcontextlost','webglcontextrestored','contextlost','contextrestored']) {
+    document.addEventListener(type, () => record(type), true);
+  }
   window.addEventListener('error', e => record('browser_error', {
     error: e.message || 'resource_load_error',
   }));

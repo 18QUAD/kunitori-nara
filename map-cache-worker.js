@@ -429,6 +429,7 @@ exports.pbkdf2 = pbkdf2;
 /* Compressed map bytes live on disk, independently of Flutter/GPU image caches. */
 'use strict';
 const REVISION = 'ce69613e7487d12f709a4b47bb5ce2cbecc1e1afd47bc8aa21373ff72180818d';
+const APP_BUILD = 'map-pan-runtime-20261020-v1';
 const ROOT = new URL('./', self.location.href);
 const STORE = 'kunitori-map-images-v1';
 const PACK_STORE = 'kunitori-map-packs-v1';
@@ -829,7 +830,7 @@ async function imageWarmBatch() {
 
 // All non-image runtime files are verified on disk too. Large files use bounded
 // gzip chunks; neither initial download nor disk reads buffer a complete county.
-const RUNTIME_REVISION = '131a836d0bf6449bef5bbc36a465dd4d7290b9ad2171b3ba56084af63586d6ee';
+const RUNTIME_REVISION = '2d214e859618e9ed84a8b3e47c5ca59b72aadd58e4ace01b1b222783a7266204';
 const RUNTIME_STORE = 'kunitori-runtime-data-v1';
 const RUNTIME_META = 'kunitori-runtime-meta-v1';
 let runtimeInventoryPromise;
@@ -914,7 +915,9 @@ self.addEventListener('fetch',event=>{
   const asset=relative==='main.dart.js'||relative.startsWith('assets/')||relative.startsWith('canvaskit/');
   if(!shell&&!asset || relative.startsWith('assets/assets/data/map_images/') && relative.endsWith('.webp')) return;
   event.respondWith((async()=>{
-    if(shell) {try {const response=await fetch(event.request);if(response.ok)return response;}catch(_) {}}
+    const pinnedShell = shell && APP_BUILD && !APP_BUILD.startsWith('__') &&
+      (url.searchParams.get('app-build') === APP_BUILD || url.searchParams.get('v') === APP_BUILD);
+    if(shell && !pinnedShell) {try {const response=await fetch(event.request,{cache:'no-store'});if(response.ok)return response;}catch(_) {}}
     const data=await runtimeInventory();
     const file=findAsset(data,url.pathname)|| (relative==='' ? data.byPath.get(new URL('index.html',ROOT).pathname):null);
     return file ? runtimeResponse(data,file) : fetch(event.request);
@@ -925,6 +928,10 @@ self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 self.addEventListener('message', event => {
   if (!event.ports[0]) return;
+  if (event.data?.type === 'map-runtime-version') {
+    event.ports[0].postMessage({build:APP_BUILD.startsWith('__') ? null : APP_BUILD,revision:RUNTIME_REVISION});
+    return;
+  }
   if (['map-memory-get', 'map-memory-set', 'map-memory-release'].includes(event.data?.type)) {
     const operation = event.data.type === 'map-memory-set'
       ? setMemorySettings(event.data.megabytes)
