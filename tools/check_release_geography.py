@@ -82,7 +82,7 @@ for entry in runtime['files']:
     if (root/entry['path']).exists(): assert (root/entry['path']).read_bytes()==data
 print(f'PASS: {len(runtime["files"])} runtime files reconstruct byte-for-byte from verified bounded local chunks.')
 
-# Each selective national index must target the exact deployed census bytes.
+# Prepared town shapes must correspond to the exact original census and grouping.
 territories = json.loads((root.parents[1]/'assets/data/national_territories/index.json').read_text())
 assert len(territories['prefectures']) == 47
 aliases = {entry['path']: entry for entry in runtime['files']}
@@ -91,5 +91,5 @@ for pref, entry in territories['prefectures'].items():
     assert aliases['assets/assets/data/'+original]['sha256'] == entry['sourceSha256']
     alias = f'assets/assets/data/national_territories/{pref}.bin'
     assert aliases[alias]['sha256'] == entry['sha256']
-    assert not (root/alias).exists(), 'National indexes must not be duplicated on Pages'
-print('PASS: all 47 selective territory indexes match the deployed census bytes.')
+    assert not (root/alias).exists(), 'Prepared shapes must not be duplicated on Pages'
+print('PASS: all 47 prepared territory files match the deployed census and source hashes.')

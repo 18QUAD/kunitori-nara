@@ -1,10 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/game.dart';
 import 'package:kunitori/national_atlas.dart';
+import 'prepared_territory_fixture.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -31,23 +30,20 @@ void main() {
         'towns': [...nara['towns'] as List, town],
       });
       final county = NationalAtlas(atlas, {});
-      final geometry = jsonEncode({
-        'cities': <dynamic>[],
-        'towns': [
-          {
-            ...town,
-            'polygons': [
-              [
-                [
-                  [136.0, 34.0],
-                  [136.1, 34.0],
-                  [136.1, 34.1],
-                  [136.0, 34.0],
-                ],
-              ],
-            ],
-          },
+      final shape = [
+        [
+          [
+            [136.0, 34.0],
+            [136.1, 34.0],
+            [136.1, 34.1],
+            [136.0, 34.0],
+          ],
         ],
+      ];
+      final geometry = preparedFixture({
+        '242080001': shape,
+        '24208': shape,
+        'pref': shape,
       });
       var reads = 0;
       final messenger =
@@ -59,11 +55,9 @@ void main() {
             message.lengthInBytes,
           ),
         );
-        if (key != 'assets/data/prefectures/24.json') return null;
+        if (key != 'assets/data/national_territories/24.bin') return null;
         reads++;
-        return reads == 1
-            ? null
-            : ByteData.sublistView(Uint8List.fromList(utf8.encode(geometry)));
+        return reads == 1 ? null : geometry;
       });
       addTearDown(
         () => messenger.setMockMessageHandler('flutter/assets', null),

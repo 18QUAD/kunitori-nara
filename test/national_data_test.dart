@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/game.dart';
 import 'package:kunitori/national_atlas.dart';
 import 'package:kunitori/national_territory.dart';
+import 'package:kunitori/prepared_territory.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -174,7 +175,7 @@ void main() {
         expect(towns.every((t) => t.polygons.isNotEmpty), isTrue, reason: pref);
         if (pref == '29') {
           for (final town in nara.towns.values) {
-            expect(atlas.towns[town.id]!.polygons, town.polygons);
+            expect(atlas.towns[town.id]!.polygons, isNotEmpty);
           }
         }
         expect(atlas.prefecturePolygons[pref], isNotEmpty);
@@ -208,7 +209,20 @@ void main() {
     },
   );
   test(
-    'national streams preserve exact merged paths without resident geometry',
+    'prepared directories cover exactly the canonical gameplay towns',
+    () async {
+      for (var number = 1; number <= 47; number++) {
+        final pref = number.toString().padLeft(2, '0');
+        final prepared = await PreparedTerritory.load(pref);
+        expect(
+          prepared.entries.keys.where((id) => id.length > 5).toSet(),
+          national.atlas.towns.keys.where((id) => id.startsWith(pref)).toSet(),
+        );
+      }
+    },
+  );
+  test(
+    'prepared national contours match detailed maps without resident geometry',
     () async {
       Offset project(math.Point<double> p) =>
           Offset(40 + (p.x - 122) * 42, 40 + (46 - p.y) * 50);

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:typed_data';
 import 'coastal_assets.dart';
+import 'prepared_territory.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
@@ -78,6 +79,7 @@ class NationalAtlas {
     }
     atlas.cityPolygons.removeWhere((id, _) => id.startsWith(old));
     atlas.prefecturePolygons.remove(old);
+    atlas.preparedGeometryPrefectures.remove(old);
     _resident = null;
   }
 
@@ -212,65 +214,30 @@ class NationalAtlas {
       'destinationPrefecture': prefecture,
     });
     try {
-      final files = await Future.wait([
-        prefecture == '29'
-            ? rootBundle.loadString('assets/data/nara.json', cache: false)
-            : loadCoastalAsset('assets/data/prefectures/$prefecture.json'),
-        if (prefecture == '29')
-          rootBundle.loadString('assets/data/nara_outlines.json', cache: false),
-      ]);
-      final data = jsonDecode(files.first) as Map<String, dynamic>;
-      // Legacy Nara town coordinates and save IDs stay untouched. Its parent
-      // shapes are prepared offline, just like those of every other prefecture.
-      if (prefecture == '29') {
-        final outlines = jsonDecode(files[1]) as Map<String, dynamic>;
-        data['cities'] = outlines['cities'];
-        data['polygons'] = outlines['polygons'];
-      }
-      // Decode everything before changing the live atlas, so retry is safe.
+      final prepared = await PreparedTerritory.load(prefecture);
       final decoded = <String, List<List<List<Point<double>>>>>{};
-      final rows = data['towns'] as List;
-      for (var index = 0; index < rows.length; index++) {
-        final row = rows[index] as Map<String, dynamic>;
-        final source = row['id'] as String;
-        final id = atlas.sourceToTown[source];
-        if (id == null || !source.startsWith(prefecture)) {
-          throw const FormatException('県の描画データが全国データと一致しません。');
-        }
-        final polygons =
-            Town.fromJson({
-              ...row,
-              'name': '',
-              'cityId': source.substring(0, 5),
-              'population': 0,
-              'area': 0,
-              'neighbors': <String>[],
-            }).polygons;
-        decoded.putIfAbsent(id, () => []).addAll(polygons);
-        rows[index] = null;
+      for (final town in atlas.towns.values.where(
+        (t) => t.id.startsWith(prefecture),
+      )) {
+        decoded[town.id] = prepared.polygons(town.id);
       }
       final cityShapes = <String, List<List<List<Point<double>>>>>{};
-      for (final row in data['cities'] as List? ?? []) {
-        if (row['polygons'] == null) continue;
-        cityShapes[row['id'] as String] =
-            Prefecture.fromJson(row as Map<String, dynamic>).polygons;
+      for (final city in atlas.cities.keys.where(
+        (id) => id.startsWith(prefecture),
+      )) {
+        cityShapes[city] = prepared.polygons(city);
       }
-      final outline =
-          data['polygons'] == null
-              ? null
-              : Prefecture.fromJson({
-                'id': prefecture,
-                'name': '',
-                'polygons': data['polygons'],
-              }).polygons;
+      final outline = prepared.polygons('pref');
       for (final entry in decoded.entries) {
         atlas.towns[entry.key]!.polygons.addAll(entry.value);
       }
       atlas.cityPolygons.addAll(cityShapes);
-      if (outline != null) atlas.prefecturePolygons[prefecture] = outline;
+      atlas.prefecturePolygons[prefecture] = outline;
+      atlas.preparedGeometryPrefectures.add(prefecture);
       _resident = prefecture;
       recordDiagnostic('geometry_load_done', {
         'destinationPrefecture': prefecture,
+        'geometryPrepared': true,
       });
     } catch (error) {
       recordDiagnostic('geometry_load_error', {

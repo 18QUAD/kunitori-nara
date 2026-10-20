@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/game.dart';
 import 'package:kunitori/national_atlas.dart';
+import 'prepared_territory_fixture.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -50,9 +51,9 @@ void main() {
               ),
             );
             final pref =
-                path.endsWith('nara.json')
+                path.endsWith('/29.bin')
                     ? '29'
-                    : path.contains('/26.json')
+                    : path.endsWith('/26.bin')
                     ? '26'
                     : '27';
             reads.update(pref, (n) => n + 1, ifAbsent: () => 1);
@@ -74,29 +75,18 @@ void main() {
                 ],
               ],
             ];
-            return ByteData.sublistView(
-              Uint8List.fromList(
-                utf8.encode(
-                  jsonEncode(
-                    pref == '29'
-                        ? original
-                        : {
-                          'towns': [
-                            {'id': '${pref}201001001', 'polygons': shape},
-                          ],
-                          'cities': [
-                            {
-                              'id': '${pref}201',
-                              'name': '検証市',
-                              'polygons': shape,
-                            },
-                          ],
-                          'polygons': shape,
-                        },
-                  ),
-                ),
-              ),
-            );
+            if (pref == '29') {
+              return ByteData.sublistView(
+                File(
+                  'assets/data/national_territories/29.bin',
+                ).readAsBytesSync(),
+              );
+            }
+            return preparedFixture({
+              '${pref}201001001': shape,
+              '${pref}201': shape,
+              'pref': shape,
+            });
           });
       addTearDown(
         () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

@@ -277,6 +277,7 @@ class Atlas {
   }
 
   final Map<String, Town> sourceTowns = {};
+  final Set<String> preparedGeometryPrefectures = {};
   final Map<String, String> sourceToTown = {};
   final Map<String, List<Town>> membersByTown = {};
   final Map<String, Town> towns = {};

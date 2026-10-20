@@ -129,6 +129,9 @@ class _TerritoryMapState extends State<TerritoryMap> {
       'destinationPrefecture': widget.prefectureId,
       'city': widget.cityId,
       'durationMs': preparation.elapsedMilliseconds,
+      'prebuiltTowns': widget.atlas.preparedGeometryPrefectures.contains(
+        widget.prefectureId,
+      ),
       'prebuiltCities':
           widget.atlas.cityPolygons.keys
               .where((id) => id.startsWith(widget.prefectureId))
@@ -162,27 +165,30 @@ class _TerritoryMapState extends State<TerritoryMap> {
   }
 
   void _buildPaths() {
-    final points =
-        widget.atlas.towns.values
-            .where((t) => t.cityId.startsWith(widget.prefectureId))
-            .expand((t) => t.polygons)
-            .expand((p) => p)
-            .expand((r) => r)
-            .toList();
-    final minX = points.map((p) => p.x).reduce(math.min),
-        maxX = points.map((p) => p.x).reduce(math.max);
-    final minY = points.map((p) => p.y).reduce(math.min),
-        maxY = points.map((p) => p.y).reduce(math.max);
+    final points = widget.atlas.towns.values
+        .where((t) => t.cityId.startsWith(widget.prefectureId))
+        .expand((t) => t.polygons)
+        .expand((p) => p)
+        .expand((r) => r);
+    var minX = double.infinity, maxX = double.negativeInfinity;
+    var minY = double.infinity, maxY = double.negativeInfinity;
+    for (final point in points) {
+      minX = math.min(minX, point.x);
+      maxX = math.max(maxX, point.x);
+      minY = math.min(minY, point.y);
+      maxY = math.max(maxY, point.y);
+    }
     final scale = math.min(
       (mapSize.width - 80) / ((maxX - minX) * 0.826),
       (mapSize.height - 80) / (maxY - minY),
     );
     final dx = (mapSize.width - (maxX - minX) * 0.826 * scale) / 2,
         dy = (mapSize.height - (maxY - minY) * scale) / 2;
+    final originX = minX, originY = maxY;
     project =
         (p) => Offset(
-          dx + (p.x - minX) * 0.826 * scale,
-          dy + (maxY - p.y) * scale,
+          dx + (p.x - originX) * 0.826 * scale,
+          dy + (originY - p.y) * scale,
         );
     paths = {};
     townOutlines = {};
@@ -190,6 +196,16 @@ class _TerritoryMapState extends State<TerritoryMap> {
     for (final t in widget.atlas.towns.values.where(
       (t) => t.cityId.startsWith(widget.prefectureId),
     )) {
+      if (widget.atlas.preparedGeometryPrefectures.contains(
+        widget.prefectureId,
+      )) {
+        final path = _polygonPath(t.polygons);
+        paths[t.id] = path;
+        townOutlines[t.id] =
+            t.cityId == widget.cityId ? exteriorOutline(path) : Path();
+        bounds[t.id] = path.getBounds();
+        continue;
+      }
       final parts = <Path>[];
       for (final polygon in t.polygons) {
         final part = Path()..fillType = PathFillType.evenOdd;
@@ -232,7 +248,10 @@ class _TerritoryMapState extends State<TerritoryMap> {
       return;
     }
     for (final town in widget.atlas.byCity[city]!) {
-      if (widget.prefectureId == '29') {
+      if (widget.prefectureId == '29' ||
+          widget.atlas.preparedGeometryPrefectures.contains(
+            widget.prefectureId,
+          )) {
         townOutlines[town.id]?.reset();
         townOutlines[town.id] = exteriorOutline(paths[town.id]!);
         continue;
