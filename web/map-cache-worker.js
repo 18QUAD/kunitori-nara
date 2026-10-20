@@ -20,6 +20,32 @@ const transfers = new Map();
 const keyFor = entry => new URL(`${entry[0]}?map-sha256=${entry[1]}`, ROOT).href;
 const progressKey = new URL(`__map_progress__/${REVISION}`, ROOT).href;
 
+// Exact, reversible tile IDs. The 417k-entry inventory must not retain a String
+// and a Map slot per filename outside the configured image cache budget.
+const TILE_LAYERS = ['background','city','overview','pref','town'];
+function tileCode(name) {
+  const m = /^(-[1-3]|[0-8])_(0|[1-9]\d*)_(0|[1-9]\d*)_(background|city|overview|pref|town)\.webp$/.exec(name);
+  if (!m) return null;
+  const x=Number(m[2]),y=Number(m[3]);
+  if(x>=4096 || y>=2048) return null;
+  return (Number(m[1])+3)*67108864+x*16384+y*8+TILE_LAYERS.indexOf(m[4]);
+}
+function tileName(code) {
+  return `${Math.floor(code/67108864)-3}_${Math.floor(code/16384)%4096}_${Math.floor(code/8)%2048}_${TILE_LAYERS[code%8]}.webp`;
+}
+function tileIndex(data,name) {
+  if(!data.codes) return data.byPath.get(name); // Older generic pack fixtures.
+  const code=tileCode(name);
+  if(code===null) return;
+  let low=0,high=data.sortedIndices.length;
+  while(low<high){
+    const mid=(low+high)>>>1;
+    if(data.codes[data.sortedIndices[mid]]<code) low=mid+1; else high=mid;
+  }
+  const i=data.sortedIndices[low];
+  return i!==undefined && data.codes[i]===code ? i : undefined;
+}
+
 async function inventory() {
   if (!inventoryPromise) {
     inventoryPromise = (async () => {
@@ -41,16 +67,15 @@ async function inventory() {
       const assetCount = value.assets.length;
       const byteOffsets = new Float64Array(assetCount + 1);
       if (value.packSchema === 2) {
-        // Keep one short name plus typed offsets per image, not six boxed fields
-        // and two full URL strings. Construct the few visible entries on demand.
-        const names = new Array(assetCount);
+        const codes = new Uint32Array(assetCount);
         const locations = new Uint32Array(assetCount * 3);
-        const byPath = new Map();
+        let numeric = true;
         value.packs.forEach((pack, index) => {
           let offset = 0;
           for (let i=pack[3];i<pack[4];i++) {
             const [name, length] = value.assets[i];
-            names[i] = name; byPath.set(name,i);
+            const code=tileCode(name);
+            if(code===null) numeric=false; else codes[i]=code;
             locations.set([length,index,offset], i*3);
             byteOffsets[i+1] = byteOffsets[i]+length;
             offset += length;
@@ -58,7 +83,18 @@ async function inventory() {
           if (offset !== pack[2]) throw new Error('Map pack index mismatch');
         });
         const {assets, ...metadata} = value;
-        return {...metadata,names,locations,byPath,assetCount,byteOffsets};
+        if(numeric){
+          // Preserve download/pack order; only the lookup permutation is sorted.
+          const sortedIndices = Uint32Array.from({length:assetCount},(_,i)=>i);
+          sortedIndices.sort((a,b)=>codes[a]-codes[b]);
+          for(let i=1;i<assetCount;i++){
+            if(codes[sortedIndices[i]]===codes[sortedIndices[i-1]]) throw new Error('Duplicate map tile');
+          }
+          return {...metadata,codes,sortedIndices,locations,assetCount,byteOffsets};
+        }
+        // Pack schemas also support non-map assets in legacy installations.
+        const names=assets.map(entry=>entry[0]);
+        return {...metadata,names,locations,byPath:new Map(names.map((name,i)=>[name,i])),assetCount,byteOffsets};
       }
       if (value.packSchema === 1) {
         value.packs.forEach((pack, index) => {
@@ -82,13 +118,14 @@ function assetEntry(data, index) {
   if (index == null || index < 0 || index >= data.assetCount) return;
   if (data.packSchema !== 2) return data.assets[index];
   const p=index*3;
-  return [data.assetPrefix+data.names[index], null, data.locations[p],data.locations[p+1],data.locations[p+2],index];
+  const name=data.codes ? tileName(data.codes[index]) : data.names[index];
+  return [data.assetPrefix+name, null, data.locations[p],data.locations[p+1],data.locations[p+2],index];
 }
 function findAsset(data, pathname) {
   if(data.packSchema !== 2) return data.byPath.get(pathname);
   const prefix=ROOT.pathname+data.assetPrefix;
   if(!pathname.startsWith(prefix)) return;
-  return assetEntry(data,data.byPath.get(pathname.slice(prefix.length)));
+  return assetEntry(data,tileIndex(data,pathname.slice(prefix.length)));
 }
 
 async function storedImage(entry, mustStore = false) {

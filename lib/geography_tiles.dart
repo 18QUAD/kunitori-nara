@@ -1,6 +1,7 @@
 import 'diagnostics.dart';
 import 'map_image_budget.dart';
 import 'prepared_map_bytes.dart';
+import 'packed_tile_keys.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -43,11 +44,11 @@ class GeographyTileIndex {
     : layerMaxLevels = (json['layerMaxLevels'] as Map<String, dynamic>).map(
         (key, value) => MapEntry(key, value as int),
       ),
-      available = (json['tiles'] as Map).keys.cast<String>().toSet(),
+      available = PackedTileKeys((json['tiles'] as Map).keys.cast<String>()),
       maxLevel = json['maxLevel'] as int,
       minLevel = json['minLevel'] as int,
       basePixelsPerDegree = json['basePixelsPerDegree'] as int;
-  final Set<String> available;
+  final PackedTileKeys available;
   final int maxLevel, minLevel, basePixelsPerDegree;
   final Map<String, int> layerMaxLevels;
   int layerLevel(int level, String layer) =>
