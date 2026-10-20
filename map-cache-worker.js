@@ -429,7 +429,7 @@ exports.pbkdf2 = pbkdf2;
 /* Compressed map bytes live on disk, independently of Flutter/GPU image caches. */
 'use strict';
 const REVISION = 'ce69613e7487d12f709a4b47bb5ce2cbecc1e1afd47bc8aa21373ff72180818d';
-const APP_BUILD = 'map-pan-runtime-20261020-v1';
+const APP_BUILD = 'compact-map-index-20261020-v1';
 const ROOT = new URL('./', self.location.href);
 const STORE = 'kunitori-map-images-v1';
 const PACK_STORE = 'kunitori-map-packs-v1';
@@ -447,6 +447,32 @@ let warming;
 const transfers = new Map();
 const keyFor = entry => new URL(`${entry[0]}?map-sha256=${entry[1]}`, ROOT).href;
 const progressKey = new URL(`__map_progress__/${REVISION}`, ROOT).href;
+
+// Exact, reversible tile IDs. The 417k-entry inventory must not retain a String
+// and a Map slot per filename outside the configured image cache budget.
+const TILE_LAYERS = ['background','city','overview','pref','town'];
+function tileCode(name) {
+  const m = /^(-[1-3]|[0-8])_(0|[1-9]\d*)_(0|[1-9]\d*)_(background|city|overview|pref|town)\.webp$/.exec(name);
+  if (!m) return null;
+  const x=Number(m[2]),y=Number(m[3]);
+  if(x>=4096 || y>=2048) return null;
+  return (Number(m[1])+3)*67108864+x*16384+y*8+TILE_LAYERS.indexOf(m[4]);
+}
+function tileName(code) {
+  return `${Math.floor(code/67108864)-3}_${Math.floor(code/16384)%4096}_${Math.floor(code/8)%2048}_${TILE_LAYERS[code%8]}.webp`;
+}
+function tileIndex(data,name) {
+  if(!data.codes) return data.byPath.get(name); // Older generic pack fixtures.
+  const code=tileCode(name);
+  if(code===null) return;
+  let low=0,high=data.sortedIndices.length;
+  while(low<high){
+    const mid=(low+high)>>>1;
+    if(data.codes[data.sortedIndices[mid]]<code) low=mid+1; else high=mid;
+  }
+  const i=data.sortedIndices[low];
+  return i!==undefined && data.codes[i]===code ? i : undefined;
+}
 
 async function inventory() {
   if (!inventoryPromise) {
@@ -469,16 +495,15 @@ async function inventory() {
       const assetCount = value.assets.length;
       const byteOffsets = new Float64Array(assetCount + 1);
       if (value.packSchema === 2) {
-        // Keep one short name plus typed offsets per image, not six boxed fields
-        // and two full URL strings. Construct the few visible entries on demand.
-        const names = new Array(assetCount);
+        const codes = new Uint32Array(assetCount);
         const locations = new Uint32Array(assetCount * 3);
-        const byPath = new Map();
+        let numeric = true;
         value.packs.forEach((pack, index) => {
           let offset = 0;
           for (let i=pack[3];i<pack[4];i++) {
             const [name, length] = value.assets[i];
-            names[i] = name; byPath.set(name,i);
+            const code=tileCode(name);
+            if(code===null) numeric=false; else codes[i]=code;
             locations.set([length,index,offset], i*3);
             byteOffsets[i+1] = byteOffsets[i]+length;
             offset += length;
@@ -486,7 +511,18 @@ async function inventory() {
           if (offset !== pack[2]) throw new Error('Map pack index mismatch');
         });
         const {assets, ...metadata} = value;
-        return {...metadata,names,locations,byPath,assetCount,byteOffsets};
+        if(numeric){
+          // Preserve download/pack order; only the lookup permutation is sorted.
+          const sortedIndices = Uint32Array.from({length:assetCount},(_,i)=>i);
+          sortedIndices.sort((a,b)=>codes[a]-codes[b]);
+          for(let i=1;i<assetCount;i++){
+            if(codes[sortedIndices[i]]===codes[sortedIndices[i-1]]) throw new Error('Duplicate map tile');
+          }
+          return {...metadata,codes,sortedIndices,locations,assetCount,byteOffsets};
+        }
+        // Pack schemas also support non-map assets in legacy installations.
+        const names=assets.map(entry=>entry[0]);
+        return {...metadata,names,locations,byPath:new Map(names.map((name,i)=>[name,i])),assetCount,byteOffsets};
       }
       if (value.packSchema === 1) {
         value.packs.forEach((pack, index) => {
@@ -510,13 +546,14 @@ function assetEntry(data, index) {
   if (index == null || index < 0 || index >= data.assetCount) return;
   if (data.packSchema !== 2) return data.assets[index];
   const p=index*3;
-  return [data.assetPrefix+data.names[index], null, data.locations[p],data.locations[p+1],data.locations[p+2],index];
+  const name=data.codes ? tileName(data.codes[index]) : data.names[index];
+  return [data.assetPrefix+name, null, data.locations[p],data.locations[p+1],data.locations[p+2],index];
 }
 function findAsset(data, pathname) {
   if(data.packSchema !== 2) return data.byPath.get(pathname);
   const prefix=ROOT.pathname+data.assetPrefix;
   if(!pathname.startsWith(prefix)) return;
-  return assetEntry(data,data.byPath.get(pathname.slice(prefix.length)));
+  return assetEntry(data,tileIndex(data,pathname.slice(prefix.length)));
 }
 
 async function storedImage(entry, mustStore = false) {
@@ -830,7 +867,7 @@ async function imageWarmBatch() {
 
 // All non-image runtime files are verified on disk too. Large files use bounded
 // gzip chunks; neither initial download nor disk reads buffer a complete county.
-const RUNTIME_REVISION = '2d214e859618e9ed84a8b3e47c5ca59b72aadd58e4ace01b1b222783a7266204';
+const RUNTIME_REVISION = 'fcd4d6aa68788f44e88bdc0630f2ba081c9a9a12858a66567913f4c450517ed6';
 const RUNTIME_STORE = 'kunitori-runtime-data-v1';
 const RUNTIME_META = 'kunitori-runtime-meta-v1';
 let runtimeInventoryPromise;
