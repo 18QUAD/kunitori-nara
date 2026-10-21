@@ -106,6 +106,11 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.tap(find.text('地名から本拠地を探す'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('進軍可能地域のみ'));
+    await tester.pumpAndSettle();
+    expect(find.text('条件に一致する地域がありません'), findsOneWidget);
+    await tester.tap(find.text('進軍可能地域のみ'));
+    await tester.pumpAndSettle();
     expect(find.widgetWithText(ListTile, '油留木町'), findsNothing);
     await tester.tap(find.widgetWithText(ListTile, '奈良市'));
     await tester.pumpAndSettle();
@@ -157,6 +162,49 @@ void main() {
     final target = map.atlas.towns.values.firstWhere(
       (t) => map.game.canAttack(t.id) && t.population > 10,
     );
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('地名から探す'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('進軍可能地域のみ'));
+    await tester.pumpAndSettle();
+    if (find.widgetWithText(ListTile, '奈良市').evaluate().isNotEmpty) {
+      for (final tile in tester.widgetList<ListTile>(find.byType(ListTile))) {
+        final name = (tile.title as Text).data;
+        if (name == '進軍可能地域のみ') continue;
+        expect(
+          map.atlas.cities.entries.any(
+            (city) =>
+                city.value == name &&
+                map.atlas.byCity[city.key]!.any(
+                  (town) => map.game.canAttack(town.id),
+                ),
+          ),
+          isTrue,
+        );
+      }
+      await tester.tap(find.widgetWithText(ListTile, '奈良市'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.widgetWithText(ListTile, homeTown.name), findsNothing);
+    for (final tile in tester.widgetList<ListTile>(find.byType(ListTile))) {
+      final name = (tile.title as Text).data;
+      if (name == '進軍可能地域のみ') continue;
+      expect(
+        map.atlas.byCity[homeTown.cityId]!.any(
+          (town) => town.name == name && map.game.canAttack(town.id),
+        ),
+        isTrue,
+      );
+    }
+    await tester.enterText(find.byType(TextField), homeTown.name);
+    await tester.pumpAndSettle();
+    expect(find.text('条件に一致する地域がありません'), findsOneWidget);
+    await tester.tap(find.text('進軍可能地域のみ'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(ListTile, homeTown.name), findsOneWidget);
+    await tester.tap(find.byTooltip('閉じる'));
+    await tester.pumpAndSettle();
     map.onSelected(target.id);
     await tester.pumpAndSettle();
     final firstTip =
