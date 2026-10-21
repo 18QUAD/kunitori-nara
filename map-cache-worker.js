@@ -429,7 +429,7 @@ exports.pbkdf2 = pbkdf2;
 /* Compressed map bytes live on disk, independently of Flutter/GPU image caches. */
 'use strict';
 const REVISION = 'ce69613e7487d12f709a4b47bb5ce2cbecc1e1afd47bc8aa21373ff72180818d';
-const APP_BUILD = 'compact-map-index-20261020-v1';
+const APP_BUILD = 'attackable-search-20261021-v1';
 const ROOT = new URL('./', self.location.href);
 const STORE = 'kunitori-map-images-v1';
 const PACK_STORE = 'kunitori-map-packs-v1';
@@ -867,7 +867,7 @@ async function imageWarmBatch() {
 
 // All non-image runtime files are verified on disk too. Large files use bounded
 // gzip chunks; neither initial download nor disk reads buffer a complete county.
-const RUNTIME_REVISION = 'fcd4d6aa68788f44e88bdc0630f2ba081c9a9a12858a66567913f4c450517ed6';
+const RUNTIME_REVISION = 'ca9cf6011d9efe6e0f2328bbd919dd9f27fd436129d78d2326cd4eef15c9645f';
 const RUNTIME_STORE = 'kunitori-runtime-data-v1';
 const RUNTIME_META = 'kunitori-runtime-meta-v1';
 let runtimeInventoryPromise;
