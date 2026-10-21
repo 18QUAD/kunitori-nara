@@ -37,7 +37,7 @@ const ink = Color(0xFF101C2B),
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   recordDiagnostic('flutter_start', {
-    'appBuild': 'compact-map-index-20261020-v1',
+    'appBuild': 'attackable-search-20261021-v1',
   });
   final previousErrorHandler = FlutterError.onError;
   FlutterError.onError = (details) {
@@ -2070,6 +2070,7 @@ class _SearchSheet extends StatefulWidget {
 class _SearchSheetState extends State<_SearchSheet> {
   String query = '';
   String? city;
+  bool attackableOnly = false;
   @override
   void initState() {
     super.initState();
@@ -2079,13 +2080,25 @@ class _SearchSheetState extends State<_SearchSheet> {
   @override
   Widget build(BuildContext context) {
     final a = widget.atlas;
+    final attackableCounts = <String, int>{};
+    if (attackableOnly) {
+      for (final town in a.towns.values) {
+        if (widget.game.canAttack(town.id)) {
+          attackableCounts.update(
+            town.cityId,
+            (count) => count + 1,
+            ifAbsent: () => 1,
+          );
+        }
+      }
+    }
     final towns =
         city == null
             ? <Town>[]
             : a.byCity[city]!
                 .where(
                   (t) =>
-                      (city == null || t.cityId == city) &&
+                      (!attackableOnly || widget.game.canAttack(t.id)) &&
                       (t.name.contains(query) ||
                           a.cities[t.cityId]!.contains(query)),
                 )
@@ -2094,11 +2107,12 @@ class _SearchSheetState extends State<_SearchSheet> {
         a.cities.entries
             .where(
               (c) =>
-                  c.value.contains(query) ||
-                  (widget.prefectureNames[c.key.substring(0, 2)]?.contains(
-                        query,
-                      ) ??
-                      false),
+                  (!attackableOnly || attackableCounts.containsKey(c.key)) &&
+                  (c.value.contains(query) ||
+                      (widget.prefectureNames[c.key.substring(0, 2)]?.contains(
+                            query,
+                          ) ??
+                          false)),
             )
             .toList();
     return SizedBox(
@@ -2137,7 +2151,12 @@ class _SearchSheetState extends State<_SearchSheet> {
                 prefixIcon: const Icon(Icons.search),
               ),
             ),
-            const SizedBox(height: 12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('進軍可能地域のみ'),
+              value: attackableOnly,
+              onChanged: (value) => setState(() => attackableOnly = value),
+            ),
             if (city != null)
               TextButton.icon(
                 onPressed:
@@ -2150,41 +2169,49 @@ class _SearchSheetState extends State<_SearchSheet> {
               ),
             const SizedBox(height: 8),
             Expanded(
-              child: ListView.builder(
-                itemCount: city == null ? cities.length : towns.length,
-                itemBuilder: (context, i) {
-                  if (city == null) {
-                    final c = cities[i];
-                    return ListTile(
-                      title: Text(c.value),
-                      subtitle: Text(
-                        '${widget.prefectureNames[c.key.substring(0, 2)]} · ${a.byCity[c.key]!.length}町',
+              child:
+                  (city == null ? cities.isEmpty : towns.isEmpty)
+                      ? const Center(child: Text('条件に一致する地域がありません'))
+                      : ListView.builder(
+                        itemCount: city == null ? cities.length : towns.length,
+                        itemBuilder: (context, i) {
+                          if (city == null) {
+                            final c = cities[i];
+                            return ListTile(
+                              title: Text(c.value),
+                              subtitle: Text(
+                                '${widget.prefectureNames[c.key.substring(0, 2)]} · ${attackableOnly ? '${attackableCounts[c.key]}町が進軍可能' : '${a.byCity[c.key]!.length}町'}',
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap:
+                                  () => setState(() {
+                                    city = c.key;
+                                    query = '';
+                                  }),
+                            );
+                          }
+                          final t = towns[i];
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                            ),
+                            title: Text(t.name),
+                            subtitle: Text(
+                              '${a.cities[t.cityId]} · ${number(t.population)}人${a.landingTowns.contains(t.id) ? ' · 渡航の入口' : ''}',
+                            ),
+                            trailing:
+                                widget.game.owned.contains(t.id)
+                                    ? const Icon(Icons.flag, color: mint)
+                                    : widget.game.canAttack(t.id)
+                                    ? const Icon(
+                                      Icons.near_me_outlined,
+                                      color: gold,
+                                    )
+                                    : null,
+                            onTap: () => Navigator.pop(context, t.id),
+                          );
+                        },
                       ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap:
-                          () => setState(() {
-                            city = c.key;
-                            query = '';
-                          }),
-                    );
-                  }
-                  final t = towns[i];
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                    title: Text(t.name),
-                    subtitle: Text(
-                      '${a.cities[t.cityId]} · ${number(t.population)}人${a.landingTowns.contains(t.id) ? ' · 渡航の入口' : ''}',
-                    ),
-                    trailing:
-                        widget.game.owned.contains(t.id)
-                            ? const Icon(Icons.flag, color: mint)
-                            : widget.game.canAttack(t.id)
-                            ? const Icon(Icons.near_me_outlined, color: gold)
-                            : null,
-                    onTap: () => Navigator.pop(context, t.id),
-                  );
-                },
-              ),
             ),
           ],
         ),

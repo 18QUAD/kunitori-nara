@@ -477,3 +477,5 @@ DIAGNOSTICS_PLATFORM=all node tools/diagnostics/fetch.mjs /workspace/remote-diag
 ダウンロードが中断した場合も保存済み分から再開します。画像を一括デコードしません。
 Web ビルド後は上記の `prepare_map_cache.py` を必ず実行してください。
 保存先はブラウザ管理のため、サイトデータが削除された場合は不足分を再取得します。
+
+「地名から探す」の「進軍可能地域のみ」をオンにすると、現在進軍できる町と、その町を含む市区町村に絞り込めます。地名検索と併用できます。

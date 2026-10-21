@@ -23,7 +23,7 @@
   const previous = read().find(s => s.id === previousId);
   // Only associate a predecessor from this tab, never another tab's open session.
   const session = {
-    id: run, tab: previous?.tab || tab, build: 'compact-map-index-20261020-v1',
+    id: run, tab: previous?.tab || tab, build: 'attackable-search-20261021-v1',
     startedAt: new Date().toISOString(),
     navigation: performance.getEntriesByType?.('navigation')?.[0]?.type || 'unknown',
     wasDiscarded: document.wasDiscarded === true,
