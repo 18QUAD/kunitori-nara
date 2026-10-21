@@ -306,25 +306,45 @@ class Atlas {
   // Sea connections are separate from physical land borders.
   final Map<String, Set<String>> seaNeighbors = {};
   final Set<String> landingTowns = {};
+  final Map<String, Set<String>> nearbyNeighbors = {};
 
-  void enableSeaTravel(Iterable<List<String>> connections) {
+  Map<String, Set<String>> _connectionGraph(
+    Iterable<List<String>> connections,
+  ) {
     final neighbors = <String, Set<String>>{};
     for (final pair in connections) {
       if (pair.length != 2 ||
           pair[0] == pair[1] ||
           !towns.containsKey(pair[0]) ||
           !towns.containsKey(pair[1])) {
-        throw const FormatException('航路の接続先が不正です。');
+        throw const FormatException('町の接続先が不正です。');
       }
       neighbors.putIfAbsent(pair[0], () => {}).add(pair[1]);
       neighbors.putIfAbsent(pair[1], () => {}).add(pair[0]);
     }
+    return neighbors;
+  }
+
+  void enableSeaTravel(Iterable<List<String>> connections) {
+    final neighbors = _connectionGraph(connections);
     seaNeighbors
       ..clear()
       ..addAll(neighbors);
     landingTowns
       ..clear()
       ..addAll(neighbors.keys);
+  }
+
+  void enableNearbyTravel(Iterable<List<String>> connections) {
+    final neighbors = _connectionGraph(connections);
+    nearbyNeighbors
+      ..clear()
+      ..addAll(neighbors);
+  }
+
+  Iterable<String> connectionsFrom(String id) sync* {
+    yield* seaNeighbors[id] ?? const <String>{};
+    yield* nearbyNeighbors[id] ?? const <String>{};
   }
 
   List<LocalFact> _culture(String city) {
@@ -474,6 +494,7 @@ class Game {
       !owned.contains(id) &&
       ((atlas.towns[id]?.neighbors.any(owned.contains) ?? false) ||
           canLand(id) ||
+          (atlas.nearbyNeighbors[id]?.any(owned.contains) ?? false) ||
           (everOwned.contains(id) &&
               atlas.officeForTown(id) != null &&
               atlas.byCity[atlas.towns[id]!.cityId]!.every(

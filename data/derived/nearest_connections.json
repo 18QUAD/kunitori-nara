@@ -1,0 +1,3564 @@
+{
+  "initialComponents": 261,
+  "finalComponents": 1,
+  "towns": 141900,
+  "additionalConnections": 289,
+  "rounds": 3,
+  "municipalityTarget": "outside",
+  "distanceMethod": "Shortest town-boundary distance; locally refined boundary endpoints and spherical distance (R=6371008.8m). Not centroid distance.",
+  "links": [
+    {
+      "fromTown": "012230710",
+      "toTown": "012230460",
+      "distanceMetres": 37.001,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01223",
+      "toCity": "01223",
+      "added": true
+    },
+    {
+      "fromTown": "012230730",
+      "toTown": "012230510",
+      "distanceMetres": 2528.785,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01223",
+      "toCity": "01223",
+      "added": true
+    },
+    {
+      "fromTown": "013310330",
+      "toTown": "013310340",
+      "distanceMetres": 37211.779,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01331",
+      "toCity": "01331",
+      "added": true
+    },
+    {
+      "fromTown": "013310340",
+      "toTown": "013310140",
+      "distanceMetres": 20632.201,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01331",
+      "toCity": "01331",
+      "added": true
+    },
+    {
+      "fromTown": "013670010",
+      "toTown": "013710290",
+      "distanceMetres": 17635.844,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01367",
+      "toCity": "01371",
+      "added": true
+    },
+    {
+      "fromTown": "01484022005",
+      "toTown": "01484023004",
+      "distanceMetres": 3607.462,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01484",
+      "toCity": "01484",
+      "added": true
+    },
+    {
+      "fromTown": "01484023004",
+      "toTown": "01484022005",
+      "distanceMetres": 3607.462,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01484",
+      "toCity": "01484",
+      "added": false
+    },
+    {
+      "fromTown": "01517001007",
+      "toTown": "01517001008",
+      "distanceMetres": 1215.277,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01517",
+      "toCity": "01517",
+      "added": true
+    },
+    {
+      "fromTown": "01517001008",
+      "toTown": "01517001007",
+      "distanceMetres": 1215.277,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01517",
+      "toCity": "01517",
+      "added": false
+    },
+    {
+      "fromTown": "01518001001",
+      "toTown": "01517006010",
+      "distanceMetres": 9537.863,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01518",
+      "toCity": "01517",
+      "added": true
+    },
+    {
+      "fromTown": "016620111",
+      "toTown": "016620090",
+      "distanceMetres": 950.252,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01662",
+      "toCity": "01662",
+      "added": true
+    },
+    {
+      "fromTown": "016620112",
+      "toTown": "016620111",
+      "distanceMetres": 1075.532,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01662",
+      "toCity": "01662",
+      "added": true
+    },
+    {
+      "fromTown": "01663006001",
+      "toTown": "01663012001",
+      "distanceMetres": 37.826,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01663",
+      "toCity": "01663",
+      "added": true
+    },
+    {
+      "fromTown": "016630180",
+      "toTown": "016630090",
+      "distanceMetres": 405.822,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01663",
+      "toCity": "01663",
+      "added": true
+    },
+    {
+      "fromTown": "016630190",
+      "toTown": "016630200",
+      "distanceMetres": 601.497,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "01663",
+      "toCity": "01663",
+      "added": true
+    },
+    {
+      "fromTown": "023230010",
+      "toTown": "023230020",
+      "distanceMetres": 31393.037,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "02323",
+      "toCity": "02323",
+      "added": true
+    },
+    {
+      "fromTown": "042021720",
+      "toTown": "042021750",
+      "distanceMetres": 1899.635,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "04202",
+      "toCity": "04202",
+      "added": true
+    },
+    {
+      "fromTown": "04401001015",
+      "toTown": "04401001012",
+      "distanceMetres": 58.91,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "04401",
+      "toCity": "04401",
+      "added": true
+    },
+    {
+      "fromTown": "04404015040",
+      "toTown": "04404017000",
+      "distanceMetres": 482.118,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "04404",
+      "toCity": "04404",
+      "added": true
+    },
+    {
+      "fromTown": "04581017002",
+      "toTown": "04581012002",
+      "distanceMetres": 266.901,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "04581",
+      "toCity": "04581",
+      "added": true
+    },
+    {
+      "fromTown": "04581025002",
+      "toTown": "042021800",
+      "distanceMetres": 857.822,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "04581",
+      "toCity": "04202",
+      "added": true
+    },
+    {
+      "fromTown": "04581025002",
+      "toTown": "04581024002",
+      "distanceMetres": 3603.218,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "04581",
+      "toCity": "04581",
+      "added": true
+    },
+    {
+      "fromTown": "06204078003",
+      "toTown": "052140380",
+      "distanceMetres": 27478.861,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "06204",
+      "toCity": "05214",
+      "added": true
+    },
+    {
+      "fromTown": "06204078003",
+      "toTown": "06204081002",
+      "distanceMetres": 33420.415,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "06204",
+      "toCity": "06204",
+      "added": true
+    },
+    {
+      "fromTown": "133620010",
+      "toTown": "133630040",
+      "distanceMetres": 3721.771,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13362",
+      "toCity": "13363",
+      "added": true
+    },
+    {
+      "fromTown": "133630040",
+      "toTown": "133620010",
+      "distanceMetres": 3721.771,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13363",
+      "toCity": "13362",
+      "added": false
+    },
+    {
+      "fromTown": "133630040",
+      "toTown": "13363003002",
+      "distanceMetres": 4299.55,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "13363",
+      "toCity": "13363",
+      "added": true
+    },
+    {
+      "fromTown": "133630050",
+      "toTown": "13363001207",
+      "distanceMetres": 1141.804,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13363",
+      "toCity": "13363",
+      "added": true
+    },
+    {
+      "fromTown": "133630060",
+      "toTown": "13363001207",
+      "distanceMetres": 754.46,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13363",
+      "toCity": "13363",
+      "added": true
+    },
+    {
+      "fromTown": "13364001017",
+      "toTown": "13364001019",
+      "distanceMetres": 3726.979,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13364",
+      "toCity": "13364",
+      "added": true
+    },
+    {
+      "fromTown": "13364001018",
+      "toTown": "13364001016",
+      "distanceMetres": 903.302,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13364",
+      "toCity": "13364",
+      "added": true
+    },
+    {
+      "fromTown": "133810010",
+      "toTown": "133820010",
+      "distanceMetres": 17353.959,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13381",
+      "toCity": "13382",
+      "added": true
+    },
+    {
+      "fromTown": "133820010",
+      "toTown": "133810010",
+      "distanceMetres": 17353.959,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13382",
+      "toCity": "13381",
+      "added": false
+    },
+    {
+      "fromTown": "134010020",
+      "toTown": "134010060",
+      "distanceMetres": 3760.88,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13401",
+      "toCity": "13401",
+      "added": true
+    },
+    {
+      "fromTown": "134010060",
+      "toTown": "134010020",
+      "distanceMetres": 3760.88,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13401",
+      "toCity": "13401",
+      "added": false
+    },
+    {
+      "fromTown": "134020010",
+      "toTown": "134010040",
+      "distanceMetres": 63961.306,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13402",
+      "toCity": "13401",
+      "added": true
+    },
+    {
+      "fromTown": "134020010",
+      "toTown": "134020020",
+      "distanceMetres": 222324.675,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "13402",
+      "toCity": "13402",
+      "added": true
+    },
+    {
+      "fromTown": "134020020",
+      "toTown": "134020010",
+      "distanceMetres": 222324.675,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13402",
+      "toCity": "13402",
+      "added": false
+    },
+    {
+      "fromTown": "13421002019",
+      "toTown": "13421002020",
+      "distanceMetres": 224.152,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": true
+    },
+    {
+      "fromTown": "13421001031",
+      "toTown": "13421001032",
+      "distanceMetres": 208.083,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": true
+    },
+    {
+      "fromTown": "13421001032",
+      "toTown": "13421001031",
+      "distanceMetres": 208.083,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": false
+    },
+    {
+      "fromTown": "13421001033",
+      "toTown": "13421001032",
+      "distanceMetres": 127567.245,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": true
+    },
+    {
+      "fromTown": "13421002020",
+      "toTown": "13421002019",
+      "distanceMetres": 224.152,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": false
+    },
+    {
+      "fromTown": "134210030",
+      "toTown": "13421001032",
+      "distanceMetres": 31726.614,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": true
+    },
+    {
+      "fromTown": "13421004001",
+      "toTown": "13421004002",
+      "distanceMetres": 67564.829,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": true
+    },
+    {
+      "fromTown": "13421004002",
+      "toTown": "13421004003",
+      "distanceMetres": 58337.331,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": true
+    },
+    {
+      "fromTown": "13421004003",
+      "toTown": "13421004002",
+      "distanceMetres": 58337.331,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": false
+    },
+    {
+      "fromTown": "134210050",
+      "toTown": "473580040",
+      "distanceMetres": 672857.22,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "47358",
+      "added": true
+    },
+    {
+      "fromTown": "134210050",
+      "toTown": "13421004003",
+      "distanceMetres": 696534.706,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": true
+    },
+    {
+      "fromTown": "134210060",
+      "toTown": "13421002020",
+      "distanceMetres": 1204718.763,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": true
+    },
+    {
+      "fromTown": "155860010",
+      "toTown": "152122860",
+      "distanceMetres": 19027.571,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "15586",
+      "toCity": "15212",
+      "added": true
+    },
+    {
+      "fromTown": "172040550",
+      "toTown": "172040560",
+      "distanceMetres": 25464.66,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "17204",
+      "toCity": "17204",
+      "added": true
+    },
+    {
+      "fromTown": "172040560",
+      "toTown": "172040250",
+      "distanceMetres": 19625.389,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "17204",
+      "toCity": "17204",
+      "added": true
+    },
+    {
+      "fromTown": "222050600",
+      "toTown": "222050910",
+      "distanceMetres": 5800.183,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "22205",
+      "toCity": "22205",
+      "added": true
+    },
+    {
+      "fromTown": "23213724029",
+      "toTown": "234450090",
+      "distanceMetres": 2439.221,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "23213",
+      "toCity": "23445",
+      "added": true
+    },
+    {
+      "fromTown": "23213724029",
+      "toTown": "232137200",
+      "distanceMetres": 4675.834,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "23213",
+      "toCity": "23213",
+      "added": true
+    },
+    {
+      "fromTown": "232160960",
+      "toTown": "232160950",
+      "distanceMetres": 1100.375,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "23216",
+      "toCity": "23216",
+      "added": true
+    },
+    {
+      "fromTown": "242090390",
+      "toTown": "242090180",
+      "distanceMetres": 320.34,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "24209",
+      "toCity": "24209",
+      "added": true
+    },
+    {
+      "fromTown": "242110320",
+      "toTown": "242110100",
+      "distanceMetres": 413.109,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "24211",
+      "toCity": "24211",
+      "added": true
+    },
+    {
+      "fromTown": "242150180",
+      "toTown": "242150150",
+      "distanceMetres": 15.903,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "24215",
+      "toCity": "24215",
+      "added": true
+    },
+    {
+      "fromTown": "282016940",
+      "toTown": "282016950",
+      "distanceMetres": 55.693,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "28201",
+      "toCity": "28201",
+      "added": true
+    },
+    {
+      "fromTown": "28224024007",
+      "toTown": "36202003001",
+      "distanceMetres": 1158.925,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "28224",
+      "toCity": "36202",
+      "added": true
+    },
+    {
+      "fromTown": "28224024007",
+      "toTown": "28224029006",
+      "distanceMetres": 11368.951,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "28224",
+      "toCity": "28224",
+      "added": true
+    },
+    {
+      "fromTown": "28224029006",
+      "toTown": "28224028004",
+      "distanceMetres": 2898.408,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "28224",
+      "toCity": "28224",
+      "added": true
+    },
+    {
+      "fromTown": "303620170",
+      "toTown": "303620040",
+      "distanceMetres": 760.021,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "30362",
+      "toCity": "30362",
+      "added": true
+    },
+    {
+      "fromTown": "304280210",
+      "toTown": "304280010",
+      "distanceMetres": 481.36,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "30428",
+      "toCity": "30428",
+      "added": true
+    },
+    {
+      "fromTown": "32528048001",
+      "toTown": "325250040",
+      "distanceMetres": 2129.953,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "32528",
+      "toCity": "32525",
+      "added": true
+    },
+    {
+      "fromTown": "332050760",
+      "toTown": "332050780",
+      "distanceMetres": 437.818,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "33205",
+      "toCity": "33205",
+      "added": true
+    },
+    {
+      "fromTown": "33205077001",
+      "toTown": "33205077002",
+      "distanceMetres": 944.389,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "33205",
+      "toCity": "33205",
+      "added": true
+    },
+    {
+      "fromTown": "33205077002",
+      "toTown": "33205077001",
+      "distanceMetres": 944.389,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "33205",
+      "toCity": "33205",
+      "added": false
+    },
+    {
+      "fromTown": "332050780",
+      "toTown": "33205007082",
+      "distanceMetres": 398.485,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "33205",
+      "toCity": "33205",
+      "added": true
+    },
+    {
+      "fromTown": "33205083002",
+      "toTown": "33205007079",
+      "distanceMetres": 1399.359,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "33205",
+      "toCity": "33205",
+      "added": true
+    },
+    {
+      "fromTown": "332050840",
+      "toTown": "33205077001",
+      "distanceMetres": 1720.636,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "33205",
+      "toCity": "33205",
+      "added": true
+    },
+    {
+      "fromTown": "33211074018",
+      "toTown": "282120400",
+      "distanceMetres": 432.851,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "33211",
+      "toCity": "28212",
+      "added": true
+    },
+    {
+      "fromTown": "33211074018",
+      "toTown": "33211075036",
+      "distanceMetres": 526.648,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "33211",
+      "toCity": "33211",
+      "added": true
+    },
+    {
+      "fromTown": "33211074019",
+      "toTown": "33212086096",
+      "distanceMetres": 281.176,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "33211",
+      "toCity": "33212",
+      "added": true
+    },
+    {
+      "fromTown": "33211074019",
+      "toTown": "33211074015",
+      "distanceMetres": 494.015,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "33211",
+      "toCity": "33211",
+      "added": true
+    },
+    {
+      "fromTown": "33212086096",
+      "toTown": "33212086094",
+      "distanceMetres": 47.048,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "33212",
+      "toCity": "33212",
+      "added": true
+    },
+    {
+      "fromTown": "34202179001",
+      "toTown": "342022100",
+      "distanceMetres": 204.182,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34202",
+      "toCity": "34202",
+      "added": true
+    },
+    {
+      "fromTown": "34202187025",
+      "toTown": "34202183001",
+      "distanceMetres": 312.237,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34202",
+      "toCity": "34202",
+      "added": true
+    },
+    {
+      "fromTown": "34202193001",
+      "toTown": "34202076001",
+      "distanceMetres": 86.842,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34202",
+      "toCity": "34202",
+      "added": true
+    },
+    {
+      "fromTown": "342022100",
+      "toTown": "34202179001",
+      "distanceMetres": 204.182,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34202",
+      "toCity": "34202",
+      "added": false
+    },
+    {
+      "fromTown": "342022330",
+      "toTown": "382022100",
+      "distanceMetres": 173.691,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34202",
+      "toCity": "38202",
+      "added": true
+    },
+    {
+      "fromTown": "342022330",
+      "toTown": "342022080",
+      "distanceMetres": 6292.556,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "34202",
+      "toCity": "34202",
+      "added": true
+    },
+    {
+      "fromTown": "342050480",
+      "toTown": "342050490",
+      "distanceMetres": 679.806,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34205",
+      "toCity": "34205",
+      "added": true
+    },
+    {
+      "fromTown": "34205098012",
+      "toTown": "38356027001",
+      "distanceMetres": 165.176,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34205",
+      "toCity": "38356",
+      "added": true
+    },
+    {
+      "fromTown": "34205098012",
+      "toTown": "342051080",
+      "distanceMetres": 2114.34,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "34205",
+      "toCity": "34205",
+      "added": true
+    },
+    {
+      "fromTown": "342051070",
+      "toTown": "383560280",
+      "distanceMetres": 26.707,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34205",
+      "toCity": "38356",
+      "added": true
+    },
+    {
+      "fromTown": "342051070",
+      "toTown": "34205099007",
+      "distanceMetres": 2000.834,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "34205",
+      "toCity": "34205",
+      "added": true
+    },
+    {
+      "fromTown": "342051150",
+      "toTown": "342051140",
+      "distanceMetres": 143.644,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34205",
+      "toCity": "34205",
+      "added": true
+    },
+    {
+      "fromTown": "342071200",
+      "toTown": "33205077001",
+      "distanceMetres": 2772.614,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34207",
+      "toCity": "33205",
+      "added": true
+    },
+    {
+      "fromTown": "342071200",
+      "toTown": "34207119001",
+      "distanceMetres": 3606.679,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "34207",
+      "toCity": "34207",
+      "added": true
+    },
+    {
+      "fromTown": "34207139001",
+      "toTown": "342071470",
+      "distanceMetres": 420.186,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34207",
+      "toCity": "34207",
+      "added": true
+    },
+    {
+      "fromTown": "34213104042",
+      "toTown": "342110190",
+      "distanceMetres": 478.44,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "34213",
+      "toCity": "34211",
+      "added": true
+    },
+    {
+      "fromTown": "34213104042",
+      "toTown": "342130990",
+      "distanceMetres": 1774.988,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "34213",
+      "toCity": "34213",
+      "added": true
+    },
+    {
+      "fromTown": "352011020",
+      "toTown": "401060190",
+      "distanceMetres": 301.532,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35201",
+      "toCity": "40106",
+      "added": true
+    },
+    {
+      "fromTown": "352011020",
+      "toTown": "352013360",
+      "distanceMetres": 1943.445,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "35201",
+      "toCity": "35201",
+      "added": true
+    },
+    {
+      "fromTown": "352013140",
+      "toTown": "352013130",
+      "distanceMetres": 5686.655,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35201",
+      "toCity": "35201",
+      "added": true
+    },
+    {
+      "fromTown": "35201408000",
+      "toTown": "35201408012",
+      "distanceMetres": 1323.308,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35201",
+      "toCity": "35201",
+      "added": true
+    },
+    {
+      "fromTown": "352014170",
+      "toTown": "352014180",
+      "distanceMetres": 1405.809,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35201",
+      "toCity": "35201",
+      "added": true
+    },
+    {
+      "fromTown": "352040440",
+      "toTown": "352040830",
+      "distanceMetres": 1393.33,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35204",
+      "toCity": "35204",
+      "added": true
+    },
+    {
+      "fromTown": "352040450",
+      "toTown": "352040730",
+      "distanceMetres": 4214.169,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35204",
+      "toCity": "35204",
+      "added": true
+    },
+    {
+      "fromTown": "352040460",
+      "toTown": "352040450",
+      "distanceMetres": 29081.539,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35204",
+      "toCity": "35204",
+      "added": true
+    },
+    {
+      "fromTown": "352040710",
+      "toTown": "352040720",
+      "distanceMetres": 1632.092,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35204",
+      "toCity": "35204",
+      "added": true
+    },
+    {
+      "fromTown": "352040720",
+      "toTown": "35204033015",
+      "distanceMetres": 1505.994,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35204",
+      "toCity": "35204",
+      "added": true
+    },
+    {
+      "fromTown": "352040730",
+      "toTown": "352040710",
+      "distanceMetres": 3175.583,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35204",
+      "toCity": "35204",
+      "added": true
+    },
+    {
+      "fromTown": "352040830",
+      "toTown": "352040440",
+      "distanceMetres": 1393.33,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35204",
+      "toCity": "35204",
+      "added": false
+    },
+    {
+      "fromTown": "35206055001",
+      "toTown": "352151030",
+      "distanceMetres": 2758.019,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35206",
+      "toCity": "35215",
+      "added": true
+    },
+    {
+      "fromTown": "35206055001",
+      "toTown": "35206068017",
+      "distanceMetres": 9662.546,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "35206",
+      "toCity": "35206",
+      "added": true
+    },
+    {
+      "fromTown": "35208037001",
+      "toTown": "35208037002",
+      "distanceMetres": 1376.509,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35208",
+      "toCity": "35208",
+      "added": true
+    },
+    {
+      "fromTown": "35208037002",
+      "toTown": "35208037001",
+      "distanceMetres": 1376.509,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35208",
+      "toCity": "35208",
+      "added": false
+    },
+    {
+      "fromTown": "35208037003",
+      "toTown": "353050220",
+      "distanceMetres": 1397.86,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35208",
+      "toCity": "35305",
+      "added": true
+    },
+    {
+      "fromTown": "35208037003",
+      "toTown": "35208037002",
+      "distanceMetres": 4842.545,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "35208",
+      "toCity": "35208",
+      "added": true
+    },
+    {
+      "fromTown": "352100010",
+      "toTown": "35341002001",
+      "distanceMetres": 3223.795,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35210",
+      "toCity": "35341",
+      "added": true
+    },
+    {
+      "fromTown": "352100010",
+      "toTown": "35210002203",
+      "distanceMetres": 3460.478,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "35210",
+      "toCity": "35210",
+      "added": true
+    },
+    {
+      "fromTown": "352120110",
+      "toTown": "353050110",
+      "distanceMetres": 3227.111,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35212",
+      "toCity": "35305",
+      "added": true
+    },
+    {
+      "fromTown": "352120110",
+      "toTown": "352120100",
+      "distanceMetres": 4457.804,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "35212",
+      "toCity": "35212",
+      "added": true
+    },
+    {
+      "fromTown": "353050280",
+      "toTown": "353050220",
+      "distanceMetres": 530.96,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35305",
+      "toCity": "35305",
+      "added": true
+    },
+    {
+      "fromTown": "353050030",
+      "toTown": "352120240",
+      "distanceMetres": 1158.891,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35305",
+      "toCity": "35212",
+      "added": true
+    },
+    {
+      "fromTown": "353050030",
+      "toTown": "353050040",
+      "distanceMetres": 1421.6,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "35305",
+      "toCity": "35305",
+      "added": true
+    },
+    {
+      "fromTown": "353050220",
+      "toTown": "353050280",
+      "distanceMetres": 530.96,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35305",
+      "toCity": "35305",
+      "added": false
+    },
+    {
+      "fromTown": "353410030",
+      "toTown": "35341002001",
+      "distanceMetres": 2708.408,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35341",
+      "toCity": "35341",
+      "added": true
+    },
+    {
+      "fromTown": "353410040",
+      "toTown": "352120110",
+      "distanceMetres": 4018.023,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35341",
+      "toCity": "35212",
+      "added": true
+    },
+    {
+      "fromTown": "353410040",
+      "toTown": "35341002001",
+      "distanceMetres": 6064.421,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "35341",
+      "toCity": "35341",
+      "added": true
+    },
+    {
+      "fromTown": "353430110",
+      "toTown": "353440110",
+      "distanceMetres": 861.281,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35343",
+      "toCity": "35344",
+      "added": true
+    },
+    {
+      "fromTown": "353430110",
+      "toTown": "353430090",
+      "distanceMetres": 1063.365,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "35343",
+      "toCity": "35343",
+      "added": true
+    },
+    {
+      "fromTown": "353440110",
+      "toTown": "353430110",
+      "distanceMetres": 861.281,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "35344",
+      "toCity": "35343",
+      "added": false
+    },
+    {
+      "fromTown": "353440110",
+      "toTown": "353440100",
+      "distanceMetres": 1472.511,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "35344",
+      "toCity": "35344",
+      "added": true
+    },
+    {
+      "fromTown": "372011420",
+      "toTown": "372011430",
+      "distanceMetres": 786.449,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37201",
+      "toCity": "37201",
+      "added": true
+    },
+    {
+      "fromTown": "372011430",
+      "toTown": "372011420",
+      "distanceMetres": 786.449,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37201",
+      "toCity": "37201",
+      "added": false
+    },
+    {
+      "fromTown": "372020450",
+      "toTown": "33202159000",
+      "distanceMetres": 691.629,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37202",
+      "toCity": "33202",
+      "added": true
+    },
+    {
+      "fromTown": "372020450",
+      "toTown": "372020530",
+      "distanceMetres": 2482.801,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "37202",
+      "toCity": "37202",
+      "added": true
+    },
+    {
+      "fromTown": "372020530",
+      "toTown": "372020480",
+      "distanceMetres": 1039.122,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37202",
+      "toCity": "37202",
+      "added": true
+    },
+    {
+      "fromTown": "372020590",
+      "toTown": "372020620",
+      "distanceMetres": 1965.369,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37202",
+      "toCity": "37202",
+      "added": true
+    },
+    {
+      "fromTown": "372020610",
+      "toTown": "372020620",
+      "distanceMetres": 1274.794,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37202",
+      "toCity": "37202",
+      "added": true
+    },
+    {
+      "fromTown": "372020620",
+      "toTown": "372020610",
+      "distanceMetres": 1274.794,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37202",
+      "toCity": "37202",
+      "added": false
+    },
+    {
+      "fromTown": "372020640",
+      "toTown": "37202063001",
+      "distanceMetres": 685.534,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37202",
+      "toCity": "37202",
+      "added": true
+    },
+    {
+      "fromTown": "372050230",
+      "toTown": "383560260",
+      "distanceMetres": 8058.035,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37205",
+      "toCity": "38356",
+      "added": true
+    },
+    {
+      "fromTown": "372050230",
+      "toTown": "37205006001",
+      "distanceMetres": 8283.963,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "37205",
+      "toCity": "37205",
+      "added": true
+    },
+    {
+      "fromTown": "372080340",
+      "toTown": "372080310",
+      "distanceMetres": 908.339,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37208",
+      "toCity": "37208",
+      "added": true
+    },
+    {
+      "fromTown": "372080350",
+      "toTown": "372080340",
+      "distanceMetres": 1365.702,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37208",
+      "toCity": "37208",
+      "added": true
+    },
+    {
+      "fromTown": "37322001001",
+      "toTown": "37322012002",
+      "distanceMetres": 989.817,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37322",
+      "toCity": "37322",
+      "added": true
+    },
+    {
+      "fromTown": "37322012002",
+      "toTown": "373220180",
+      "distanceMetres": 577.987,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37322",
+      "toCity": "37322",
+      "added": true
+    },
+    {
+      "fromTown": "373220180",
+      "toTown": "37322012002",
+      "distanceMetres": 577.987,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37322",
+      "toCity": "37322",
+      "added": false
+    },
+    {
+      "fromTown": "374040330",
+      "toTown": "374040340",
+      "distanceMetres": 1768.611,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37404",
+      "toCity": "37404",
+      "added": true
+    },
+    {
+      "fromTown": "374040340",
+      "toTown": "374040330",
+      "distanceMetres": 1768.611,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "37404",
+      "toCity": "37404",
+      "added": false
+    },
+    {
+      "fromTown": "382013120",
+      "toTown": "382013550",
+      "distanceMetres": 6630.738,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38201",
+      "toCity": "38201",
+      "added": true
+    },
+    {
+      "fromTown": "382013460",
+      "toTown": "353050340",
+      "distanceMetres": 807.289,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38201",
+      "toCity": "35305",
+      "added": true
+    },
+    {
+      "fromTown": "382013460",
+      "toTown": "382013470",
+      "distanceMetres": 1024.513,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "38201",
+      "toCity": "38201",
+      "added": true
+    },
+    {
+      "fromTown": "382013470",
+      "toTown": "382013460",
+      "distanceMetres": 1024.513,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38201",
+      "toCity": "38201",
+      "added": false
+    },
+    {
+      "fromTown": "382013490",
+      "toTown": "382013470",
+      "distanceMetres": 2154.282,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38201",
+      "toCity": "38201",
+      "added": true
+    },
+    {
+      "fromTown": "382013570",
+      "toTown": "382013610",
+      "distanceMetres": 427.71,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38201",
+      "toCity": "38201",
+      "added": true
+    },
+    {
+      "fromTown": "382013610",
+      "toTown": "382013570",
+      "distanceMetres": 427.71,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38201",
+      "toCity": "38201",
+      "added": false
+    },
+    {
+      "fromTown": "382013620",
+      "toTown": "382013610",
+      "distanceMetres": 661.554,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38201",
+      "toCity": "38201",
+      "added": true
+    },
+    {
+      "fromTown": "382021110",
+      "toTown": "38202145004",
+      "distanceMetres": 244.292,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38202",
+      "toCity": "38202",
+      "added": true
+    },
+    {
+      "fromTown": "382021120",
+      "toTown": "382021800",
+      "distanceMetres": 449.0,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38202",
+      "toCity": "38202",
+      "added": true
+    },
+    {
+      "fromTown": "382021790",
+      "toTown": "382021800",
+      "distanceMetres": 76.916,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38202",
+      "toCity": "38202",
+      "added": true
+    },
+    {
+      "fromTown": "382021900",
+      "toTown": "382021890",
+      "distanceMetres": 5695.23,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38202",
+      "toCity": "38202",
+      "added": true
+    },
+    {
+      "fromTown": "382022090",
+      "toTown": "382022100",
+      "distanceMetres": 173.215,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38202",
+      "toCity": "38202",
+      "added": true
+    },
+    {
+      "fromTown": "382022100",
+      "toTown": "382022090",
+      "distanceMetres": 173.215,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38202",
+      "toCity": "38202",
+      "added": false
+    },
+    {
+      "fromTown": "382022120",
+      "toTown": "382022060",
+      "distanceMetres": 279.653,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38202",
+      "toCity": "38202",
+      "added": true
+    },
+    {
+      "fromTown": "382030840",
+      "toTown": "382030830",
+      "distanceMetres": 3231.116,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38203",
+      "toCity": "38203",
+      "added": true
+    },
+    {
+      "fromTown": "38203145001",
+      "toTown": "382031460",
+      "distanceMetres": 1560.997,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38203",
+      "toCity": "38203",
+      "added": true
+    },
+    {
+      "fromTown": "38204033001",
+      "toTown": "382140970",
+      "distanceMetres": 1341.747,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38204",
+      "toCity": "38214",
+      "added": true
+    },
+    {
+      "fromTown": "38204033001",
+      "toTown": "38204032001",
+      "distanceMetres": 1342.18,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "38204",
+      "toCity": "38204",
+      "added": true
+    },
+    {
+      "fromTown": "382070450",
+      "toTown": "353050270",
+      "distanceMetres": 8908.196,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38207",
+      "toCity": "35305",
+      "added": true
+    },
+    {
+      "fromTown": "382070450",
+      "toTown": "382070480",
+      "distanceMetres": 11536.616,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "38207",
+      "toCity": "38207",
+      "added": true
+    },
+    {
+      "fromTown": "383560011",
+      "toTown": "34207139001",
+      "distanceMetres": 3551.035,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38356",
+      "toCity": "34207",
+      "added": true
+    },
+    {
+      "fromTown": "383560011",
+      "toTown": "383560012",
+      "distanceMetres": 4053.114,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "38356",
+      "toCity": "38356",
+      "added": true
+    },
+    {
+      "fromTown": "383560140",
+      "toTown": "38356027001",
+      "distanceMetres": 389.479,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38356",
+      "toCity": "38356",
+      "added": true
+    },
+    {
+      "fromTown": "383560130",
+      "toTown": "383560160",
+      "distanceMetres": 3439.159,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38356",
+      "toCity": "38356",
+      "added": true
+    },
+    {
+      "fromTown": "383560160",
+      "toTown": "383560190",
+      "distanceMetres": 2859.751,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38356",
+      "toCity": "38356",
+      "added": true
+    },
+    {
+      "fromTown": "383560190",
+      "toTown": "383560260",
+      "distanceMetres": 2822.423,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38356",
+      "toCity": "38356",
+      "added": true
+    },
+    {
+      "fromTown": "383560260",
+      "toTown": "383560190",
+      "distanceMetres": 2822.423,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38356",
+      "toCity": "38356",
+      "added": false
+    },
+    {
+      "fromTown": "38356027001",
+      "toTown": "34205098012",
+      "distanceMetres": 165.176,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38356",
+      "toCity": "34205",
+      "added": false
+    },
+    {
+      "fromTown": "38356027001",
+      "toTown": "383560140",
+      "distanceMetres": 389.479,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "38356",
+      "toCity": "38356",
+      "added": false
+    },
+    {
+      "fromTown": "383560280",
+      "toTown": "342051070",
+      "distanceMetres": 26.707,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38356",
+      "toCity": "34205",
+      "added": false
+    },
+    {
+      "fromTown": "383560280",
+      "toTown": "38356027001",
+      "distanceMetres": 427.94,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "38356",
+      "toCity": "38356",
+      "added": true
+    },
+    {
+      "fromTown": "384420260",
+      "toTown": "38204039001",
+      "distanceMetres": 942.544,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38442",
+      "toCity": "38204",
+      "added": true
+    },
+    {
+      "fromTown": "384420260",
+      "toTown": "384420110",
+      "distanceMetres": 1515.103,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "38442",
+      "toCity": "38442",
+      "added": true
+    },
+    {
+      "fromTown": "385060620",
+      "toTown": "385060630",
+      "distanceMetres": 573.854,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "38506",
+      "toCity": "38506",
+      "added": true
+    },
+    {
+      "fromTown": "39208053001",
+      "toTown": "39208053002",
+      "distanceMetres": 5904.223,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "39208",
+      "toCity": "39208",
+      "added": true
+    },
+    {
+      "fromTown": "39208053002",
+      "toTown": "392080540",
+      "distanceMetres": 2014.598,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "39208",
+      "toCity": "39208",
+      "added": true
+    },
+    {
+      "fromTown": "401060010",
+      "toTown": "401060190",
+      "distanceMetres": 2869.977,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "40106",
+      "toCity": "40106",
+      "added": true
+    },
+    {
+      "fromTown": "401060190",
+      "toTown": "352011020",
+      "distanceMetres": 301.532,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "40106",
+      "toCity": "35201",
+      "added": false
+    },
+    {
+      "fromTown": "401060190",
+      "toTown": "401060010",
+      "distanceMetres": 2869.977,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "40106",
+      "toCity": "40106",
+      "added": false
+    },
+    {
+      "fromTown": "401071310",
+      "toTown": "401019990",
+      "distanceMetres": 2457.165,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "40107",
+      "toCity": "40101",
+      "added": true
+    },
+    {
+      "fromTown": "401071310",
+      "toTown": "401070700",
+      "distanceMetres": 4393.427,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "40107",
+      "toCity": "40107",
+      "added": true
+    },
+    {
+      "fromTown": "401350630",
+      "toTown": "42210089006",
+      "distanceMetres": 23173.0,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "40135",
+      "toCity": "42210",
+      "added": true
+    },
+    {
+      "fromTown": "401350630",
+      "toTown": "401350620",
+      "distanceMetres": 25512.21,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "40135",
+      "toCity": "40135",
+      "added": true
+    },
+    {
+      "fromTown": "402021630",
+      "toTown": "402021160",
+      "distanceMetres": 1588.598,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "40202",
+      "toCity": "40202",
+      "added": true
+    },
+    {
+      "fromTown": "402021640",
+      "toTown": "402021630",
+      "distanceMetres": 4820.172,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "40202",
+      "toCity": "40202",
+      "added": true
+    },
+    {
+      "fromTown": "40220060001",
+      "toTown": "40220059001",
+      "distanceMetres": 1551.688,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "40220",
+      "toCity": "40220",
+      "added": true
+    },
+    {
+      "fromTown": "402200650",
+      "toTown": "40220060001",
+      "distanceMetres": 3466.083,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "40220",
+      "toCity": "40220",
+      "added": true
+    },
+    {
+      "fromTown": "402300960",
+      "toTown": "40230095001",
+      "distanceMetres": 3133.088,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "40230",
+      "toCity": "40230",
+      "added": true
+    },
+    {
+      "fromTown": "403450090",
+      "toTown": "403450080",
+      "distanceMetres": 5764.415,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "40345",
+      "toCity": "40345",
+      "added": true
+    },
+    {
+      "fromTown": "412021090",
+      "toTown": "41202105001",
+      "distanceMetres": 610.655,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "41202",
+      "toCity": "41202",
+      "added": true
+    },
+    {
+      "fromTown": "412021950",
+      "toTown": "41202187001",
+      "distanceMetres": 1161.505,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "41202",
+      "toCity": "41202",
+      "added": true
+    },
+    {
+      "fromTown": "412022010",
+      "toTown": "412022020",
+      "distanceMetres": 614.973,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "41202",
+      "toCity": "41202",
+      "added": true
+    },
+    {
+      "fromTown": "412022020",
+      "toTown": "412022010",
+      "distanceMetres": 614.973,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "41202",
+      "toCity": "41202",
+      "added": false
+    },
+    {
+      "fromTown": "41441004020",
+      "toTown": "41441004019",
+      "distanceMetres": 22.479,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "41441",
+      "toCity": "41441",
+      "added": true
+    },
+    {
+      "fromTown": "422013690",
+      "toTown": "422013680",
+      "distanceMetres": 522.009,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42201",
+      "toCity": "42201",
+      "added": true
+    },
+    {
+      "fromTown": "422014070",
+      "toTown": "422014040",
+      "distanceMetres": 2801.811,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42201",
+      "toCity": "42201",
+      "added": true
+    },
+    {
+      "fromTown": "422021130",
+      "toTown": "422021140",
+      "distanceMetres": 240.719,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42202",
+      "toCity": "42202",
+      "added": true
+    },
+    {
+      "fromTown": "422022610",
+      "toTown": "422022620",
+      "distanceMetres": 428.648,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42202",
+      "toCity": "42202",
+      "added": true
+    },
+    {
+      "fromTown": "422023090",
+      "toTown": "42202304009",
+      "distanceMetres": 29.395,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42202",
+      "toCity": "42202",
+      "added": true
+    },
+    {
+      "fromTown": "422070320",
+      "toTown": "422070210",
+      "distanceMetres": 1589.916,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42207",
+      "toCity": "42207",
+      "added": true
+    },
+    {
+      "fromTown": "42207120005",
+      "toTown": "422070320",
+      "distanceMetres": 2007.799,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42207",
+      "toCity": "42207",
+      "added": true
+    },
+    {
+      "fromTown": "422071290",
+      "toTown": "422070570",
+      "distanceMetres": 662.901,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42207",
+      "toCity": "42207",
+      "added": true
+    },
+    {
+      "fromTown": "42208606000",
+      "toTown": "41205006013",
+      "distanceMetres": 183.554,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42208",
+      "toCity": "41205",
+      "added": true
+    },
+    {
+      "fromTown": "42208606000",
+      "toTown": "422085210",
+      "distanceMetres": 1173.092,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "42208",
+      "toCity": "42208",
+      "added": true
+    },
+    {
+      "fromTown": "422090550",
+      "toTown": "422090500",
+      "distanceMetres": 11.977,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42209",
+      "toCity": "42209",
+      "added": true
+    },
+    {
+      "fromTown": "422090500",
+      "toTown": "422090550",
+      "distanceMetres": 11.977,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42209",
+      "toCity": "42209",
+      "added": false
+    },
+    {
+      "fromTown": "42210098007",
+      "toTown": "422100990",
+      "distanceMetres": 223.358,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42210",
+      "toCity": "42210",
+      "added": true
+    },
+    {
+      "fromTown": "422100250",
+      "toTown": "422100270",
+      "distanceMetres": 654.263,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42210",
+      "toCity": "42210",
+      "added": true
+    },
+    {
+      "fromTown": "422100270",
+      "toTown": "422100250",
+      "distanceMetres": 654.263,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42210",
+      "toCity": "42210",
+      "added": false
+    },
+    {
+      "fromTown": "422100990",
+      "toTown": "42210098007",
+      "distanceMetres": 223.358,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42210",
+      "toCity": "42210",
+      "added": false
+    },
+    {
+      "fromTown": "422110230",
+      "toTown": "422110310",
+      "distanceMetres": 1497.224,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42211",
+      "toCity": "42211",
+      "added": true
+    },
+    {
+      "fromTown": "422110310",
+      "toTown": "422110230",
+      "distanceMetres": 1497.224,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42211",
+      "toCity": "42211",
+      "added": false
+    },
+    {
+      "fromTown": "422110330",
+      "toTown": "42211147008",
+      "distanceMetres": 2881.654,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42211",
+      "toCity": "42211",
+      "added": true
+    },
+    {
+      "fromTown": "422110350",
+      "toTown": "42211146001",
+      "distanceMetres": 1085.993,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42211",
+      "toCity": "42211",
+      "added": true
+    },
+    {
+      "fromTown": "422111120",
+      "toTown": "42211111011",
+      "distanceMetres": 3105.723,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42211",
+      "toCity": "42211",
+      "added": true
+    },
+    {
+      "fromTown": "422111450",
+      "toTown": "42211130015",
+      "distanceMetres": 2324.351,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42211",
+      "toCity": "42211",
+      "added": true
+    },
+    {
+      "fromTown": "42212009007",
+      "toTown": "42212005017",
+      "distanceMetres": 629.296,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42212",
+      "toCity": "42212",
+      "added": true
+    },
+    {
+      "fromTown": "42212048008",
+      "toTown": "42212045041",
+      "distanceMetres": 806.025,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42212",
+      "toCity": "42212",
+      "added": true
+    },
+    {
+      "fromTown": "42212051001",
+      "toTown": "42212052001",
+      "distanceMetres": 6908.123,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42212",
+      "toCity": "42212",
+      "added": true
+    },
+    {
+      "fromTown": "42212052001",
+      "toTown": "42411033012",
+      "distanceMetres": 2492.263,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42212",
+      "toCity": "42411",
+      "added": true
+    },
+    {
+      "fromTown": "42212052001",
+      "toTown": "42212051001",
+      "distanceMetres": 6908.123,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "42212",
+      "toCity": "42212",
+      "added": false
+    },
+    {
+      "fromTown": "423830070",
+      "toTown": "423830080",
+      "distanceMetres": 397.92,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42383",
+      "toCity": "42383",
+      "added": true
+    },
+    {
+      "fromTown": "423830080",
+      "toTown": "423830070",
+      "distanceMetres": 397.92,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42383",
+      "toCity": "42383",
+      "added": false
+    },
+    {
+      "fromTown": "423830100",
+      "toTown": "42383003029",
+      "distanceMetres": 524.434,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42383",
+      "toCity": "42383",
+      "added": true
+    },
+    {
+      "fromTown": "423830120",
+      "toTown": "42411021001",
+      "distanceMetres": 612.637,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42383",
+      "toCity": "42411",
+      "added": true
+    },
+    {
+      "fromTown": "423830120",
+      "toTown": "423830110",
+      "distanceMetres": 1027.553,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "42383",
+      "toCity": "42383",
+      "added": true
+    },
+    {
+      "fromTown": "42411007001",
+      "toTown": "42411009001",
+      "distanceMetres": 285.851,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "42411",
+      "toCity": "42411",
+      "added": true
+    },
+    {
+      "fromTown": "432120050",
+      "toTown": "432120020",
+      "distanceMetres": 3213.693,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "43212",
+      "toCity": "43212",
+      "added": true
+    },
+    {
+      "fromTown": "432120150",
+      "toTown": "43215052001",
+      "distanceMetres": 144.621,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "43212",
+      "toCity": "43215",
+      "added": true
+    },
+    {
+      "fromTown": "432120150",
+      "toTown": "432120030",
+      "distanceMetres": 14860.983,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "43212",
+      "toCity": "43212",
+      "added": true
+    },
+    {
+      "fromTown": "43215052001",
+      "toTown": "432120150",
+      "distanceMetres": 144.621,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "43215",
+      "toCity": "43212",
+      "added": false
+    },
+    {
+      "fromTown": "43215052001",
+      "toTown": "43215053001",
+      "distanceMetres": 808.393,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "43215",
+      "toCity": "43215",
+      "added": true
+    },
+    {
+      "fromTown": "432150510",
+      "toTown": "43215052003",
+      "distanceMetres": 703.315,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "43215",
+      "toCity": "43215",
+      "added": true
+    },
+    {
+      "fromTown": "43215053003",
+      "toTown": "432120150",
+      "distanceMetres": 600.066,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "43215",
+      "toCity": "43212",
+      "added": true
+    },
+    {
+      "fromTown": "43215053003",
+      "toTown": "43215050009",
+      "distanceMetres": 1151.052,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "43215",
+      "toCity": "43215",
+      "added": true
+    },
+    {
+      "fromTown": "43215064013",
+      "toTown": "43215064012",
+      "distanceMetres": 316.44,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "43215",
+      "toCity": "43215",
+      "added": true
+    },
+    {
+      "fromTown": "442051040",
+      "toTown": "442051030",
+      "distanceMetres": 540.758,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "44205",
+      "toCity": "44205",
+      "added": true
+    },
+    {
+      "fromTown": "443220010",
+      "toTown": "442140110",
+      "distanceMetres": 3831.145,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "44322",
+      "toCity": "44214",
+      "added": true
+    },
+    {
+      "fromTown": "452031370",
+      "toTown": "45203179005",
+      "distanceMetres": 1009.033,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "45203",
+      "toCity": "45203",
+      "added": true
+    },
+    {
+      "fromTown": "45207006005",
+      "toTown": "45207006004",
+      "distanceMetres": 376.365,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "45207",
+      "toCity": "45207",
+      "added": true
+    },
+    {
+      "fromTown": "462017180",
+      "toTown": "462016560",
+      "distanceMetres": 1253.515,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46201",
+      "toCity": "46201",
+      "added": true
+    },
+    {
+      "fromTown": "462130250",
+      "toTown": "462130240",
+      "distanceMetres": 9773.134,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46213",
+      "toCity": "46213",
+      "added": true
+    },
+    {
+      "fromTown": "462150780",
+      "toTown": "462150810",
+      "distanceMetres": 196.939,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46215",
+      "toCity": "46215",
+      "added": true
+    },
+    {
+      "fromTown": "462150810",
+      "toTown": "462150780",
+      "distanceMetres": 196.939,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46215",
+      "toCity": "46215",
+      "added": false
+    },
+    {
+      "fromTown": "462150910",
+      "toTown": "462150810",
+      "distanceMetres": 1096.791,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46215",
+      "toCity": "46215",
+      "added": true
+    },
+    {
+      "fromTown": "465250310",
+      "toTown": "465250490",
+      "distanceMetres": 975.258,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46525",
+      "toCity": "46525",
+      "added": true
+    },
+    {
+      "fromTown": "463030020",
+      "toTown": "463030030",
+      "distanceMetres": 5115.306,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46303",
+      "toCity": "46303",
+      "added": true
+    },
+    {
+      "fromTown": "463030030",
+      "toTown": "463030020",
+      "distanceMetres": 5115.306,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46303",
+      "toCity": "46303",
+      "added": false
+    },
+    {
+      "fromTown": "463040010",
+      "toTown": "463040030",
+      "distanceMetres": 9431.293,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": true
+    },
+    {
+      "fromTown": "463040020",
+      "toTown": "463040060",
+      "distanceMetres": 14106.453,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": true
+    },
+    {
+      "fromTown": "463040030",
+      "toTown": "463040010",
+      "distanceMetres": 9431.293,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": false
+    },
+    {
+      "fromTown": "463040040",
+      "toTown": "463040050",
+      "distanceMetres": 11988.181,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": true
+    },
+    {
+      "fromTown": "463040050",
+      "toTown": "463040040",
+      "distanceMetres": 11988.181,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": false
+    },
+    {
+      "fromTown": "463040060",
+      "toTown": "463040020",
+      "distanceMetres": 14106.453,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": false
+    },
+    {
+      "fromTown": "463040070",
+      "toTown": "463040020",
+      "distanceMetres": 16658.371,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": true
+    },
+    {
+      "fromTown": "463040080",
+      "toTown": "463040030",
+      "distanceMetres": 13219.714,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": true
+    },
+    {
+      "fromTown": "463040090",
+      "toTown": "463040010",
+      "distanceMetres": 20437.417,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": true
+    },
+    {
+      "fromTown": "463040100",
+      "toTown": "463040110",
+      "distanceMetres": 2370.277,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": true
+    },
+    {
+      "fromTown": "463040110",
+      "toTown": "463040100",
+      "distanceMetres": 2370.277,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": false
+    },
+    {
+      "fromTown": "464040010",
+      "toTown": "464040040",
+      "distanceMetres": 1109.761,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46404",
+      "toCity": "46404",
+      "added": true
+    },
+    {
+      "fromTown": "464040060",
+      "toTown": "462060090",
+      "distanceMetres": 346.073,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46404",
+      "toCity": "46206",
+      "added": true
+    },
+    {
+      "fromTown": "464040060",
+      "toTown": "464040010",
+      "distanceMetres": 11273.589,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "46404",
+      "toCity": "46404",
+      "added": true
+    },
+    {
+      "fromTown": "465050090",
+      "toTown": "465050100",
+      "distanceMetres": 11910.522,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46505",
+      "toCity": "46505",
+      "added": true
+    },
+    {
+      "fromTown": "465050100",
+      "toTown": "465050090",
+      "distanceMetres": 11910.522,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46505",
+      "toCity": "46505",
+      "added": false
+    },
+    {
+      "fromTown": "465250070",
+      "toTown": "465250200",
+      "distanceMetres": 1565.851,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46525",
+      "toCity": "46525",
+      "added": true
+    },
+    {
+      "fromTown": "465250490",
+      "toTown": "465250310",
+      "distanceMetres": 975.258,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46525",
+      "toCity": "46525",
+      "added": false
+    },
+    {
+      "fromTown": "465250200",
+      "toTown": "465250070",
+      "distanceMetres": 1565.851,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46525",
+      "toCity": "46525",
+      "added": false
+    },
+    {
+      "fromTown": "465300260",
+      "toTown": "465250070",
+      "distanceMetres": 21734.913,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46530",
+      "toCity": "46525",
+      "added": true
+    },
+    {
+      "fromTown": "46534001000",
+      "toTown": "465350030",
+      "distanceMetres": 31460.513,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "46534",
+      "toCity": "46535",
+      "added": true
+    },
+    {
+      "fromTown": "473810020",
+      "toTown": "473810090",
+      "distanceMetres": 1966.248,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47381",
+      "toCity": "47381",
+      "added": true
+    },
+    {
+      "fromTown": "472070240",
+      "toTown": "472140150",
+      "distanceMetres": 128744.094,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47207",
+      "toCity": "47214",
+      "added": true
+    },
+    {
+      "fromTown": "472070240",
+      "toTown": "472070180",
+      "distanceMetres": 144646.089,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "47207",
+      "toCity": "47207",
+      "added": true
+    },
+    {
+      "fromTown": "472140270",
+      "toTown": "472140320",
+      "distanceMetres": 1238.352,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47214",
+      "toCity": "47214",
+      "added": true
+    },
+    {
+      "fromTown": "472140140",
+      "toTown": "472140120",
+      "distanceMetres": 1259.52,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47214",
+      "toCity": "47214",
+      "added": true
+    },
+    {
+      "fromTown": "472140170",
+      "toTown": "472140120",
+      "distanceMetres": 3249.127,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47214",
+      "toCity": "47214",
+      "added": true
+    },
+    {
+      "fromTown": "472140320",
+      "toTown": "472140270",
+      "distanceMetres": 1238.352,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47214",
+      "toCity": "47214",
+      "added": false
+    },
+    {
+      "fromTown": "473150020",
+      "toTown": "473080240",
+      "distanceMetres": 4873.682,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47315",
+      "toCity": "47308",
+      "added": true
+    },
+    {
+      "fromTown": "473530010",
+      "toTown": "473540040",
+      "distanceMetres": 1660.727,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47353",
+      "toCity": "47354",
+      "added": true
+    },
+    {
+      "fromTown": "473530010",
+      "toTown": "473530030",
+      "distanceMetres": 3662.145,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "47353",
+      "toCity": "47353",
+      "added": true
+    },
+    {
+      "fromTown": "473530030",
+      "toTown": "473530010",
+      "distanceMetres": 3662.145,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47353",
+      "toCity": "47353",
+      "added": false
+    },
+    {
+      "fromTown": "473540050",
+      "toTown": "473540020",
+      "distanceMetres": 604.823,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47354",
+      "toCity": "47354",
+      "added": true
+    },
+    {
+      "fromTown": "473540020",
+      "toTown": "473540030",
+      "distanceMetres": 185.406,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47354",
+      "toCity": "47354",
+      "added": true
+    },
+    {
+      "fromTown": "473540030",
+      "toTown": "473540020",
+      "distanceMetres": 185.406,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47354",
+      "toCity": "47354",
+      "added": false
+    },
+    {
+      "fromTown": "473550020",
+      "toTown": "473560010",
+      "distanceMetres": 22288.592,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47355",
+      "toCity": "47356",
+      "added": true
+    },
+    {
+      "fromTown": "473560010",
+      "toTown": "473540050",
+      "distanceMetres": 16718.546,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47356",
+      "toCity": "47354",
+      "added": true
+    },
+    {
+      "fromTown": "473580040",
+      "toTown": "473570060",
+      "distanceMetres": 149116.405,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47358",
+      "toCity": "47357",
+      "added": true
+    },
+    {
+      "fromTown": "473580040",
+      "toTown": "473580030",
+      "distanceMetres": 162362.92,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "47358",
+      "toCity": "47358",
+      "added": true
+    },
+    {
+      "fromTown": "473590050",
+      "toTown": "473590040",
+      "distanceMetres": 413.093,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47359",
+      "toCity": "47359",
+      "added": true
+    },
+    {
+      "fromTown": "473600050",
+      "toTown": "473590040",
+      "distanceMetres": 1735.132,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47360",
+      "toCity": "47359",
+      "added": true
+    },
+    {
+      "fromTown": "473610090",
+      "toTown": "473560010",
+      "distanceMetres": 19798.675,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47361",
+      "toCity": "47356",
+      "added": true
+    },
+    {
+      "fromTown": "473610090",
+      "toTown": "47361027001",
+      "distanceMetres": 213129.243,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "47361",
+      "toCity": "47361",
+      "added": true
+    },
+    {
+      "fromTown": "47361027001",
+      "toTown": "465340070",
+      "distanceMetres": 58565.505,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47361",
+      "toCity": "46534",
+      "added": true
+    },
+    {
+      "fromTown": "47361027001",
+      "toTown": "473610010",
+      "distanceMetres": 197179.959,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "47361",
+      "toCity": "47361",
+      "added": true
+    },
+    {
+      "fromTown": "473750030",
+      "toTown": "473750010",
+      "distanceMetres": 7560.098,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47375",
+      "toCity": "47375",
+      "added": true
+    },
+    {
+      "fromTown": "473810080",
+      "toTown": "473810010",
+      "distanceMetres": 4881.073,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47381",
+      "toCity": "47381",
+      "added": true
+    },
+    {
+      "fromTown": "473810090",
+      "toTown": "473810020",
+      "distanceMetres": 1966.248,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47381",
+      "toCity": "47381",
+      "added": false
+    },
+    {
+      "fromTown": "473810100",
+      "toTown": "472070220",
+      "distanceMetres": 3225.217,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47381",
+      "toCity": "47207",
+      "added": true
+    },
+    {
+      "fromTown": "473810100",
+      "toTown": "473810090",
+      "distanceMetres": 7332.808,
+      "reason": "same_municipality",
+      "round": 1,
+      "fromCity": "47381",
+      "toCity": "47381",
+      "added": true
+    },
+    {
+      "fromTown": "473810110",
+      "toTown": "473810120",
+      "distanceMetres": 3706.869,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47381",
+      "toCity": "47381",
+      "added": true
+    },
+    {
+      "fromTown": "473810120",
+      "toTown": "473810110",
+      "distanceMetres": 3706.869,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47381",
+      "toCity": "47381",
+      "added": false
+    },
+    {
+      "fromTown": "473810130",
+      "toTown": "473810120",
+      "distanceMetres": 20112.096,
+      "reason": "nearest_component",
+      "round": 1,
+      "fromCity": "47381",
+      "toCity": "47381",
+      "added": true
+    },
+    {
+      "fromTown": "01484022001",
+      "toTown": "014830050",
+      "distanceMetres": 21640.19,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "01484",
+      "toCity": "01483",
+      "added": true
+    },
+    {
+      "fromTown": "01484022001",
+      "toTown": "014840240",
+      "distanceMetres": 22118.389,
+      "reason": "same_municipality",
+      "round": 2,
+      "fromCity": "01484",
+      "toCity": "01484",
+      "added": true
+    },
+    {
+      "fromTown": "01519011003",
+      "toTown": "01214600005",
+      "distanceMetres": 19152.6,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "01519",
+      "toCity": "01214",
+      "added": true
+    },
+    {
+      "fromTown": "133810040",
+      "toTown": "13364001018",
+      "distanceMetres": 28998.882,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "13381",
+      "toCity": "13364",
+      "added": true
+    },
+    {
+      "fromTown": "134010010",
+      "toTown": "133820010",
+      "distanceMetres": 78056.624,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "13401",
+      "toCity": "13382",
+      "added": true
+    },
+    {
+      "fromTown": "13421001011",
+      "toTown": "13421001031",
+      "distanceMetres": 451.539,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": true
+    },
+    {
+      "fromTown": "13421001031",
+      "toTown": "13421001011",
+      "distanceMetres": 451.539,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": false
+    },
+    {
+      "fromTown": "34202179001",
+      "toTown": "34202186001",
+      "distanceMetres": 692.629,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "34202",
+      "toCity": "34202",
+      "added": true
+    },
+    {
+      "fromTown": "352040440",
+      "toTown": "352040710",
+      "distanceMetres": 2019.308,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "35204",
+      "toCity": "35204",
+      "added": true
+    },
+    {
+      "fromTown": "372011420",
+      "toTown": "372010562",
+      "distanceMetres": 2285.607,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "37201",
+      "toCity": "37201",
+      "added": true
+    },
+    {
+      "fromTown": "372020540",
+      "toTown": "372020480",
+      "distanceMetres": 2234.495,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "37202",
+      "toCity": "37202",
+      "added": true
+    },
+    {
+      "fromTown": "37322016001",
+      "toTown": "373640010",
+      "distanceMetres": 1301.972,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "37322",
+      "toCity": "37364",
+      "added": true
+    },
+    {
+      "fromTown": "374040340",
+      "toTown": "33205083001",
+      "distanceMetres": 2560.321,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "37404",
+      "toCity": "33205",
+      "added": true
+    },
+    {
+      "fromTown": "374040340",
+      "toTown": "374040320",
+      "distanceMetres": 9696.606,
+      "reason": "same_municipality",
+      "round": 2,
+      "fromCity": "37404",
+      "toCity": "37404",
+      "added": true
+    },
+    {
+      "fromTown": "382013530",
+      "toTown": "382013480",
+      "distanceMetres": 1258.197,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "38201",
+      "toCity": "38201",
+      "added": true
+    },
+    {
+      "fromTown": "412022020",
+      "toTown": "412022170",
+      "distanceMetres": 2041.158,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "41202",
+      "toCity": "41202",
+      "added": true
+    },
+    {
+      "fromTown": "422090190",
+      "toTown": "42210065001",
+      "distanceMetres": 46357.147,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "42209",
+      "toCity": "42210",
+      "added": true
+    },
+    {
+      "fromTown": "422100270",
+      "toTown": "42210014016",
+      "distanceMetres": 697.615,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "42210",
+      "toCity": "42210",
+      "added": true
+    },
+    {
+      "fromTown": "422110230",
+      "toTown": "422110210",
+      "distanceMetres": 5009.066,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "42211",
+      "toCity": "42211",
+      "added": true
+    },
+    {
+      "fromTown": "423830080",
+      "toTown": "42383002027",
+      "distanceMetres": 567.575,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "42383",
+      "toCity": "42383",
+      "added": true
+    },
+    {
+      "fromTown": "462150770",
+      "toTown": "462150490",
+      "distanceMetres": 12417.283,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "46215",
+      "toCity": "46215",
+      "added": true
+    },
+    {
+      "fromTown": "465250080",
+      "toTown": "465250200",
+      "distanceMetres": 2355.073,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "46525",
+      "toCity": "46525",
+      "added": true
+    },
+    {
+      "fromTown": "463030030",
+      "toTown": "464910070",
+      "distanceMetres": 28629.049,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "46303",
+      "toCity": "46491",
+      "added": true
+    },
+    {
+      "fromTown": "463040010",
+      "toTown": "463040020",
+      "distanceMetres": 20339.659,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": true
+    },
+    {
+      "fromTown": "463040020",
+      "toTown": "463040010",
+      "distanceMetres": 20339.659,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": false
+    },
+    {
+      "fromTown": "463040040",
+      "toTown": "463040070",
+      "distanceMetres": 33825.8,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": true
+    },
+    {
+      "fromTown": "463040100",
+      "toTown": "463040050",
+      "distanceMetres": 38399.083,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "46304",
+      "toCity": "46304",
+      "added": true
+    },
+    {
+      "fromTown": "465050010",
+      "toTown": "465020040",
+      "distanceMetres": 17830.989,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "46505",
+      "toCity": "46502",
+      "added": true
+    },
+    {
+      "fromTown": "465250200",
+      "toTown": "465250080",
+      "distanceMetres": 2355.073,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "46525",
+      "toCity": "46525",
+      "added": false
+    },
+    {
+      "fromTown": "473810040",
+      "toTown": "473810120",
+      "distanceMetres": 5592.462,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "47381",
+      "toCity": "47381",
+      "added": true
+    },
+    {
+      "fromTown": "473810120",
+      "toTown": "473810040",
+      "distanceMetres": 5592.462,
+      "reason": "nearest_component",
+      "round": 2,
+      "fromCity": "47381",
+      "toCity": "47381",
+      "added": false
+    },
+    {
+      "fromTown": "13421002020",
+      "toTown": "13421004001",
+      "distanceMetres": 149026.774,
+      "reason": "nearest_component",
+      "round": 3,
+      "fromCity": "13421",
+      "toCity": "13421",
+      "added": true
+    },
+    {
+      "fromTown": "462220760",
+      "toTown": "465290030",
+      "distanceMetres": 23275.763,
+      "reason": "nearest_component",
+      "round": 3,
+      "fromCity": "46222",
+      "toCity": "46529",
+      "added": true
+    },
+    {
+      "fromTown": "463040080",
+      "toTown": "465050210",
+      "distanceMetres": 42641.732,
+      "reason": "nearest_component",
+      "round": 3,
+      "fromCity": "46304",
+      "toCity": "46505",
+      "added": true
+    },
+    {
+      "fromTown": "472140170",
+      "toTown": "473610250",
+      "distanceMetres": 203966.593,
+      "reason": "nearest_component",
+      "round": 3,
+      "fromCity": "47214",
+      "toCity": "47361",
+      "added": true
+    }
+  ],
+  "noSameMunicipalityTarget": [
+    {
+      "town": "013670010",
+      "city": "01367",
+      "round": 1
+    },
+    {
+      "town": "01518001001",
+      "city": "01518",
+      "round": 1
+    },
+    {
+      "town": "133620010",
+      "city": "13362",
+      "round": 1
+    },
+    {
+      "town": "133810010",
+      "city": "13381",
+      "round": 1
+    },
+    {
+      "town": "133820010",
+      "city": "13382",
+      "round": 1
+    },
+    {
+      "town": "155860010",
+      "city": "15586",
+      "round": 1
+    },
+    {
+      "town": "32528048001",
+      "city": "32528",
+      "round": 1
+    },
+    {
+      "town": "443220010",
+      "city": "44322",
+      "round": 1
+    },
+    {
+      "town": "465300260",
+      "city": "46530",
+      "round": 1
+    },
+    {
+      "town": "46534001000",
+      "city": "46534",
+      "round": 1
+    },
+    {
+      "town": "473150020",
+      "city": "47315",
+      "round": 1
+    },
+    {
+      "town": "473550020",
+      "city": "47355",
+      "round": 1
+    },
+    {
+      "town": "473560010",
+      "city": "47356",
+      "round": 1
+    },
+    {
+      "town": "473600050",
+      "city": "47360",
+      "round": 1
+    },
+    {
+      "town": "01519011003",
+      "city": "01519",
+      "round": 2
+    },
+    {
+      "town": "133810040",
+      "city": "13381",
+      "round": 2
+    },
+    {
+      "town": "134010010",
+      "city": "13401",
+      "round": 2
+    },
+    {
+      "town": "37322016001",
+      "city": "37322",
+      "round": 2
+    },
+    {
+      "town": "422090190",
+      "city": "42209",
+      "round": 2
+    },
+    {
+      "town": "463030030",
+      "city": "46303",
+      "round": 2
+    },
+    {
+      "town": "465050010",
+      "city": "46505",
+      "round": 2
+    },
+    {
+      "town": "462220760",
+      "city": "46222",
+      "round": 3
+    },
+    {
+      "town": "463040080",
+      "city": "46304",
+      "round": 3
+    },
+    {
+      "town": "472140170",
+      "city": "47214",
+      "round": 3
+    }
+  ],
+  "graphSha256": "3edf57b5588ab35728c20a75672dba826eb8f2d87f5dc7fcbf2c270016f774e1"
+}

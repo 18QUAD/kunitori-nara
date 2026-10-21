@@ -112,7 +112,7 @@ class _NationalMapState extends State<NationalMap> {
       final ids = {...widget.game.owned, ...widget.game.progress.keys};
       for (final id in widget.game.owned) {
         ids.addAll(widget.data.atlas.towns[id]!.neighbors);
-        ids.addAll(widget.data.atlas.seaNeighbors[id] ?? const <String>{});
+        ids.addAll(widget.data.atlas.connectionsFrom(id));
       }
       await widget.data.releaseGeometry();
       for (final pref in ids.map((id) => id.substring(0, 2)).toSet()) {
@@ -247,9 +247,7 @@ class _NationalMapState extends State<NationalMap> {
         final adjacent = <String>{};
         for (final id in widget.game.owned) {
           adjacent.addAll(widget.data.atlas.towns[id]!.neighbors);
-          adjacent.addAll(
-            widget.data.atlas.seaNeighbors[id] ?? const <String>{},
-          );
+          adjacent.addAll(widget.data.atlas.connectionsFrom(id));
         }
         final territory = territoryPaths;
         return Stack(

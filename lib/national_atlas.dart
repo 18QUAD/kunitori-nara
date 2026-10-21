@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/services.dart';
 import 'game.dart';
 import 'town_connections.dart';
+import 'nearest_connections.dart';
 import 'office_marker.dart';
 import 'national_tips.dart';
 import 'diagnostics.dart';
@@ -161,6 +162,7 @@ class NationalAtlas {
       }
     }
     atlas.enableSeaTravel(seaTownConnections);
+    atlas.enableNearbyTravel(nearestTownConnections);
     // Migration needs source IDs and populations; gameplay uses the merged graph.
     // Drop the duplicate imported neighbor strings after constructing that graph.
     for (final source in atlas.sourceTowns.values) {

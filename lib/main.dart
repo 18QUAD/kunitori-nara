@@ -37,7 +37,7 @@ const ink = Color(0xFF101C2B),
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   recordDiagnostic('flutter_start', {
-    'appBuild': 'town-connections-20261021-v1',
+    'appBuild': 'nearest-connections-20261021-v1',
   });
   final previousErrorHandler = FlutterError.onError;
   FlutterError.onError = (details) {
@@ -1943,7 +1943,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。航路で接続された町を領有すると、その接続先の町へ渡航できます。渡航先も人口と同じ回数のタップで攻略します。町との対応が未確定の航路は含みません。奈良県以外は全領土獲得まで遊べます。役所・制圧クイズは準備中です。',
+                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。航路で接続された町を領有すると、その接続先の町へ渡航できます。渡航先も人口と同じ回数のタップで攻略します。町との対応が未確定の航路は含みません。未接続の町群は、境界間の直線距離が最も近い町と接続します。接続先が別の市区町村の場合は、同じ市区町村内に別の町群があれば、そちらの最も近い町とも接続します。奈良県以外は全領土獲得まで遊べます。役所・制圧クイズは準備中です。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
@@ -2197,7 +2197,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                             ),
                             title: Text(t.name),
                             subtitle: Text(
-                              '${a.cities[t.cityId]} · ${number(t.population)}人${a.landingTowns.contains(t.id) ? ' · 航路のある町' : ''}',
+                              '${a.cities[t.cityId]} · ${number(t.population)}人${a.landingTowns.contains(t.id) ? ' · 航路のある町' : ''}${a.nearbyNeighbors.containsKey(t.id) ? ' · 近隣地域との接続' : ''}',
                             ),
                             trailing:
                                 widget.game.owned.contains(t.id)

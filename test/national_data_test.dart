@@ -19,6 +19,105 @@ void main() {
     );
   });
 
+  test(
+    'all game towns are reachable using land, sea, and nearest-town links',
+    () {
+      final atlas = national.atlas;
+      final visited = <String>{};
+      final pending = [atlas.towns.keys.first];
+      expect(atlas.nearbyNeighbors, isNotEmpty);
+      while (pending.isNotEmpty) {
+        final id = pending.removeLast();
+        if (!visited.add(id)) continue;
+        pending.addAll(
+          atlas.towns[id]!.neighbors.where((t) => !visited.contains(t)),
+        );
+        pending.addAll(
+          atlas.connectionsFrom(id).where((t) => !visited.contains(t)),
+        );
+      }
+      expect(visited.length, atlas.towns.length);
+      for (final entry in atlas.nearbyNeighbors.entries) {
+        expect(atlas.towns.containsKey(entry.key), isTrue);
+        expect(entry.value, isNot(contains(entry.key)));
+        for (final target in entry.value) {
+          expect(atlas.towns.containsKey(target), isTrue);
+          expect(atlas.nearbyNeighbors[target], contains(entry.key));
+        }
+      }
+    },
+  );
+
+  test(
+    'generated cross-municipality links include an eligible same-city link',
+    () {
+      final atlas = national.atlas;
+      final report =
+          jsonDecode(
+                File(
+                  'data/derived/nearest_connections.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, dynamic>;
+      final records = (report['links'] as List).cast<Map<String, dynamic>>();
+      final parents = {for (final id in atlas.towns.keys) id: id};
+      String root(String id) {
+        while (parents[id] != id) {
+          parents[id] = parents[parents[id]]!;
+          id = parents[id]!;
+        }
+        return id;
+      }
+
+      void join(String a, String b) {
+        a = root(a);
+        b = root(b);
+        if (a != b) parents[b] = a;
+      }
+
+      for (final town in atlas.towns.values) {
+        for (final other in town.neighbors) {
+          join(town.id, other);
+        }
+        for (final other in atlas.seaNeighbors[town.id] ?? const <String>{}) {
+          join(town.id, other);
+        }
+      }
+      expect(
+        atlas.towns.keys.map(root).toSet().length,
+        report['initialComponents'],
+      );
+      for (var round = 1; round <= report['rounds']; round++) {
+        final current = records.where((r) => r['round'] == round).toList();
+        for (final link in current) {
+          final from = link['fromTown'] as String;
+          final to = link['toTown'] as String;
+          expect(atlas.nearbyNeighbors[from], contains(to));
+          expect(root(from), isNot(root(to)));
+          expect(link['distanceMetres'] as num, greaterThanOrEqualTo(0));
+          final city = atlas.towns[from]!.cityId;
+          if (link['reason'] == 'same_municipality') {
+            expect(atlas.towns[to]!.cityId, city);
+          } else if (city != atlas.towns[to]!.cityId &&
+              atlas.byCity[city]!.any((town) => root(town.id) != root(from))) {
+            expect(
+              current.any(
+                (r) =>
+                    r['reason'] == 'same_municipality' && r['fromTown'] == from,
+              ),
+              isTrue,
+              reason: 'Missing same-municipality link for $from',
+            );
+          }
+        }
+        for (final link in current) {
+          join(link['fromTown'] as String, link['toTown'] as String);
+        }
+      }
+      expect(atlas.towns.keys.map(root).toSet().length, 1);
+    },
+  );
+
   test('startup retains no detailed coordinates, including Nara sources', () {
     expect(national.residentGeometry, isNull);
     expect(

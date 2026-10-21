@@ -229,6 +229,44 @@ void main() {
     expect(islandHome.canLand(landing.id), isFalse);
   });
 
+  test(
+    'nearby town links require owning the source and work in both directions',
+    () {
+      final home = nara.towns.values.firstWhere((t) => t.neighbors.isNotEmpty);
+      final departure = nara.towns[home.neighbors.first]!;
+      final destination = combined.byCity['26201']!.first;
+      combined.enableSeaTravel(const []);
+      combined.enableNearbyTravel([
+        [departure.id, destination.id],
+      ]);
+      final game = Game(combined)..setHome(home.id);
+      expect(game.isReachable(destination.id), isFalse);
+      game.owned.add(departure.id);
+      game.everOwned.add(departure.id);
+      expect(game.isReachable(destination.id), isTrue);
+      expect(game.canAttack(destination.id), isTrue);
+      expect(game.canLand(destination.id), isFalse);
+      final reverse = Game(combined)..setHome(destination.id);
+      expect(reverse.isReachable(departure.id), isTrue);
+      expect(reverse.canLand(departure.id), isFalse);
+      expect(
+        combined.towns[departure.id]!.neighbors,
+        isNot(contains(destination.id)),
+      );
+      expect(Game.restore(combined, game.toJson()).toJson(), game.toJson());
+      final before = combined.nearbyNeighbors.map(
+        (id, neighbors) => MapEntry(id, neighbors.toSet()),
+      );
+      expect(
+        () => combined.enableNearbyTravel([
+          ['missing', 'unknown'],
+        ]),
+        throwsFormatException,
+      );
+      expect(combined.nearbyNeighbors, before);
+    },
+  );
+
   test('invalid sea links leave the existing connections intact', () {
     final existing = combined.seaNeighbors.map(
       (id, values) => MapEntry(id, values.toSet()),
