@@ -132,33 +132,32 @@ void main() {
   );
 
   test(
-    'every real town can be reached through land borders and component landings',
+    'configured sea links connect real towns only after capturing their port',
     () {
       final atlas = national.atlas;
-      final reached = <String>{};
-      final pending = [...atlas.landingTowns];
-      while (pending.isNotEmpty) {
-        final id = pending.removeLast();
-        if (!reached.add(id)) continue;
-        pending.addAll(
-          atlas.towns[id]!.neighbors.where((id) => !reached.contains(id)),
-        );
+      final game = Game(atlas)..setHome('29205043001');
+      expect(atlas.seaNeighbors, isNotEmpty);
+      for (final entry in atlas.seaNeighbors.entries) {
+        expect(atlas.towns.containsKey(entry.key), isTrue);
+        for (final other in entry.value) {
+          expect(atlas.towns.containsKey(other), isTrue);
+          expect(atlas.seaNeighbors[other], contains(entry.key));
+          expect(game.canLand(other), isFalse);
+        }
       }
-      expect(reached.length, atlas.towns.length);
-      final game = Game(atlas)..setHome(nara.towns.keys.first);
-      final okinawa = atlas.landingTowns.firstWhere(
-        (id) => id.startsWith('47'),
-      );
-      expect(game.canAttack(okinawa), isTrue);
+      const departure = '26202008062'; // 舞鶴市・新舞鶴前島埠頭
+      const destination = '012030200'; // 小樽市・築港
+      expect(game.canAttack(destination), isFalse);
+      game.owned.add(departure);
+      game.everOwned.add(departure);
+      expect(game.canLand(destination), isTrue);
+      expect(game.canAttack(destination), isTrue);
+      expect(game.canAttack('01202031001'), isFalse);
+      game.owned.add(destination);
+      expect(game.canLand(destination), isFalse);
       expect(
-        game.requiredTaps(atlas.towns[okinawa]!),
-        atlas.towns[okinawa]!.population,
-      );
-      expect(
-        game.requiredTaps(
-          atlas.towns.values.firstWhere((t) => t.population == 0),
-        ),
-        1,
+        game.requiredTaps(atlas.towns[destination]!),
+        atlas.towns[destination]!.population,
       );
     },
   );

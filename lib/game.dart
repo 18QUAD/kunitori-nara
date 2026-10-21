@@ -303,39 +303,28 @@ class Atlas {
     },
   );
 
-  // Real boundary adjacency stays intact. A landing permits entry into each
-  // disconnected land component without inventing a shared land border.
-  final Map<String, String> landComponent = {};
+  // Sea connections are separate from physical land borders.
+  final Map<String, Set<String>> seaNeighbors = {};
   final Set<String> landingTowns = {};
 
-  void enableSeaTravel() {
-    final unseen = towns.keys.toSet();
-    final components = <List<String>>[];
-    while (unseen.isNotEmpty) {
-      final pending = [unseen.first];
-      unseen.remove(pending.first);
-      final component = <String>[];
-      while (pending.isNotEmpty) {
-        final id = pending.removeLast();
-        component.add(id);
-        for (final next in towns[id]!.neighbors) {
-          if (unseen.remove(next)) pending.add(next);
-        }
+  void enableSeaTravel(Iterable<List<String>> connections) {
+    final neighbors = <String, Set<String>>{};
+    for (final pair in connections) {
+      if (pair.length != 2 ||
+          pair[0] == pair[1] ||
+          !towns.containsKey(pair[0]) ||
+          !towns.containsKey(pair[1])) {
+        throw const FormatException('航路の接続先が不正です。');
       }
-      components.add(component);
+      neighbors.putIfAbsent(pair[0], () => {}).add(pair[1]);
+      neighbors.putIfAbsent(pair[1], () => {}).add(pair[0]);
     }
-    components.sort((a, b) => b.length.compareTo(a.length));
-    for (final component in components) {
-      component.sort((a, b) {
-        final population = towns[b]!.population.compareTo(towns[a]!.population);
-        return population == 0 ? a.compareTo(b) : population;
-      });
-      final landing = component.first;
-      landingTowns.add(landing);
-      for (final id in component) {
-        landComponent[id] = landing;
-      }
-    }
+    seaNeighbors
+      ..clear()
+      ..addAll(neighbors);
+    landingTowns
+      ..clear()
+      ..addAll(neighbors.keys);
   }
 
   List<LocalFact> _culture(String city) {
@@ -478,8 +467,8 @@ class Game {
   int requiredTaps(Town t) => max(1, t.population);
   bool canLand(String id) =>
       home != null &&
-      atlas.landingTowns.contains(id) &&
-      !owned.any((town) => atlas.landComponent[town] == id);
+      !owned.contains(id) &&
+      (atlas.seaNeighbors[id]?.any(owned.contains) ?? false);
   bool isReachable(String id) =>
       home != null &&
       !owned.contains(id) &&

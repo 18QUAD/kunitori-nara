@@ -37,7 +37,7 @@ const ink = Color(0xFF101C2B),
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   recordDiagnostic('flutter_start', {
-    'appBuild': 'attackable-search-20261021-v1',
+    'appBuild': 'town-connections-20261021-v1',
   });
   final previousErrorHandler = FlutterError.onError;
   FlutterError.onError = (details) {
@@ -1943,7 +1943,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。離島など陸続きでない地域では、人口が最大の町を入口として渡航できます。金色の入口を選んで通常と同じタップ数で攻略し、その後は隣接する町へ進みます。奈良県以外は全領土獲得まで遊べます。役所・制圧クイズは準備中です。',
+                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。航路で接続された町を領有すると、その接続先の町へ渡航できます。渡航先も人口と同じ回数のタップで攻略します。町との対応が未確定の航路は含みません。奈良県以外は全領土獲得まで遊べます。役所・制圧クイズは準備中です。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
@@ -2197,7 +2197,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                             ),
                             title: Text(t.name),
                             subtitle: Text(
-                              '${a.cities[t.cityId]} · ${number(t.population)}人${a.landingTowns.contains(t.id) ? ' · 渡航の入口' : ''}',
+                              '${a.cities[t.cityId]} · ${number(t.population)}人${a.landingTowns.contains(t.id) ? ' · 航路のある町' : ''}',
                             ),
                             trailing:
                                 widget.game.owned.contains(t.id)

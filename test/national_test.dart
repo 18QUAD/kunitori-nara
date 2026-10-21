@@ -181,41 +181,73 @@ void main() {
     expect(national.prefectureId, '26');
   });
 
-  test(
-    'landings connect islands in both directions without changing borders',
-    () {
-      combined.enableSeaTravel();
-      final landing = combined.byCity['26201']!.firstWhere(
-        (t) => t.name == '中央',
-      );
-      final inland = combined.byCity['26201']!.firstWhere(
-        (t) => t.name == '西町',
-      );
-      final game = Game(combined)..setHome(nara.towns.keys.first);
-      expect(game.isReachable(landing.id), isTrue);
-      expect(game.isReachable(inland.id), isFalse);
-      expect(landing.neighbors, {inland.id});
-      for (var i = 0; i < 5; i++) {
-        game.tap(landing.id, DateTime.utc(2026));
-      }
-      expect(game.owned, contains(landing.id));
-      expect(game.isReachable(inland.id), isTrue);
-      expect(game.tap(inland.id, DateTime.utc(2026)), isTrue);
-      expect(game.totalTaps, 6);
-      expect(game.cityOwned('26201'), isTrue);
-      expect(game.quiz, isNull);
-      expect(game.message, contains('制圧クイズは準備中'));
-      final restored = Game.restore(combined, game.toJson());
-      expect(restored.toJson(), game.toJson());
+  test('sea travel requires ownership of a connected departure town', () {
+    final landing = combined.byCity['26201']!.firstWhere((t) => t.name == '中央');
+    final inland = combined.byCity['26201']!.firstWhere((t) => t.name == '西町');
+    final home = nara.towns.values.firstWhere((t) => t.neighbors.isNotEmpty);
+    final departure = nara.towns[home.neighbors.first]!;
+    combined.enableSeaTravel([
+      [departure.id, landing.id],
+    ]);
+    final game = Game(combined)..setHome(home.id);
+    expect(game.isReachable(landing.id), isFalse);
+    expect(game.canLand(landing.id), isFalse);
+    game.owned.add(departure.id);
+    game.everOwned.add(departure.id);
+    expect(game.isReachable(landing.id), isTrue);
+    expect(game.isReachable(inland.id), isFalse);
+    expect(landing.neighbors, {inland.id});
+    for (var i = 0; i < 5; i++) {
+      game.tap(landing.id, DateTime.utc(2026));
+    }
+    expect(game.owned, contains(landing.id));
+    expect(game.isReachable(inland.id), isTrue);
+    expect(game.tap(inland.id, DateTime.utc(2026)), isTrue);
+    expect(game.totalTaps, 6);
+    expect(game.cityOwned('26201'), isTrue);
+    expect(game.quiz, isNull);
+    expect(game.message, contains('制圧クイズは準備中'));
+    final restored = Game.restore(combined, game.toJson());
+    expect(restored.toJson(), game.toJson());
+    final old = Game(combined)..setHome(home.id);
+    old.attackTarget = landing.id;
+    old.progress[landing.id] = 2;
+    old.totalTaps = 2;
+    final resumed = Game.restore(combined, old.toJson());
+    expect(resumed.attackTarget, isNull);
+    expect(resumed.progress[landing.id], 2);
+    expect(resumed.owned, old.owned);
+    resumed.owned.add(departure.id);
+    expect(resumed.selectAttackTarget(landing.id), isTrue);
+    expect(resumed.progress[landing.id], 2);
 
-      final islandHome = Game(combined)..setHome(inland.id);
-      final mainlandLanding = combined.landingTowns.firstWhere(
-        (id) => id.startsWith('29'),
-      );
-      expect(islandHome.isReachable(mainlandLanding), isTrue);
-      expect(islandHome.canLand(landing.id), isFalse);
-    },
-  );
+    final islandHome = Game(combined)..setHome(inland.id);
+    expect(islandHome.isReachable(departure.id), isFalse);
+    islandHome.owned.add(landing.id);
+    islandHome.everOwned.add(landing.id);
+    expect(islandHome.isReachable(departure.id), isTrue);
+    expect(islandHome.canLand(landing.id), isFalse);
+  });
+
+  test('invalid sea links leave the existing connections intact', () {
+    final existing = combined.seaNeighbors.map(
+      (id, values) => MapEntry(id, values.toSet()),
+    );
+    expect(
+      () => combined.enableSeaTravel([
+        ['missing', 'also-missing'],
+      ]),
+      throwsFormatException,
+    );
+    expect(combined.seaNeighbors, existing);
+    expect(
+      () => combined.enableSeaTravel([
+        [combined.towns.keys.first],
+      ]),
+      throwsFormatException,
+    );
+    expect(combined.seaNeighbors, existing);
+  });
 
   test(
     'prefecture-only selection shows placeholder tips during a Nara campaign',
