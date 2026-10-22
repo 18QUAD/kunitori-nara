@@ -58,16 +58,22 @@ window.kunitoriMapStorage = (async () => {
       ? (navigator.onLine ? '地図データのダウンロードを再開しています' : '接続を待っています。続きから再開します')
       : '地図・ゲームデータを端末に保存中';
   }
-  function request(type, data = {}) {
+  function request(type, data = {}, timeoutMs = 90000) {
     return new Promise((resolve, reject) => {
       const channel = new MessageChannel();
-      const timeout = setTimeout(() => {channel.port1.close(); reject(new Error('Map storage batch timeout'));}, 90000);
+      const timeout = setTimeout(() => {channel.port1.close(); reject(new Error(`Map storage ${type} timeout`));}, timeoutMs);
       channel.port1.onmessage = event => {
         clearTimeout(timeout);
         channel.port1.close();
         event.data.error ? reject(new Error(event.data.error)) : resolve(event.data);
       };
-      navigator.serviceWorker.controller.postMessage({type, ...data}, [channel.port2]);
+      try {
+        navigator.serviceWorker.controller.postMessage({type, ...data}, [channel.port2]);
+      } catch (error) {
+        clearTimeout(timeout);
+        channel.port1.close();
+        reject(error);
+      }
     });
   }
   async function next() {
@@ -202,9 +208,9 @@ window.kunitoriMapStorage = (async () => {
           changed();
         });
       }
-      connected = true;
       record('map_storage_controller_ready', {error: null});
-      const identity = await request('map-runtime-version');
+      phase = 'identity';
+      const identity = await request('map-runtime-version', {}, 15000);
       if (identity.build && identity.build !== version) {
         // An old cached document may install a newer worker. Do not start its
         // old bootstrap against new data. The worker serves this pinned entry
@@ -215,6 +221,9 @@ window.kunitoriMapStorage = (async () => {
         window.location.replace(current.href);
         return;
       }
+      // Control alone is not a usable connection: failed identity requests must
+      // leave connect() retryable, otherwise its own guard strands startup.
+      connected = true;
       navigator.storage?.persist?.().catch(() => {});
       // Read the saved cursor before starting work: resumed downloads keep their
       // percentage, and completed downloads never flash a new progress panel.
@@ -233,7 +242,8 @@ window.kunitoriMapStorage = (async () => {
       window.kunitoriDiagnostics?.record?.('map_storage_start', JSON.stringify({}));
       downloadTimer = setTimeout(next, 500);
     } catch (error) {
-      record('map_storage_setup_retry', {error: String(error)});
+      connected = false;
+      record('map_storage_setup_retry', {error: String(error), context: phase});
       // An old worker can remain stuck on extended events. Replace only this
       // app's registration; its disk cache and all game saves remain intact.
       if (registration && phase !== 'registration' && registration.scope === root.href) {

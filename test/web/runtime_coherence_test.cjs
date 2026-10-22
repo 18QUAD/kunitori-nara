@@ -40,19 +40,29 @@ const server=http.createServer((req,res)=>{
  browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});
  const context=await browser.newContext();const page=await context.newPage();
  await context.addInitScript(()=>{
+  // Simulate the identity reply being lost while Safari replaces a worker.
+  // A completed registration must remain retryable until this handshake succeeds.
+  const send=ServiceWorker.prototype.postMessage;
+  ServiceWorker.prototype.postMessage=function(message,...rest){
+    if(message?.type==='map-runtime-version'&&!sessionStorage.identityReplyDropped){
+      sessionStorage.identityReplyDropped='yes';return;
+    }
+    return send.call(this,message,...rest);
+  };
   if(!localStorage.seeded){localStorage.setItem('flutter.kunitori.nara.v1','existing-game');localStorage.setItem('flutter.kunitori.nara.mapView.v1','existing-view');localStorage.seeded='1';}
  });
  page.on('framenavigated',f=>{if(f===page.mainFrame())starts++;});
  await page.goto(`http://127.0.0.1:${server.address().port}${root}`);
- await page.waitForFunction(()=>window.startedBuild==='coherent-2',{},{timeout:30000});
+ await page.waitForFunction(()=>window.startedBuild==='coherent-2',{},{timeout:45000});
+ assert.equal(await page.evaluate(()=>sessionStorage.identityReplyDropped),'yes');
  assert.equal(await page.evaluate(()=>window.startedShell),build,'Old diagnostic code must also be replaced');
  assert.equal(starts,2,'Exactly one correction before starting, no reload loop');
  assert(!requests.some(u=>u.includes('main.dart.js')),'Executable must come from the verified runtime, not stale HTTP cache');
  assert.equal(new URL(page.url()).searchParams.get('app-build'),build);
  await context.setOffline(true);await page.reload();
- await page.waitForFunction(()=>window.startedBuild==='coherent-2',{},{timeout:30000});
+ await page.waitForFunction(()=>window.startedBuild==='coherent-2',{},{timeout:45000});
  assert.equal(starts,3,'Offline restart must not add a correction reload');
  assert.deepEqual(await page.evaluate(()=>[localStorage.getItem('flutter.kunitori.nara.v1'),localStorage.getItem('flutter.kunitori.nara.mapView.v1')]),['existing-game','existing-view']);
- console.log('PASS: stale HTML/JS cache corrected before engine start; matching runtime and diagnostics; one correction, offline restart, saves preserved.');
+ console.log('PASS: lost initial identity reply recovered automatically; stale HTML/JS cache corrected before engine start; matching runtime and diagnostics; one correction, offline restart, saves preserved.');
  await browser.close();server.close();
 })().catch(async e=>{console.error(e);if(browser)await browser.close();server.close();process.exitCode=1;});

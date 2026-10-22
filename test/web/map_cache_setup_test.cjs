@@ -3,8 +3,8 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 
-async function scenario(scope = 'https://example.test/game/') {
-  let now = 0, sequence = 0, registrations = 0, unregisters = 0, finished = false;
+async function scenario(scope = 'https://example.test/game/', identityFailure = null) {
+  let now = 0, sequence = 0, registrations = 0, unregisters = 0, finished = false, identityAttempts = 0;
   const timers = new Map(), records = [], elements = new Map();
   const schedule = (fn, delay) => {const id = ++sequence; timers.set(id, {fn, at: now + delay}); return id;};
   const flush = async () => {for (let i = 0; i < 30; i++) await Promise.resolve();};
@@ -30,11 +30,18 @@ async function scenario(scope = 'https://example.test/game/') {
   const sw = new EventTarget();
   sw.register = async () => {
     registrations++;
-    if (registrations === 1) {
+    if (registrations === 1 && !identityFailure) {
       const pending = Object.assign(new EventTarget(), {state:'activating', scriptURL:workerURL});
       return {scope, installing:pending, unregister:async () => {unregisters++; return true;}};
     }
-    sw.controller = {scriptURL:workerURL, postMessage(message, ports){ports[0].answer({done:true,saved:10,total:10,savedBytes:100,bytes:100});}};
+    sw.controller = {scriptURL:workerURL, postMessage(message, ports){
+      if(message.type==='map-runtime-version' && identityFailure && ++identityAttempts===1){
+        if(identityFailure==='error')ports[0].answer({error:'Worker replaced during handshake'});
+        if(identityFailure==='throw')throw Error('Controller became unavailable');
+        return; // timeout mode deliberately drops the first reply.
+      }
+      ports[0].answer({done:true,saved:10,total:10,savedBytes:100,bytes:100});
+    }};
     return {scope, active:sw.controller};
   };
   class Channel {
@@ -68,4 +75,9 @@ test('stuck activation recovers across visibility changes without clearing saved
 test('recovery never unregisters a different scope', async () => {
   const result = await scenario('https://example.test/');
   assert.equal(result.unregisters, 0);
+});
+
+for(const mode of ['error','timeout','throw'])test(`failed identity handshake (${mode}) retries rather than leaving startup blocked`,async()=>{
+  const result=await scenario('https://example.test/game/',mode);
+  assert(result.records.includes('map_storage_setup_retry'));
 });
