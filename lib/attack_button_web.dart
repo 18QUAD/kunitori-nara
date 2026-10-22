@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:web/web.dart' as web;
 import 'browser_insets.dart';
 import 'action_button_style.dart';
+import 'attack_contacts.dart';
+import 'diagnostics.dart';
 
 Widget protectAttackTap({required Widget child, VoidCallback? onPressed}) =>
     _NativeAttackButton(onPressed: onPressed);
@@ -22,7 +24,7 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
   bool _portraitAllowed = true;
   Rect? _rect;
   bool _placementPending = false;
-  final _contacts = <int>{};
+  final _contacts = AttackContacts();
   late final JSFunction _releaseContact;
   late final JSFunction _resetContacts;
 
@@ -144,14 +146,26 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
     // document's releases so dragging outside the button cannot leave it stuck.
     _releaseContact =
         ((web.PointerEvent event) {
-          _contacts.remove(event.pointerId);
+          if (!_contacts.end(event.pointerId)) return;
+          recordDiagnostic('trace_button', {
+            'phase': event.type,
+            'operation': event.pointerId,
+            'count': _contacts.length,
+            'resource': event.pointerType,
+          });
         }).toJS;
     for (final type in ['pointerup', 'pointercancel']) {
       web.document.addEventListener(type, _releaseContact, true.toJS);
     }
     _resetContacts =
         ((web.Event event) {
-          if (event.type == 'blur' || web.document.hidden) _contacts.clear();
+          if (event.type == 'blur' || web.document.hidden) {
+            _contacts.clear();
+            recordDiagnostic('trace_button', {
+              'phase': 'reset_${event.type}',
+              'count': 0,
+            });
+          }
         }).toJS;
     web.window.addEventListener('blur', _resetContacts);
     web.document.addEventListener('visibilitychange', _resetContacts);
@@ -159,16 +173,44 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
       'pointerdown',
       ((web.PointerEvent event) {
         event.stopPropagation();
-        if (event.button != 0 ||
-            !mounted ||
-            !_routeCurrent ||
-            !_portraitAllowed) {
+        final rejected =
+            event.button != 0
+                ? 'secondary_button'
+                : !mounted
+                ? 'unmounted'
+                : !_routeCurrent
+                ? 'route_inactive'
+                : !_portraitAllowed
+                ? 'landscape'
+                : button.disabled || widget.onPressed == null
+                ? 'disabled'
+                : null;
+        if (rejected != null) {
+          recordDiagnostic('trace_button', {
+            'phase': rejected,
+            'operation': event.pointerId,
+            'count': _contacts.length,
+            'resource': event.pointerType,
+          });
           return;
         }
-        final first = _contacts.isEmpty;
-        if (_contacts.add(event.pointerId) && first && !button.disabled) {
-          widget.onPressed?.call();
-        }
+        final previousContacts = _contacts.length;
+        final accepted = _contacts.begin(
+          event.pointerId,
+          event.pointerType,
+          primary: event.isPrimary,
+        );
+        recordDiagnostic('trace_button', {
+          'phase':
+              accepted
+                  ? (previousContacts > 0 ? 'accepted_recovered' : 'accepted')
+                  : 'overlapping_contact',
+          'operation': event.pointerId,
+          'count': _contacts.length,
+          'resource':
+              '${event.pointerType}:${event.isPrimary ? 'primary' : 'secondary'}',
+        });
+        if (accepted) widget.onPressed?.call();
       }).toJS,
     );
     for (final type in [

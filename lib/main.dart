@@ -38,7 +38,7 @@ const ink = Color(0xFF101C2B),
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   recordDiagnostic('flutter_start', {
-    'appBuild': 'operation-diagnostics-20261022-v1',
+    'appBuild': 'attack-contact-recovery-20261022-v1',
   });
   final previousErrorHandler = FlutterError.onError;
   FlutterError.onError = (details) {
