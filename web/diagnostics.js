@@ -3,6 +3,8 @@
 (() => {
   'use strict';
   const key = 'kunitori.diagnostics.v1', tabKey = key + '.tab';
+  const traceKey = key + '.trace';
+  let traces = [], traceSequence = 0;
   const maxBytes = 96 * 1024, maxEvents = 64, maxSessions = 3;
   let storageAvailable = true, state = {}, lastWrite = 0, ended = false;
   const id = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
@@ -17,13 +19,29 @@
       const raw = localStorage.getItem(key);
       if (!raw || raw.length > maxBytes) return [];
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed.sessions) ? parsed.sessions.slice(-maxSessions) : [];
+      const sessions = Array.isArray(parsed.sessions) ? parsed.sessions.slice(-maxSessions) : [];
+      // Compact stage checkpoints are independent of the throttled full state log.
+      // Merge them before the next startup overwrites the checkpoint slot.
+      try {
+        const rawTrace = localStorage.getItem(traceKey);
+        if (rawTrace && rawTrace.length <= 12 * 1024) {
+          const saved = JSON.parse(rawTrace);
+          const owner = sessions.find(s => s.id === saved.session);
+          if (owner && Array.isArray(saved.events)) {
+            const seen = new Set(owner.events.map(e => e.traceSequence).filter(Number.isFinite));
+            owner.events.push(...saved.events.filter(e => Number.isFinite(e.traceSequence) && !seen.has(e.traceSequence)));
+            owner.events.sort((a,b) => a.at.localeCompare(b.at) || (a.traceSequence || 0) - (b.traceSequence || 0));
+            owner.events = owner.events.slice(-maxEvents);
+          }
+        }
+      } catch (_) {}
+      return sessions;
     } catch (_) { return []; }
   };
   const previous = read().find(s => s.id === previousId);
   // Only associate a predecessor from this tab, never another tab's open session.
   const session = {
-    id: run, tab: previous?.tab || tab, build: 'nearest-connections-20261021-v1',
+    id: run, tab: previous?.tab || tab, build: 'operation-diagnostics-20261022-v1',
     startedAt: new Date().toISOString(),
     navigation: performance.getEntriesByType?.('navigation')?.[0]?.type || 'unknown',
     wasDiscarded: document.wasDiscarded === true,
@@ -70,10 +88,31 @@
       storageAvailable = true;
     } catch (_) { storageAvailable = false; }
   }
+  function checkpoint(event, data) {
+    try {
+      const at = new Date().toISOString();
+      const entry = {at, event: String(event).slice(0,80), traceSequence: ++traceSequence,
+        visibility: document.visibilityState, state: clean(data || {}), memory: memory()};
+      traces.push(entry);
+      traces = traces.slice(-24);
+      let text = JSON.stringify({session:run,events:traces});
+      while (text.length > 6 * 1024 && traces.length > 1) {
+        traces.shift(); text = JSON.stringify({session:run,events:traces});
+      }
+      localStorage.setItem(traceKey,text);
+    } catch (_) { /* A failed checkpoint must never break an action. */ }
+  }
   function record(event, data, important = true) {
     try {
+      if (String(event).startsWith('trace_')) {checkpoint(event,data);return;}
       if (event === 'flutter_start' && typeof data?.appBuild === 'string') session.build = data.appBuild;
-      if (data) state = {...state, ...clean(data)};
+      if (data) {
+        const sanitized = clean(data);
+        // Error stacks are bounded separately and must not pollute every later heartbeat.
+        state = {...state, ...sanitized};
+        if (typeof data.stack === 'string') state.stack = data.stack.slice(0,4096);
+        if (typeof data.error === 'string') state.error = data.error.slice(0,1024);
+      }
       const now = Date.now();
       if (!important && now - lastWrite < 1000) return;
       lastWrite = now;
@@ -82,6 +121,9 @@
         visibility: document.visibilityState, state: {...state}, memory: memory()});
       session.events = session.events.slice(-maxEvents);
       persist();
+      delete state.stack;
+      delete state.context;
+      delete state.library;
     } catch (_) { /* Diagnostics must never interfere with the game. */ }
   }
   function report() {
@@ -145,11 +187,38 @@
     document.addEventListener(type, () => record(type), true);
   }
   window.addEventListener('error', e => record('browser_error', {
-    error: e.message || 'resource_load_error',
-  }));
+    error: e.message || 'resource_load_error', stack: e.error?.stack,
+    resource: safeResource(e.filename || e.target?.src || e.target?.href),
+    line: e.lineno, column: e.colno,
+  }), true);
   window.addEventListener('unhandledrejection', e => record('unhandled_rejection', {
-    error: String(e.reason?.message || e.reason || 'unknown'),
+    error: String(e.reason?.message || e.reason || 'unknown'), stack: e.reason?.stack,
   }));
+  function safeResource(value) {
+    if (!value) return null;
+    try {const u = new URL(value,document.baseURI);return u.pathname;} catch (_) {return String(value).split(/[?#]/)[0];}
+  }
+  let lastBrowserFrame = null, lastFrameCheckpoint = 0, lastTick = Date.now(), lastVisibility = document.visibilityState;
+  if (typeof requestAnimationFrame === 'function') {
+    const frame = () => {
+      if (!ended && document.visibilityState === 'visible') {
+        lastBrowserFrame = Date.now();
+        if (lastBrowserFrame - lastFrameCheckpoint >= 5000) {
+          lastFrameCheckpoint = lastBrowserFrame;
+          record('browser_frame', {lastBrowserFrame}, false);
+        }
+      }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
+  setInterval(() => {
+    const now = Date.now(), visible = document.visibilityState;
+    if (!ended && visible === 'visible' && lastVisibility === 'visible' && now - lastTick > 2500) {
+      record('event_loop_delay', {delayMs: now-lastTick-1000, lastBrowserFrame});
+    }
+    lastTick = now; lastVisibility = visible;
+  },1000);
   setInterval(() => { if (!ended && document.visibilityState === 'visible') record('heartbeat'); }, 5000);
   record('startup');
   setTimeout(()=>{void upload();},2000);

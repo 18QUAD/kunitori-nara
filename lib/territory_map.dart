@@ -491,7 +491,18 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 _projection,
               ),
               maxScale: MapImageScale.scale(_maxImageLevel, _projection),
-              onInteractionEnd: (_) => _zoom(1),
+              onInteractionStart:
+                  (_) => recordDiagnostic('trace_map', {
+                    'phase': 'gesture_start',
+                    'scale': controller.value.getMaxScaleOnAxis(),
+                  }),
+              onInteractionEnd: (_) {
+                recordDiagnostic('trace_map', {
+                  'phase': 'gesture_end',
+                  'scale': controller.value.getMaxScaleOnAxis(),
+                });
+                _zoom(1);
+              },
               boundaryMargin: const EdgeInsets.all(2000),
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,

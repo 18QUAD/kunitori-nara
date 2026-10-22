@@ -5,6 +5,8 @@ const fields = new Set(['map','prefecture','city','selected','scale','centerX','
   'terrain','changingMap','totalTaps','territories','attackTarget','flutterImageBytes',
   'flutterImageCount','flutterLiveImages','flutterPendingImages','backgroundCache',
   'borderCache','destinationPrefecture','imageScale','imageCache','persisted','error',
+  'operation','parentOperation','phase','resource','bytes','width','height','count','won','stack','context','library',
+  'line','column','lastFlutterFrame','lastBrowserFrame','delayMs','buildMicros','rasterMicros','frameTotalMicros',
   'mapCacheLimitMb','mapCacheBytes','mapDownloadSaved','mapDownloadTotal','mapDownloadBytes','mapDownloadTotalBytes']);
 function scalar(value) {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -24,6 +26,8 @@ function snapshot(value) {
           ['limitBytes','compressedLimitBytes','sourceBytes','backgroundBytes','boundaryBytes','retainedImageBytes']
             .map(k => [k, typeof item.budget[k] === 'number' ? scalar(item.budget[k]) : null]));
       }
+    } else if (key === 'stack' || key === 'error') {
+      result[key] = typeof item === 'string' ? item.slice(0,key === 'stack' ? 4096 : 1024).replace(/https?:\/\/[^\s)]+/g, '[url]') : scalar(item);
     } else result[key] = scalar(item);
   }
   return result;

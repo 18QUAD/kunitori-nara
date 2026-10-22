@@ -1,3 +1,4 @@
+import 'dart:ui' show PlatformDispatcher, FramePhase;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -37,13 +38,45 @@ const ink = Color(0xFF101C2B),
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   recordDiagnostic('flutter_start', {
-    'appBuild': 'nearest-connections-20261021-v1',
+    'appBuild': 'operation-diagnostics-20261022-v1',
   });
   final previousErrorHandler = FlutterError.onError;
   FlutterError.onError = (details) {
-    recordDiagnostic('flutter_error', {'error': details.exceptionAsString()});
+    recordDiagnostic('flutter_error', {
+      'error': details.exceptionAsString(),
+      'stack': details.stack?.toString(),
+      'context': details.context?.toDescription(),
+      'library': details.library,
+    });
     previousErrorHandler?.call(details);
   };
+  final previousPlatformErrorHandler = PlatformDispatcher.instance.onError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    recordDiagnostic('platform_error', {
+      'error': error.toString(),
+      'stack': stack.toString(),
+    });
+    return previousPlatformErrorHandler?.call(error, stack) ?? false;
+  };
+  if (kIsWeb) {
+    var lastFrameLog = Duration.zero;
+    WidgetsBinding.instance.addTimingsCallback((timings) {
+      if (timings.isEmpty) return;
+      final now = Duration(
+        microseconds: timings.last.timestampInMicroseconds(
+          FramePhase.rasterFinish,
+        ),
+      );
+      if (now - lastFrameLog < const Duration(seconds: 5)) return;
+      lastFrameLog = now;
+      recordDiagnostic('flutter_frame', {
+        'lastFlutterFrame': DateTime.now().millisecondsSinceEpoch,
+        'buildMicros': timings.last.buildDuration.inMicroseconds,
+        'rasterMicros': timings.last.rasterDuration.inMicroseconds,
+        'frameTotalMicros': timings.last.totalSpan.inMicroseconds,
+      }, important: false);
+    });
+  }
   await configureRenderingMemory();
   try {
     MapImageBudget.shared.configure(
@@ -611,9 +644,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _save() {
+  void _save({int? tapOperation}) {
     _diagnose('game_state', important: false);
-    if (game != null && store != null) unawaited(store!.save(game!));
+    if (game != null && store != null) {
+      unawaited(store!.save(game!, tapOperation: tapOperation));
+    }
   }
 
   Future<void> _restart() async {
@@ -808,7 +843,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _save();
   }
 
+  int _tapOperation = 0;
   void _attack() {
+    final operation = ++_tapOperation;
+    void step(String phase, [Map<String, Object?> extra = const {}]) {
+      recordDiagnostic('trace_tap', {
+        'operation': operation,
+        'phase': phase,
+        'selected': selected,
+        'totalTaps': game?.totalTaps,
+        ...extra,
+      });
+    }
+
+    step('input');
     final g = game!;
     final oldCity =
         g.attackTarget == null ? null : atlas!.towns[g.attackTarget]!.cityId;
@@ -818,7 +866,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _diagnose('conquest_before');
     }
     final won = g.tap(selected!, DateTime.now());
-    if (g.totalTaps == before) return;
+    step('calculated', {'won': won});
+    if (g.totalTaps == before) {
+      step('ignored');
+      return;
+    }
     if (won) {
       _diagnose('conquest_after');
       HapticFeedback.mediumImpact();
@@ -830,7 +882,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (oldCity != newCity) factIndex = 0;
       _rememberVisibleFact();
     });
-    _save();
+    step('update_requested');
+    _save(tapOperation: operation);
+    step('save_requested');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      step('frame_submitted');
+      // Flutter submitted its frame; this does not prove GPU presentation.
+    });
   }
 
   @override

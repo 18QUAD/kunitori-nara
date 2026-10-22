@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
 import 'map_view.dart';
+import 'diagnostics.dart';
 
 /// Serial writes, coalescing quick taps while a previous write is in flight.
 /// A failed write remains retryable and never displays a false "saved" status.
@@ -11,6 +12,8 @@ class SaveStore {
   static const key = 'kunitori.nara.v1';
   static const mapViewKey = 'kunitori.nara.mapView.v1';
   final Map<String, String> _pending = {};
+  final Map<String, int?> _pendingParents = {};
+  int _writeOperation = 0;
   Future<void>? _writing;
   String? error;
   void Function()? onChanged;
@@ -38,9 +41,39 @@ class SaveStore {
 
   Future<void> saveMapView(MapViewState view) =>
       _saveValue(mapViewKey, jsonEncode(view.toJson()));
-  Future<void> save(Game game) => _saveValue(key, jsonEncode(game.toJson()));
+  int _operation = 0;
+  Future<void> save(Game game, {int? tapOperation}) {
+    final operation = ++_operation;
+    recordDiagnostic('trace_save_encode', {
+      'operation': operation,
+      'phase': 'start',
+      'parentOperation': tapOperation,
+      'totalTaps': game.totalTaps,
+    });
+    try {
+      final value = jsonEncode(game.toJson());
+      recordDiagnostic('trace_save_encode', {
+        'operation': operation,
+        'phase': 'end',
+        'parentOperation': tapOperation,
+        'bytes': value.length,
+      });
+      return _saveValue(key, value, parentOperation: tapOperation);
+    } catch (error, stack) {
+      recordDiagnostic('save_error', {
+        'error': error.toString(),
+        'stack': stack.toString(),
+      });
+      rethrow;
+    }
+  }
 
-  Future<void> _saveValue(String storageKey, String value) {
+  Future<void> _saveValue(
+    String storageKey,
+    String value, {
+    int? parentOperation,
+  }) {
+    _pendingParents[storageKey] = parentOperation;
     _pending[storageKey] = value;
     if (_writing != null) return _writing!;
     final future = _drain();
@@ -56,11 +89,34 @@ class SaveStore {
     while (_pending.isNotEmpty) {
       final storageKey = _pending.keys.first;
       final value = _pending.remove(storageKey)!;
+      final parent = _pendingParents.remove(storageKey);
+      final writeOperation = ++_writeOperation;
+      recordDiagnostic('trace_save_write', {
+        'operation': writeOperation,
+        'parentOperation': parent,
+        'phase': 'start',
+        'resource': storageKey,
+        'bytes': value.length,
+      });
       try {
         if (!await preferences.setString(storageKey, value)) {
           throw StateError('書き込み失敗');
         }
-      } catch (_) {
+        recordDiagnostic('trace_save_write', {
+          'operation': writeOperation,
+          'parentOperation': parent,
+          'phase': 'end',
+          'resource': storageKey,
+        });
+      } catch (failure, stack) {
+        recordDiagnostic('save_error', {
+          'resource': storageKey,
+          'error': failure.toString(),
+          'stack': stack.toString(),
+        });
+        if (!_pending.containsKey(storageKey)) {
+          _pendingParents[storageKey] = parent;
+        }
         _pending.putIfAbsent(storageKey, () => value);
         error = '保存できませんでした。空き容量を確認して再試行してください。';
         break;

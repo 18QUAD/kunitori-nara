@@ -57,3 +57,18 @@ test('image-budget accounting is retained while arbitrary nested data is discard
   assert.equal(cache.budget.retainedImageBytes,19922944);
   assert.equal(cache.budget.save,undefined);
 });
+
+test('operation stages, frame timings and bounded stacks survive ingest and private retrieval',async()=>{
+  const report=sample(), s=report.sessions[0].events[0].state;
+  Object.assign(s,{operation:42,phase:'decode_start',resource:'24/8/50_background',bytes:1024,
+    width:512,height:512,count:6,won:false,lastBrowserFrame:1700000000000,delayMs:3200,
+    buildMicros:12,rasterMicros:34,frameTotalMicros:56,stack:'frame:12\n'.repeat(600)+' https://example.com/?token=secret'});
+  const {store:backend}=store(),env=envFor(backend);
+  assert.equal((await handleDiagnostics(post(report),env)).status,200);
+  const response=await handleDiagnostics(new Request('https://worker.example/diagnostics/reports',{
+    headers:{Authorization:'Bearer private-test-token'}}),env);
+  const state=(await response.json()).reports[0].sessions[0].events[0].state;
+  assert.equal(state.operation,42);assert.equal(state.phase,'decode_start');assert.equal(state.resource,s.resource);
+  assert.equal(state.lastBrowserFrame,s.lastBrowserFrame);assert.equal(state.frameTotalMicros,56);
+  assert.equal(state.stack.length,4096);assert(!state.stack.includes('token=secret'));assert.equal(state.save,undefined);
+});

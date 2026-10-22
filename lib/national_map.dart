@@ -1,3 +1,4 @@
+import 'diagnostics.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -258,7 +259,18 @@ class _NationalMapState extends State<NationalMap> {
                 scaleEnabled: !_imagesBusy,
                 minScale: MapImageScale.scale(MapImageScale.minLevel, 50),
                 maxScale: MapImageScale.scale(5, 50),
-                onInteractionEnd: (_) => _zoom(1),
+                onInteractionStart:
+                    (_) => recordDiagnostic('trace_map', {
+                      'phase': 'gesture_start',
+                      'scale': transform.value.getMaxScaleOnAxis(),
+                    }),
+                onInteractionEnd: (_) {
+                  recordDiagnostic('trace_map', {
+                    'phase': 'gesture_end',
+                    'scale': transform.value.getMaxScaleOnAxis(),
+                  });
+                  _zoom(1);
+                },
                 constrained: false,
                 boundaryMargin: const EdgeInsets.all(2000),
                 child: GestureDetector(

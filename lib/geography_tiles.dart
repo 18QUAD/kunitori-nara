@@ -160,7 +160,13 @@ class GeographyImageCache {
   }
 
   void _remove(String key) {
+    recordDiagnostic('trace_image', {
+      'phase': 'dispose_start',
+      'resource': key,
+      'imageCache': diagnosticCounts,
+    });
     _images.remove(key)?.dispose();
+    recordDiagnostic('trace_image', {'phase': 'dispose_end', 'resource': key});
     MapImageBudget.shared.release(_reservations.remove(key));
   }
 
@@ -228,7 +234,19 @@ class GeographyImageCache {
         if (!MapImageBudget.shared.reserve(reservation, kind, bytesNeeded)) {
           throw StateError('Map image budget exhausted');
         }
+        recordDiagnostic('trace_image', {
+          'phase': 'load_start',
+          'resource': key,
+          'imageCache': diagnosticCounts,
+        });
         final bytes = await PreparedMapBytes.shared.load(parts.first);
+        recordDiagnostic('trace_image', {
+          'phase': 'decode_start',
+          'resource': key,
+          'bytes': bytes.length,
+          'width': side,
+          'imageCache': diagnosticCounts,
+        });
         final codec = await ui.instantiateImageCodec(
           bytes,
           targetWidth: side,
@@ -236,6 +254,12 @@ class GeographyImageCache {
         );
         try {
           final image = (await codec.getNextFrame()).image;
+          recordDiagnostic('trace_image', {
+            'phase': 'decode_end',
+            'resource': key,
+            'width': image.width,
+            'height': image.height,
+          });
           if (image.width != side || image.height != side) {
             image.dispose();
             throw StateError('Unexpected map image dimensions');
@@ -248,6 +272,14 @@ class GeographyImageCache {
         } finally {
           codec.dispose();
         }
+      } catch (error, stack) {
+        recordDiagnostic('image_error', {
+          'resource': key,
+          'error': error.toString(),
+          'stack': stack.toString(),
+          'imageCache': diagnosticCounts,
+        });
+        rethrow;
       } finally {
         if (!retained) MapImageBudget.shared.release(reservation);
         _pending.remove(key);
@@ -505,6 +537,12 @@ class _GeographyTilesState extends State<GeographyTiles> {
 
   Future<void> _refreshOnce() async {
     final token = revision;
+    recordDiagnostic('trace_images', {
+      'operation': token,
+      'phase': 'refresh_start',
+      'resource': widget.boundaryLayer ?? 'background',
+      'imageCache': cache.diagnosticCounts,
+    });
     final level = _level;
     final descriptors =
         widget.enabled ? _descriptors(level) : <(String, Rect, Rect)>[];
@@ -530,8 +568,19 @@ class _GeographyTilesState extends State<GeographyTiles> {
       });
     }
 
+    recordDiagnostic('trace_images', {
+      'operation': token,
+      'phase': 'replace_start',
+      'resource': widget.boundaryLayer ?? 'background',
+      'count': wanted.length,
+    });
     publish();
     await WidgetsBinding.instance.endOfFrame;
+    recordDiagnostic('trace_images', {
+      'operation': token,
+      'phase': 'replace_frame_boundary',
+      'resource': widget.boundaryLayer ?? 'background',
+    });
     if (!mounted || token != revision) return;
     // The old paint has retired; only now may the LRU evict departing pixels.
     _pinned = wanted;
@@ -540,6 +589,11 @@ class _GeographyTilesState extends State<GeographyTiles> {
       if (!mounted || token != revision) return;
       await cache.load(key);
       publish();
+      recordDiagnostic('trace_images', {
+        'operation': token,
+        'phase': 'published',
+        'resource': key,
+      });
     }
     if (!mounted || token != revision) return;
     // Prefetch nearest levels only into spare capacity. It never evicts a
