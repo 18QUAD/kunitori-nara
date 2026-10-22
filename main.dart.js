@@ -26735,7 +26735,7 @@ s=q}while(true)switch(s){case 0:if($.a_==null)A.aId()
 $.a_.toString
 n=t.N
 m=t.X
-A.bR("flutter_start",A.a3(["appBuild","attack-contact-recovery-20261022-v1"],n,m),!0)
+A.bR("flutter_start",A.a3(["appBuild","startup-handshake-recovery-20261022-v1"],n,m),!0)
 $.hR=new A.ayX($.hR)
 l=$.aP()
 l.xr=new A.ayY(l.xr)
