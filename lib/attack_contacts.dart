@@ -8,8 +8,11 @@ class AttackContacts {
 
   int get length => _active.length;
 
+  void startSequence(String type) =>
+      _active.removeWhere((_, value) => value == type);
+
   bool begin(int pointer, String type, {required bool primary}) {
-    if (primary) _active.removeWhere((_, value) => value == type);
+    if (primary) startSequence(type);
     final first = _active.isEmpty;
     final added = !_active.containsKey(pointer);
     _active[pointer] = type;

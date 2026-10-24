@@ -42,4 +42,18 @@ void main() {
     contacts.clear();
     expect(contacts.length, 0);
   });
+  test(
+    'a primary sequence starting outside the button permits its secondary contact',
+    () {
+      final contacts = AttackContacts();
+      expect(contacts.begin(1, 'touch', primary: true), isTrue);
+      // Lost release, then the next primary contact begins elsewhere in the page.
+      contacts.startSequence('touch');
+      expect(contacts.begin(3, 'touch', primary: false), isTrue);
+      expect(contacts.begin(4, 'touch', primary: false), isFalse);
+      contacts.end(3);
+      contacts.end(4);
+      expect(contacts.length, 0);
+    },
+  );
 }

@@ -39,7 +39,7 @@ const ink = Color(0xFF101C2B),
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   recordDiagnostic('flutter_start', {
-    'appBuild': 'national-conquest-20261024-v1',
+    'appBuild': 'outside-primary-recovery-20261024-v1',
   });
   final previousErrorHandler = FlutterError.onError;
   FlutterError.onError = (details) {

@@ -26,6 +26,7 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
   bool _placementPending = false;
   final _contacts = AttackContacts();
   late final JSFunction _releaseContact;
+  late final JSFunction _startSequence;
   late final JSFunction _resetContacts;
 
   void _update() {
@@ -116,6 +117,7 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
     for (final type in ['pointerup', 'pointercancel']) {
       web.document.removeEventListener(type, _releaseContact, true.toJS);
     }
+    web.document.removeEventListener('pointerdown', _startSequence, true.toJS);
     web.window.removeEventListener('blur', _resetContacts);
     web.document.removeEventListener('visibilitychange', _resetContacts);
     _contacts.clear();
@@ -144,6 +146,23 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
     // One contact group counts once, on its first press. Every finger in the
     // group must be released/canceled before a new group can count. Capture the
     // document's releases so dragging outside the button cannot leave it stuck.
+    // Primary contacts can begin anywhere in this document, not just on the
+    // button. Clear stale contacts before a later secondary finger enters it.
+    _startSequence =
+        ((web.PointerEvent event) {
+          if (!event.isPrimary) return;
+          final before = _contacts.length;
+          _contacts.startSequence(event.pointerType);
+          if (_contacts.length != before) {
+            recordDiagnostic('trace_button', {
+              'phase': 'reset_primary_sequence',
+              'operation': event.pointerId,
+              'count': _contacts.length,
+              'resource': event.pointerType,
+            });
+          }
+        }).toJS;
+    web.document.addEventListener('pointerdown', _startSequence, true.toJS);
     _releaseContact =
         ((web.PointerEvent event) {
           if (!_contacts.end(event.pointerId)) return;

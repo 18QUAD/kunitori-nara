@@ -41,6 +41,24 @@ const server=http.createServer((req,res)=>{
   await page.evaluate(()=>window.blockReleases=false);
   await touch('touchStart',[left]);expected++;await count();await touch('touchEnd',[]);
   console.log('PASS lost releases recover on the next genuine primary touch without app switching');
+  // A fresh gesture can begin outside the button. That primary pointer must
+  // also retire stale contacts before its second finger presses the button.
+  const outside={id:9,x:10,y:100};
+  await touch('touchStart',[left]);expected++;await count();
+  await page.evaluate(()=>window.blockReleases=true);await touch('touchEnd',[]);
+  await page.evaluate(()=>window.blockReleases=false);
+  await touch('touchStart',[outside]);await count();
+  await touch('touchStart',[outside,left]);expected++;await count();
+  await touch('touchEnd',[]);
+  console.log('PASS lost release recovers when the next primary finger starts outside the button');
+  await touch('touchStart',[left]);expected++;await count();
+  await page.evaluate(()=>window.blockReleases=true);await touch('touchEnd',[]);
+  await page.evaluate(()=>window.blockReleases=false);
+  await touch('touchStart',[outside,left]);expected++;await count();
+  await touch('touchEnd',[]);
+  console.log('PASS simultaneous outside/inside contacts recover without a lost count');
+
+
   await touch('touchStart',[left]);expected++;await count();
   await page.evaluate(()=>window.blockReleases=true);await touch('touchCancel',[]);await page.evaluate(()=>window.blockReleases=false);
   await touch('touchStart',[left]);expected++;await count();await touch('touchEnd',[]);
