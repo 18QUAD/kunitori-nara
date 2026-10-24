@@ -448,9 +448,18 @@ class _TerritoryMapState extends State<TerritoryMap> {
     final office = widget.atlas.mapOffices[officeId]!;
     final city = office.cityId;
     if (widget.cityId == null) widget.onCitySelected(city);
-    final town = office.townId;
+    final town = office.townId ?? widget.atlas.officeTownIds[city];
     if (town != null) {
       widget.onSelected(town);
+      if (office.townId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${office.name}は区域外にあるため、${widget.atlas.conquestPlaceName(city)}を選択します。',
+            ),
+          ),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1052,12 +1061,13 @@ class _MapPainter extends CustomPainter {
     for (final office in atlas.mapOffices.values) {
       if (!officePoints.containsKey(office.id)) continue;
       if (!overview && office.cityId != cityId) continue;
+      final quizTown = office.townId ?? atlas.officeTownIds[office.cityId];
       paintOfficeSymbol(
         canvas,
         officePoints[office.id]!,
         zoom,
         isCity: office.isCity,
-        ready: office.townId != null && game.canStartQuizAt(office.townId!),
+        ready: quizTown != null && game.canStartQuizAt(quizTown),
         mastered: game.mastered.contains(office.cityId),
       );
     }

@@ -17,8 +17,8 @@ void main() {
       final atlas = data.atlas;
       expect(atlas.mapOffices.length, 1916);
       expect(atlas.mapOffices.keys.toSet(), containsAll(atlas.cities.keys));
-      expect(atlas.offices.length, 39);
-      expect(atlas.officeTownIds.length, 39);
+      expect(atlas.offices.keys.toSet(), atlas.cities.keys.toSet());
+      expect(atlas.officeTownIds.keys.toSet(), atlas.cities.keys.toSet());
       expect(atlas.towns.values.every((t) => t.polygons.isEmpty), isTrue);
       final original = jsonDecode(
         File('assets/data/nara_offices.json').readAsStringSync(),
@@ -42,11 +42,11 @@ void main() {
       final game = Game(atlas)..setHome(town);
       game.owned.addAll(atlas.byCity['27127']!.map((t) => t.id));
       expect(game.cityOwned('27127'), isTrue);
-      expect(game.canStartQuizAt(town), isFalse);
-      expect(game.canPracticeAt(town), isFalse);
+      expect(game.canStartQuizAt(town), isTrue);
+      expect(game.canPracticeAt(town), isTrue);
       expect(
-        game.tipsFor(selectedCity: '27127').every((f) => !f.quizEligible),
-        isTrue,
+        game.tipsFor(selectedCity: '27127').where((f) => f.quizEligible).length,
+        5,
       );
     },
   );
@@ -124,7 +124,7 @@ void main() {
   );
 
   testWidgets(
-    'an island headquarters outside its territory remains visible without a guessed town',
+    'an island headquarters keeps its real position and selects its explicit conquest hub',
     (tester) async {
       await tester.runAsync(() => data.ensureGeometry('47'));
       String? selected;
@@ -151,7 +151,8 @@ void main() {
       expect(nodes.single.properties.label, '竹富町役場');
       nodes.single.properties.onTap();
       await tester.pump();
-      expect(selected, isNull);
+      expect(selected, data.atlas.officeTownIds['47381']);
+      expect(data.atlas.mapOffices['47381']!.townId, isNull);
       expect(find.byType(SnackBar), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());

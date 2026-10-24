@@ -12,6 +12,7 @@ import 'town_connections.dart';
 import 'nearest_connections.dart';
 import 'office_marker.dart';
 import 'national_tips.dart';
+import 'national_conquest.dart';
 import 'diagnostics.dart';
 
 /// Population and adjacency are resident; detailed polygons are loaded by prefecture.
@@ -161,6 +162,10 @@ class NationalAtlas {
         atlas.towns[b]!.neighbors.add(a);
       }
     }
+    enableNationalConquest(atlas, {
+      for (final p in national['prefectures'] as List)
+        p['id'] as String: p['name'] as String,
+    });
     atlas.enableSeaTravel(seaTownConnections);
     atlas.enableNearbyTravel(nearestTownConnections);
     // Migration needs source IDs and populations; gameplay uses the merged graph.

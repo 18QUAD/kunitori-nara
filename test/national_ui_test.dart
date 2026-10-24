@@ -261,7 +261,8 @@ void main() {
       );
       for (
         var i = 0;
-        i < 100 && game.atlas.facts['47201']!.first.category == '仮tips';
+        i < 100 &&
+            !game.atlas.facts['47201']!.any((f) => f.id.contains(':national:'));
         i++
       ) {
         await tester.runAsync(
@@ -272,10 +273,14 @@ void main() {
       expect(game.atlas.facts['47201']!.first.category, isNot('仮tips'));
       expect(find.text('この地域の歴史・文化tipsは準備中です。'), findsNothing);
       expect(
-        game.atlas.facts['47201']!.every(
-          (f) => !f.quizEligible && f.text.runes.length <= 40,
-        ),
+        game.atlas.facts['47201']!
+            .where((f) => !f.quizEligible)
+            .every((f) => f.text.runes.length <= 40),
         isTrue,
+      );
+      expect(
+        game.atlas.facts['47201']!.where((f) => f.quizEligible),
+        hasLength(5),
       );
       expect(
         progressLabel(),

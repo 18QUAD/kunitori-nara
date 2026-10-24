@@ -120,6 +120,10 @@ class NationalTips {
       }
     }
     if (token != _revision) return false;
+    // Quiz questions stay resident while display-only culture tips are swapped.
+    for (final city in decoded.keys) {
+      decoded[city]!.addAll(atlas.facts[city]!.where((f) => f.quizEligible));
+    }
     for (final city in decoded.keys) {
       _fallbacks[city] = atlas.facts[city]!;
     }

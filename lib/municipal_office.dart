@@ -8,10 +8,14 @@ class MunicipalOffice {
     this.address,
     this.officialUrl,
     this.longitude,
-    this.latitude,
-  );
+    this.latitude, {
+    bool? isCityOffice,
+    this.usesConquestHub = false,
+  }) : _isCityOffice = isCityOffice;
   final String cityId, name, sourceTownId, address, officialUrl;
   final double longitude, latitude;
-  bool get isCity => cityId.startsWith('292');
+  final bool? _isCityOffice;
+  final bool usesConquestHub;
+  bool get isCity => _isCityOffice ?? cityId.startsWith('292');
   Point<double> get point => Point(longitude, latitude);
 }

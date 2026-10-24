@@ -271,6 +271,13 @@ class Atlas {
   final Map<String, MunicipalOffice> offices = {};
   final Map<String, OfficeMarker> mapOffices = {};
   final Map<String, String> officeTownIds = {};
+  String conquestPlaceName(String city) {
+    final office = offices[city]!;
+    return office.usesConquestHub
+        ? '${towns[officeTownIds[city]]!.name}の制圧拠点'
+        : office.name;
+  }
+
   MunicipalOffice? officeForTown(String id) {
     final city = towns[id]?.cityId;
     return officeTownIds[city] == id ? offices[city] : null;
@@ -631,7 +638,7 @@ class Game {
         !mastered.contains(town.cityId) &&
         atlas.offices.containsKey(town.cityId)) {
       message =
-          '${atlas.cities[town.cityId]}の全領土を獲得。${atlas.offices[town.cityId]!.name}のある町をタップして制圧クイズに挑戦できます。';
+          '${atlas.cities[town.cityId]}の全領土を獲得。${atlas.offices[town.cityId]!.usesConquestHub ? atlas.conquestPlaceName(town.cityId) : '${atlas.offices[town.cityId]!.name}のある町'}をタップして制圧クイズに挑戦できます。';
     }
     return true;
   }
@@ -742,7 +749,7 @@ class Game {
     if (correct) {
       wins++;
       mastered.add(q.cityId);
-      titles.add('大和の知恵者');
+      titles.add(q.cityId.startsWith('29') ? '大和の知恵者' : '全国の知恵者');
       message = 'すごい、5問とも正解だよ！ ${atlas.cities[q.cityId]}を制圧できたね。おめでとう！';
     } else {
       losses++;
@@ -751,7 +758,7 @@ class Game {
       progress.remove(officeTown);
       mastered.remove(q.cityId);
       message =
-          '${choice == null ? '時間切れになっちゃったね' : '今回は不正解だったね'}。正解は「${q.answer}」だよ。${atlas.offices[q.cityId]!.name}所在地の${atlas.towns[officeTown]!.name}の支配を失ったけれど、再攻略すればまた挑戦できるよ！';
+          '${choice == null ? '時間切れになっちゃったね' : '今回は不正解だったね'}。正解は「${q.answer}」だよ。${atlas.offices[q.cityId]!.usesConquestHub ? atlas.conquestPlaceName(q.cityId) : '${atlas.offices[q.cityId]!.name}所在地の${atlas.towns[officeTown]!.name}'}の支配を失ったけれど、再攻略すればまた挑戦できるよ！';
     }
     if (attackTarget != null && !isReachable(attackTarget!)) {
       _resumePendingTarget();

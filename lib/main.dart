@@ -39,7 +39,7 @@ const ink = Color(0xFF101C2B),
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   recordDiagnostic('flutter_start', {
-    'appBuild': 'map-save-coalescing-20261024-v1',
+    'appBuild': 'national-conquest-20261024-v1',
   });
   final previousErrorHandler = FlutterError.onError;
   FlutterError.onError = (details) {
@@ -419,15 +419,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
+  String get _conquestLocation =>
+      atlas!.offices[_completedCity]!.usesConquestHub ? '制圧拠点' : '役所所在地';
+
   List<String> get _conquestPages => [
     '${atlas!.cities[_completedCity]}の全地域制圧おめでとう！',
     '完全制覇には、制圧クイズに全問正解する必要があるよ。',
-    'クイズは役所所在地から挑戦する、4択5問だよ。',
+    'クイズは$_conquestLocationから挑戦する、4択5問だよ。',
     '5問すべて正解で完全制覇！1問の制限時間は${game!.difficulty.seconds}秒だよ。',
-    '不正解や時間切れで、役所所在地の支配を失うよ。',
-    '役所所在地が本拠地の場合も対象だよ。気をつけてね。',
+    '不正解や時間切れで、$_conquestLocationの支配を失うよ。',
+    '$_conquestLocationが本拠地の場合も対象だよ。気をつけてね。',
     '開始前にキャンセルしても、領土は失わないよ。',
-    '${atlas!.offices[_completedCity]!.name}へ移動して、クイズを始める？',
+    '${atlas!.conquestPlaceName(_completedCity!)}へ移動して、クイズを始める？',
   ];
 
   void _finishConquestGuide({required bool startQuiz}) {
@@ -1280,7 +1283,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         Expanded(
           child: FilledButton(
             onPressed: () => _finishConquestGuide(startQuiz: true),
-            child: const Text('役所へ移動して挑戦'),
+            child: Text(
+              atlas!.offices[_completedCity]!.usesConquestHub
+                  ? '制圧拠点へ移動して挑戦'
+                  : '役所へ移動して挑戦',
+            ),
           ),
         ),
       ],
@@ -2005,7 +2012,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。航路で接続された町を領有すると、その接続先の町へ渡航できます。渡航先も人口と同じ回数のタップで攻略します。町との対応が未確定の航路は含みません。未接続の町群は、境界間の直線距離が最も近い町と接続します。接続先が別の市区町村の場合は、同じ市区町村内に別の町群があれば、そちらの最も近い町とも接続します。奈良県以外は全領土獲得まで遊べます。役所・制圧クイズは準備中です。',
+                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。航路で接続された町を領有すると、その接続先の町へ渡航できます。渡航先も人口と同じ回数のタップで攻略します。町との対応が未確定の航路は含みません。未接続の町群は、境界間の直線距離が最も近い町と接続します。接続先が別の市区町村の場合は、同じ市区町村内に別の町群があれば、そちらの最も近い町とも接続します。全国の市区町村で、全領土獲得後に4択5問の制圧クイズへ挑戦できます。役場が区域外にある自治体は、町内の制圧拠点から挑戦します。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
@@ -2090,7 +2097,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '役所・役場：全国の県・市区町村マップに市役所・区役所・町村役場を表示します。国土交通省「市町村役場等及び公的集会施設」（2022年）の本庁舎を基に、未収録・旧所在地は国土地理院ベクトルタイルの役所記号で補完。照合用の代表点にはCode for Fukui localgovjp（CC0）を使用しています。離島の町村などで役場が区域外にある場合も実位置に表示します。奈良は従来の公式所在地との照合済みデータを維持し、明日香村は橘の新庁舎に対応。奈良以外の制圧クイズは準備中です。\nhttps://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P05-v3_0.html\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment\nhttps://github.com/codeforfukui/localgovjp',
+                    '役所・役場：全国の県・市区町村マップに市役所・区役所・町村役場を表示します。国土交通省「市町村役場等及び公的集会施設」（2022年）の本庁舎を基に、未収録・旧所在地は国土地理院ベクトルタイルの役所記号で補完。照合用の代表点にはCode for Fukui localgovjp（CC0）を使用しています。離島の町村などで役場が区域外にある場合も実位置に表示します。奈良は従来の公式所在地との照合済みデータを維持し、明日香村は橘の新庁舎に対応。全国の役所所在地で制圧クイズに挑戦できます。区域外の役場は実位置を保ち、町内の制圧拠点を使います。\nhttps://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P05-v3_0.html\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment\nhttps://github.com/codeforfukui/localgovjp',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
