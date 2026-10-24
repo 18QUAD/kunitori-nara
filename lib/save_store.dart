@@ -15,6 +15,7 @@ class SaveStore {
   final Map<String, int?> _pendingParents = {};
   int _writeOperation = 0;
   Future<void>? _writing;
+  bool _notifyAfterWrite = false;
   String? error;
   void Function()? onChanged;
   bool get saving => _writing != null;
@@ -73,6 +74,7 @@ class SaveStore {
     String value, {
     int? parentOperation,
   }) {
+    _notifyAfterWrite |= storageKey == key || error != null;
     _pendingParents[storageKey] = parentOperation;
     _pending[storageKey] = value;
     if (_writing != null) return _writing!;
@@ -80,7 +82,11 @@ class SaveStore {
     _writing = future;
     return future.whenComplete(() {
       _writing = null;
-      onChanged?.call();
+      final notify = _notifyAfterWrite;
+      _notifyAfterWrite = false;
+      // Camera saves do not change game UI. Rebuilding it on every pan frame
+      // creates a save -> full rebuild -> paint loop. Errors still notify.
+      if (notify) onChanged?.call();
     });
   }
 
@@ -109,6 +115,7 @@ class SaveStore {
           'resource': storageKey,
         });
       } catch (failure, stack) {
+        _notifyAfterWrite = true;
         recordDiagnostic('save_error', {
           'resource': storageKey,
           'error': failure.toString(),

@@ -1,3 +1,4 @@
+import 'map_view_save_queue.dart';
 import 'dart:ui' show PlatformDispatcher, FramePhase;
 import 'dart:async';
 import 'dart:convert';
@@ -38,7 +39,7 @@ const ink = Color(0xFF101C2B),
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   recordDiagnostic('flutter_start', {
-    'appBuild': 'startup-handshake-recovery-20261022-v1',
+    'appBuild': 'map-save-coalescing-20261024-v1',
   });
   final previousErrorHandler = FlutterError.onError;
   FlutterError.onError = (details) {
@@ -221,6 +222,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Atlas? atlas;
   Game? game;
   SaveStore? store;
+  MapViewSaveQueue? _mapViewSaves;
   MapViewState? _restoredMapView;
   TipAppearanceStore? tipAppearanceStore;
   TipAppearance tipAppearance = const TipAppearance();
@@ -534,6 +536,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _adRepository?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     if (store != null) store!.onChanged = null;
+    _mapViewSaves?.dispose();
     super.dispose();
   }
 
@@ -562,6 +565,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       atlas = data;
       game = g;
       store = saver;
+      _mapViewSaves = MapViewSaveQueue(saver.saveMapView);
       tipAppearanceStore = appearanceStore;
       tipAppearance = appearanceStore.load();
       saver.onChanged = () {
@@ -620,6 +624,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _diagnose('lifecycle_${state.name}');
+    if (state != AppLifecycleState.resumed) {
+      unawaited(_mapViewSaves?.flush() ?? Future<void>.value());
+    }
     if (game == null) return;
     if (state == AppLifecycleState.resumed && !_answerFeedbackOpen) {
       final q = game!.quiz;
@@ -673,6 +680,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           ),
     );
     if (confirmed != true || !mounted) return;
+    _mapViewSaves?.cancel();
     setState(() {
       _clearConquestFor(null);
       game = Game(atlas!);
@@ -1611,9 +1619,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                             onViewChanged: (view) {
                               _recordView(view);
                               _restoredMapView = view;
-                              if (store != null) {
-                                unawaited(store!.saveMapView(view));
-                              }
+                              _mapViewSaves?.schedule(view);
                             },
                             controls: [
                               IconButton.filledTonal(
@@ -1649,9 +1655,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                               onViewChanged: (view) {
                                 _recordView(view);
                                 _restoredMapView = view;
-                                if (store != null) {
-                                  unawaited(store!.saveMapView(view));
-                                }
+                                _mapViewSaves?.schedule(view);
                               },
                               fitScale: 1,
                               showControls:
