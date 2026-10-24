@@ -162,10 +162,18 @@ class NationalAtlas {
         atlas.towns[b]!.neighbors.add(a);
       }
     }
-    enableNationalConquest(atlas, {
-      for (final p in national['prefectures'] as List)
-        p['id'] as String: p['name'] as String,
-    });
+    enableNationalConquest(
+      atlas,
+      {
+        for (final p in national['prefectures'] as List)
+          p['id'] as String: p['name'] as String,
+      },
+      officeSourceTownIds: {
+        for (final row in officeData['offices'] as List)
+          if (row['id'] == row['cityId'] && row['sourceTownId'] != null)
+            row['cityId'] as String: row['sourceTownId'] as String,
+      },
+    );
     atlas.enableSeaTravel(seaTownConnections);
     atlas.enableNearbyTravel(nearestTownConnections);
     // Migration needs source IDs and populations; gameplay uses the merged graph.

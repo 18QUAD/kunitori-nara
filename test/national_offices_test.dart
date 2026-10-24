@@ -33,6 +33,17 @@ void main() {
         expect(atlas.cities.containsKey(o.cityId), isTrue);
         if (o.townId != null) expect(atlas.towns[o.townId]!.cityId, o.cityId);
       }
+      final records = jsonDecode(
+        File('assets/data/japan_offices.json').readAsStringSync(),
+      );
+      for (final row in records['offices']) {
+        if (row['id'] == row['cityId'] && row['sourceTownId'] != null) {
+          expect(
+            atlas.offices[row['cityId']]!.sourceTownId,
+            row['sourceTownId'],
+          );
+        }
+      }
       expect(atlas.mapOffices['13101']!.isCity, isTrue);
       expect(atlas.mapOffices['14301']!.isCity, isFalse);
       expect(atlas.mapOffices['27127:city-hall']!.name, '大阪市役所');

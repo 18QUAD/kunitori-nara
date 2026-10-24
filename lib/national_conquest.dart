@@ -6,7 +6,11 @@ const nationalOfficeSource =
 
 /// Extend the existing five-question conquest rules using the resident census
 /// metadata. No detailed geometry or external quiz download is required.
-void enableNationalConquest(Atlas atlas, Map<String, String> prefectures) {
+void enableNationalConquest(
+  Atlas atlas,
+  Map<String, String> prefectures, {
+  Map<String, String> officeSourceTownIds = const {},
+}) {
   for (final city in atlas.cities.entries.where(
     (c) => !c.key.startsWith('29'),
   )) {
@@ -30,7 +34,7 @@ void enableNationalConquest(Atlas atlas, Map<String, String> prefectures) {
     atlas.offices[city.key] = MunicipalOffice(
       city.key,
       marker.name,
-      atlas.membersByTown[hub]!.first.id,
+      officeSourceTownIds[city.key] ?? atlas.membersByTown[hub]!.first.id,
       marker.address,
       nationalOfficeSource,
       marker.point.x,

@@ -1067,8 +1067,12 @@ class _MapPainter extends CustomPainter {
         officePoints[office.id]!,
         zoom,
         isCity: office.isCity,
-        ready: quizTown != null && game.canStartQuizAt(quizTown),
-        mastered: game.mastered.contains(office.cityId),
+        ready:
+            office.id == office.cityId &&
+            quizTown != null &&
+            game.canStartQuizAt(quizTown),
+        mastered:
+            office.id == office.cityId && game.mastered.contains(office.cityId),
       );
     }
   }
