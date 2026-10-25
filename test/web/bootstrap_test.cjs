@@ -9,6 +9,7 @@ const source = fs.readFileSync('web/flutter_bootstrap.js', 'utf8')
 async function run(serviceWorker) {
   let loaded = 0, reloaded = 0;
   const listeners = {};
+  const css = {};
   const buildConfig = {builds: [{mainJsPath: 'main.dart.js'}]};
   const host = {
     style: {},
@@ -18,6 +19,7 @@ async function run(serviceWorker) {
   const context = {
     URL, console: {warn() {}},
     document: {
+      documentElement: {style: {setProperty(name, value) {css[name] = value;}}},
       baseURI: 'https://18quad.github.io/kunitori-nara/',
       getElementById() {return host;}, addEventListener() {},
     },
@@ -32,16 +34,19 @@ async function run(serviceWorker) {
     _flutter: {buildConfig, loader: {load() { loaded++; }}},
   };
   await vm.runInNewContext(source, context);
+  assert.equal(css['--game-visible-height'], '800px');
   assert.equal(host.style.height, undefined);
   // A stale host rectangle and a scrolled viewport must not become game padding.
   context.window.visualViewport = {offsetTop: 24, height: 390};
   listeners.resize();
+  assert.equal(css['--game-visible-height'], `${context.window.visualViewport.height}px`);
   assert.equal(host.style.height, undefined);
   assert.equal(host.style.top, undefined);
   assert.equal(context.window.kunitoriViewport.top(), 0);
   assert.equal(context.window.kunitoriViewport.bottom(), 0);
   context.window.visualViewport = {offsetTop: 0, height: 844};
   listeners.resize();
+  assert.equal(css['--game-visible-height'], `${context.window.visualViewport.height}px`);
   assert.equal(host.style.height, undefined);
   assert.equal(host.style.top, undefined);
   assert.equal(buildConfig.builds[0].mainJsPath, 'main.dart.js?v=test-build-90');
