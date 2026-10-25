@@ -38,7 +38,7 @@ const ink = Color(0xFF101C2B),
     gold = Color(0xFFEEC47C);
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  recordDiagnostic('flutter_start', {'appBuild': 'landscape-play-20261025-v1'});
+  recordDiagnostic('flutter_start', {'appBuild': 'landscape-font-20261025-v1'});
   final previousErrorHandler = FlutterError.onError;
   FlutterError.onError = (details) {
     recordDiagnostic('flutter_error', {
@@ -1164,9 +1164,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 16)),
+          Text(title, style: const TextStyle(fontSize: 12)),
           const SizedBox(height: 6),
-          Text(value, key: key, style: const TextStyle(fontSize: 18)),
+          Text(value, key: key, style: const TextStyle(fontSize: 12)),
         ],
       ),
     );
@@ -1211,18 +1211,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                           town?.name ??
                               (city == null ? '町を選択' : atlas!.cities[city]!),
                           key: const Key('current-location'),
-                          style: const TextStyle(fontSize: 18),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         if (town != null) ...[
                           const SizedBox(height: 20),
-                          Text(
-                            '${number(g.owned.contains(town.id) ? town.population : g.progress[town.id] ?? 0)}\n/ ${number(town.population)}',
-                            key: const Key('landscape-town-progress'),
-                            style: const TextStyle(
-                              fontSize: 28,
-                              color: gold,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          TapProgress(
+                            townId: town.id,
+                            value:
+                                g.owned.contains(town.id)
+                                    ? town.population
+                                    : g.progress[town.id] ?? 0,
+                            population: town.population,
+                            tapCount: g.totalTaps,
                           ),
                         ],
                         if (store!.error != null) ...[
@@ -1256,9 +1259,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       child: Row(
         key: const Key('landscape-play-layout'),
         children: [
-          Expanded(flex: 22, child: side(right: false)),
+          Expanded(
+            flex: 22,
+            child: DefaultTextStyle(
+              style: Theme.of(context).textTheme.titleLarge!,
+              child: side(right: false),
+            ),
+          ),
           Expanded(flex: 56, child: _playMap()),
-          Expanded(flex: 22, child: side(right: true)),
+          Expanded(
+            flex: 22,
+            child: DefaultTextStyle(
+              style: Theme.of(context).textTheme.titleLarge!,
+              child: side(right: true),
+            ),
+          ),
         ],
       ),
     );
