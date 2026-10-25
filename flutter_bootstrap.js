@@ -53,6 +53,13 @@ const safeAreaProbe = document.getElementById('safe-area-probe');
 let topInset = 0;
 let bottomInset = 0;
 function updateBrowserViewport() {
+  const viewport = window.visualViewport;
+  // Portrait must fit above Safari's toolbar. Landscape keeps its large CSS
+  // viewport for the map backdrop and native toolbar-collapse scrolling.
+  if (!viewport || viewport.scale === undefined || viewport.scale === 1) {
+    document.documentElement.style.setProperty(
+      '--game-visible-height', `${viewport ? viewport.height : window.innerHeight}px`);
+  }
   const safeArea = getComputedStyle(safeAreaProbe);
   const nextTop = Math.max(0, parseFloat(safeArea.paddingTop) || 0);
   const nextBottom = Math.max(0, parseFloat(safeArea.paddingBottom) || 0);
