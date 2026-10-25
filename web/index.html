@@ -57,6 +57,8 @@
              input:focus, textarea:focus, [role="dialog"], [role="menu"]) .browser-scroll-rail {
       display: none;
     }
+    /* Override the native button shape, which Flutter refreshes inline. */
+    .attack-tap-native { border-radius: 16px !important; }
     /* Repeated taps must not select Flutter's accessibility text on iOS. */
     #app-host, #app-host * {
       -webkit-user-select: none !important;
@@ -80,6 +82,6 @@
   <div id="browser-scroll-left" class="browser-scroll-rail" aria-hidden="true"></div>
   <div id="browser-scroll-right" class="browser-scroll-rail" aria-hidden="true"></div>
   <div id="safe-area-probe" aria-hidden="true"></div>
-  <script src="flutter_bootstrap.js?v=native-toolbar-scroll-20261025" async></script>
+  <script src="flutter_bootstrap.js?v=tap-corners-20261025" async></script>
 </body>
 </html>
