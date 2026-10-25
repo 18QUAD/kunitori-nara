@@ -73,9 +73,12 @@
       display: none;
     }
     /* Override the native button shape, which Flutter refreshes inline. */
-    .attack-tap-native, .attack-tap-half { border-radius: 16px !important; }
+    .attack-tap-native, .attack-tap-half {
+      border-radius: 16px !important;
+    }
     .attack-tap-half { display: none !important; }
     @media (orientation: portrait) {
+      .attack-tap-native, .attack-tap-half { -webkit-tap-highlight-color: transparent; }
       .attack-tap-native[data-split-ready] { width: var(--attack-half-width) !important; }
       .attack-tap-half { display: block !important; }
     }
@@ -105,7 +108,7 @@
   <div id="safe-area-probe" aria-hidden="true"></div>
   <script src="diagnostics.js?v=landscape-font-20261025-v1"></script>
   <script src="map-cache.js?v=landscape-font-20261025-v1"></script>
-  <script src="split_attack.js?v=portrait-split-20261025"></script>
-  <script src="flutter_bootstrap.js?v=portrait-split-20261025" async></script>
+  <script src="split_attack.js?v=split-feedback-20261025"></script>
+  <script src="flutter_bootstrap.js?v=split-feedback-20261025" async></script>
 </body>
 </html>
