@@ -54,6 +54,21 @@
       tabIndex: bridge.tabIndex,
       ariaHidden: bridge.getAttribute('aria-hidden'),
     };
+    bridge.addEventListener('pointerdown', event => {
+      if (portrait.matches || event.button !== 0) return;
+      // The legacy contact tracker can reject a second finger or retain a
+      // canceled contact. Count each landscape target directly on press.
+      event.stopImmediatePropagation();
+      if (bridge.disabled) return;
+      feedback(bridge);
+      bridge.click();
+    }, true);
+    bridge.addEventListener('click', event => {
+      if (!portrait.matches && (event.detail > 0 || event.pointerType)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }, true);
     bridge.dataset.splitReady = '';
     pairs.set(bridge, pair);
   }
