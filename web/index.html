@@ -49,6 +49,18 @@
       user-select: text !important;
       -webkit-touch-callout: default !important;
     }
+    /* Independent of Flutter's embedded host size during browser rotation. */
+    #portrait-guide { display: none; }
+    @media (orientation: landscape) {
+      body:not(:has(input:focus, textarea:focus, [contenteditable="true"]:focus)) #portrait-guide {
+        position: fixed; inset: 0; z-index: 2147483647;
+        display: flex; align-items: center; justify-content: center;
+        box-sizing: border-box; padding: 24px;
+        background: #101C2B; color: white;
+        font: bold 18px sans-serif; text-align: center;
+        touch-action: none;
+      }
+    }
     #safe-area-probe {
       position: fixed; visibility: hidden; pointer-events: none;
       padding-top: env(safe-area-inset-top, 0px);
@@ -58,7 +70,8 @@
 </head>
 <body>
   <div id="app-host"></div>
+  <div id="portrait-guide" role="status">端末を縦向きにしてご利用ください</div>
   <div id="safe-area-probe" aria-hidden="true"></div>
-  <script src="flutter_bootstrap.js?v=attackable-search-20261020" async></script>
+  <script src="flutter_bootstrap.js?v=rotation-guard-20261025" async></script>
 </body>
 </html>
