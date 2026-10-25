@@ -57,7 +57,23 @@ const assert = require('node:assert/strict');
     await page.setViewportSize({width: 390, height: 844});
     assert.equal(await page.locator('#browser-scroll-left').isVisible(), false);
     assert.equal(await page.evaluate(() => scrollY), 0);
-    console.log('Toolbar scroll checks passed: native touch scroll on both sides, stationary game, map gestures, action button, portrait rotation.');
+    await page.addScriptTag({content: fs.readFileSync('web/landscape_scroll.js', 'utf8')});
+    await page.setViewportSize({width: 844, height: 390});
+    await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(() => scrollY), 0, 'Do not scroll before the game is ready');
+    await page.evaluate(() => document.querySelector('#app-host').append(document.createElement('flutter-view')));
+    await page.waitForFunction(() => scrollY > 0);
+    assert.equal((await page.locator('#app-host').boundingBox()).y, 0);
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.setViewportSize({width: 844, height: 380});
+    await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(() => scrollY), 0, 'Do not fight a later user scroll or toolbar resize');
+    await page.setViewportSize({width: 390, height: 844});
+    await page.setViewportSize({width: 844, height: 390});
+    await page.waitForFunction(() => scrollY > 0);
+    await page.setViewportSize({width: 390, height: 844});
+    await page.waitForFunction(() => scrollY === 0);
+    console.log('Toolbar scroll checks passed: native touch scroll on both sides, stationary game, map gestures, action button, portrait rotation, automatic landscape scroll after game startup.');
   } finally {
     await browser.close();
   }
