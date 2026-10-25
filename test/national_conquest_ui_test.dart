@@ -26,10 +26,17 @@ void main() {
     WidgetTester tester,
     String city, {
     bool seenGuide = false,
+    bool attack = false,
   }) async {
     final atlas = data.atlas, hub = data.atlas.officeTownIds[city]!;
     final game = Game(atlas)..setHome(hub);
-    game.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
+    final target =
+        attack
+            ? atlas.byCity[city]!
+                .firstWhere((t) => t.id != hub && game.canAttack(t.id))
+                .id
+            : hub;
+    if (!attack) game.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
     game.everOwned.addAll(game.owned);
     if (seenGuide) game.conquestGuideSeen.add(city);
     SharedPreferences.setMockInitialValues({
@@ -38,7 +45,7 @@ void main() {
         MapViewState(
           center: const Offset(550, 750),
           scale: 1,
-          selected: hub,
+          selected: target,
           cityId: city,
           prefectureId: city.substring(0, 2),
           showGeography: false,
@@ -102,9 +109,54 @@ void main() {
   }
 
   testWidgets(
+    'landscape has one central map, two working attacks, and survives rotation',
+    (tester) async {
+      final game = await launch(tester, '24216', attack: true);
+      final before = game.totalTaps;
+      tester.view.physicalSize = const Size(844, 390);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byKey(const Key('landscape-play-layout')), findsOneWidget);
+      expect(find.byType(TerritoryMap), findsOneWidget);
+      final map = tester.getRect(find.byType(TerritoryMap));
+      for (final name in ['landscape-left-action', 'landscape-right-action']) {
+        final region = find.byKey(ValueKey(name));
+        final button = find.descendant(
+          of: region,
+          matching: find.byType(FilledButton),
+        );
+        expect(button, findsOneWidget);
+        final rect = tester.getRect(button);
+        expect(rect.overlaps(map), isFalse);
+        await tester.tapAt(tester.getCenter(region));
+        await tester.pump();
+      }
+      expect(game.totalTaps, before + 2);
+      expect(find.byTooltip('設定'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      tester.view.physicalSize = const Size(667, 320);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pump();
+      expect(find.byKey(const Key('landscape-play-layout')), findsNothing);
+      expect(
+        tester.widget<TerritoryMap>(find.byType(TerritoryMap)).game,
+        same(game),
+      );
+      expect(game.totalTaps, before + 2);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    },
+  );
+
+  testWidgets(
     'Iga starts from an existing fully owned save, shows the guide, and completes five answers',
     (tester) async {
       final game = await launch(tester, '24216');
+      tester.view.physicalSize = const Size(844, 390);
+      await tester.pump();
       await tester.tap(find.text('制圧クイズに挑戦'));
       await tester.pump();
       for (var page = 0; page < 7; page++) {

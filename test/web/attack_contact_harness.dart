@@ -38,23 +38,31 @@ class _ContactHarnessState extends State<ContactHarness> {
     super.dispose();
   }
 
+  Widget button() => SizedBox(
+    width: 160,
+    height: 160,
+    child: protectAttackTap(
+      onPressed:
+          enabled
+              ? () {
+                web.document.body!.setAttribute('data-taps', '${++taps}');
+                setState(() {});
+              }
+              : null,
+      child: const SizedBox.expand(),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: Center(
-      child: SizedBox(
-        width: 160,
-        height: 160,
-        child: protectAttackTap(
-          onPressed:
-              enabled
-                  ? () {
-                    web.document.body!.setAttribute('data-taps', '${++taps}');
-                    setState(() {});
-                  }
-                  : null,
-          child: const SizedBox.expand(),
-        ),
-      ),
+      child:
+          MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height
+              ? Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [button(), button()],
+              )
+              : button(),
     ),
   );
 }

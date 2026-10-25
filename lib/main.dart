@@ -38,9 +38,7 @@ const ink = Color(0xFF101C2B),
     gold = Color(0xFFEEC47C);
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  recordDiagnostic('flutter_start', {
-    'appBuild': 'outside-primary-recovery-20261024-v1',
-  });
+  recordDiagnostic('flutter_start', {'appBuild': 'landscape-play-20261025-v1'});
   final previousErrorHandler = FlutterError.onError;
   FlutterError.onError = (details) {
     recordDiagnostic('flutter_error', {
@@ -87,7 +85,11 @@ Future<void> main() async {
     recordDiagnostic('map_budget_setting_error', {'error': error.toString()});
   }
   if (!kIsWeb) {
-    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
   }
   runApp(const KunitoriApp());
 }
@@ -138,9 +140,6 @@ class KunitoriApp extends StatelessWidget {
           valueListenable: browserInsets,
           builder: (context, insets, _) {
             final size = MediaQuery.sizeOf(context);
-            final landscape =
-                size.width > size.height &&
-                MediaQuery.viewInsetsOf(context).bottom == 0;
             final media = MediaQuery.of(context);
             final visibleSize = Size(
               size.width,
@@ -152,52 +151,7 @@ class KunitoriApp extends StatelessWidget {
                 padding: insets,
                 child: MediaQuery(
                   data: media.copyWith(size: visibleSize),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ExcludeSemantics(
-                        excluding: landscape,
-                        child: IgnorePointer(
-                          ignoring: landscape,
-                          child: child!,
-                        ),
-                      ),
-                      if (landscape)
-                        const Positioned.fill(
-                          child: Material(
-                            color: ink,
-                            child: SafeArea(
-                              child: Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(24),
-                                  child: Column(
-                                    key: Key('portrait-guide'),
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.screen_rotation,
-                                        size: 48,
-                                        color: mint,
-                                      ),
-                                      SizedBox(height: 16),
-                                      Text(
-                                        '端末を縦向きにしてご利用ください',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                  child: child!,
                 ),
               ),
             );
@@ -953,234 +907,359 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (city != null) atlas!.cities[city]!,
       if (town != null) town.name,
     ].join(' ');
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: ink,
-        titleSpacing: 24,
-        toolbarHeight: 88,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Tooltip(
-                    message: location,
-                    child: Text(
-                      town?.name ??
-                          (city == null
-                              ? (nationalView
-                                  ? '全国'
-                                  : national
-                                          ?.prefectures[prefectureFilter]
-                                          ?.name ??
-                                      '奈良県')
-                              : atlas!.cities[city]!),
-                      key: const Key('current-location'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+    final header = AppBar(
+      backgroundColor: ink,
+      titleSpacing: 24,
+      toolbarHeight: 88,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Tooltip(
+                  message: location,
+                  child: Text(
+                    town?.name ??
+                        (city == null
+                            ? (nationalView
+                                ? '全国'
+                                : national
+                                        ?.prefectures[prefectureFilter]
+                                        ?.name ??
+                                    '奈良県')
+                            : atlas!.cities[city]!),
+                    key: const Key('current-location'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                if (town != null) ...[
-                  const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: math.min(
-                        200,
-                        MediaQuery.sizeOf(context).width * .45,
-                      ),
-                    ),
-                    child: TapProgress(
-                      townId: town.id,
-                      value:
-                          g.owned.contains(town.id)
-                              ? town.population
-                              : g.progress[town.id] ?? 0,
-                      population: town.population,
-                      tapCount: g.totalTaps,
+              ),
+              if (town != null) ...[
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: math.min(
+                      200,
+                      MediaQuery.sizeOf(context).width * .45,
                     ),
                   ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '${city == null ? '市区町村未選択' : atlas!.cities[city]!} ${city == null ? "— / —" : "${number(g.currentCityPopulation(city))} / ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}"}',
-                      key: const Key('city-progress'),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      nationalView
-                          ? '全国 ${number(g.population)} / ${number(atlas!.totalPopulation)}'
-                          : '${national?.prefectures[prefectureFilter]?.name ?? '奈良県'} ${number(g.currentPrefecturePopulation(prefectureFilter))} / ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
-                      key: const Key('prefecture-progress'),
-                      style: const TextStyle(fontSize: 12),
-                    ),
+                  child: TapProgress(
+                    townId: town.id,
+                    value:
+                        g.owned.contains(town.id)
+                            ? town.population
+                            : g.progress[town.id] ?? 0,
+                    population: town.population,
+                    tapCount: g.totalTaps,
                   ),
                 ),
               ],
-            ),
-          ],
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: '設定',
-            icon: const Icon(Icons.settings_outlined),
-            onSelected: (value) {
-              if (value == 'search') _search();
-              if (value == 'records') _showRecords();
-              if (value == 'help') _about();
-              if (value == 'tips') _tipSettings();
-              if (value == 'diagnostics') _showDiagnostics();
-              if (value == 'map-cache') _mapCacheSettings();
-            },
-            itemBuilder:
-                (_) => const [
-                  PopupMenuItem(
-                    value: 'search',
-                    child: ListTile(
-                      leading: Icon(Icons.search),
-                      title: Text('地名から探す'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'tips',
-                    child: ListTile(
-                      leading: Icon(Icons.chat_bubble_outline),
-                      title: Text('キャラ・吹き出し'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'records',
-                    child: ListTile(
-                      leading: Icon(Icons.emoji_events_outlined),
-                      title: Text('戦績'),
-                    ),
-                  ),
-                  if (kIsWeb)
-                    PopupMenuItem(
-                      value: 'map-cache',
-                      child: ListTile(
-                        leading: Icon(Icons.memory_outlined),
-                        title: Text('地図キャッシュ'),
-                      ),
-                    ),
-                  if (kIsWeb)
-                    PopupMenuItem(
-                      value: 'diagnostics',
-                      child: ListTile(
-                        leading: Icon(Icons.description_outlined),
-                        title: Text('診断ログ'),
-                      ),
-                    ),
-                  PopupMenuItem(
-                    value: 'help',
-                    child: ListTile(
-                      leading: Icon(Icons.help_outline),
-                      title: Text('ヘルプ'),
-                    ),
-                  ),
-                ],
+            ],
           ),
-          const SizedBox(width: 8),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${city == null ? '市区町村未選択' : atlas!.cities[city]!} ${city == null ? "— / —" : "${number(g.currentCityPopulation(city))} / ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}"}',
+                    key: const Key('city-progress'),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    nationalView
+                        ? '全国 ${number(g.population)} / ${number(atlas!.totalPopulation)}'
+                        : '${national?.prefectures[prefectureFilter]?.name ?? '奈良県'} ${number(g.currentPrefecturePopulation(prefectureFilter))} / ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
+                    key: const Key('prefecture-progress'),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                if (store!.error != null)
-                  MaterialBanner(
-                    content: Text(store!.error!),
-                    actions: [
-                      TextButton(onPressed: _save, child: const Text('再試行')),
-                    ],
+      actions: [
+        PopupMenuButton<String>(
+          tooltip: '設定',
+          icon: const Icon(Icons.settings_outlined),
+          onSelected: (value) {
+            if (value == 'search') _search();
+            if (value == 'records') _showRecords();
+            if (value == 'help') _about();
+            if (value == 'tips') _tipSettings();
+            if (value == 'diagnostics') _showDiagnostics();
+            if (value == 'map-cache') _mapCacheSettings();
+          },
+          itemBuilder:
+              (_) => const [
+                PopupMenuItem(
+                  value: 'search',
+                  child: ListTile(
+                    leading: Icon(Icons.search),
+                    title: Text('地名から探す'),
                   ),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final baseMapHeight = math.min(
-                        constraints.maxHeight * 0.6 + 12,
-                        math.max(0.0, constraints.maxHeight - 168),
-                      );
-                      // Reuse the former tips row for the map for every profile,
-                      // including the default profile without saved appearance data.
-                      final formerTipSize =
-                          tipAppearance.controlInsetSize ?? TipSize.standard;
-                      final reclaimedHeight =
-                          math.min(
-                            formerTipSize.height,
-                            math.max(
-                                  0,
-                                  constraints.maxHeight - baseMapHeight - 16,
-                                ) *
-                                0.4,
-                          ) +
-                          8;
-                      final topHeight = baseMapHeight + reclaimedHeight;
-                      return Column(
-                        key: const Key('play-layout'),
-                        children: [
-                          SizedBox(
-                            key: const Key('fixed-region'),
-                            height: topHeight,
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                IgnorePointer(
-                                  ignoring: _quizActive,
-                                  child: ExcludeSemantics(
-                                    excluding: _quizActive,
-                                    child: _map(
-                                      showTips: !_quizActive,
-                                      showControls: !_quizActive,
-                                    ),
-                                  ),
-                                ),
-                                if (g.quiz != null || _feedbackQuiz != null)
-                                  _quiz(),
-                                if (_practice != null)
-                                  PracticeQuiz(
-                                    cityName: _practiceCityName!,
-                                    questions: _practice!.questions,
-                                    appearance: tipAppearance,
-                                    controller: _practice,
-                                    inline: true,
-                                    onClose: _closePractice,
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Expanded(child: _controls()),
-                        ],
-                      );
-                    },
+                ),
+                PopupMenuItem(
+                  value: 'tips',
+                  child: ListTile(
+                    leading: Icon(Icons.chat_bubble_outline),
+                    title: Text('キャラ・吹き出し'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'records',
+                  child: ListTile(
+                    leading: Icon(Icons.emoji_events_outlined),
+                    title: Text('戦績'),
+                  ),
+                ),
+                if (kIsWeb)
+                  PopupMenuItem(
+                    value: 'map-cache',
+                    child: ListTile(
+                      leading: Icon(Icons.memory_outlined),
+                      title: Text('地図キャッシュ'),
+                    ),
+                  ),
+                if (kIsWeb)
+                  PopupMenuItem(
+                    value: 'diagnostics',
+                    child: ListTile(
+                      leading: Icon(Icons.description_outlined),
+                      title: Text('診断ログ'),
+                    ),
+                  ),
+                PopupMenuItem(
+                  value: 'help',
+                  child: ListTile(
+                    leading: Icon(Icons.help_outline),
+                    title: Text('ヘルプ'),
                   ),
                 ),
               ],
-            ),
-          ],
         ),
+        const SizedBox(width: 8),
+      ],
+    );
+    final landscape =
+        MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
+    return Scaffold(
+      appBar: landscape ? null : header,
+      body:
+          landscape
+              ? _landscapePlay(header)
+              : SafeArea(
+                child: Stack(
+                  children: [
+                    Column(
+                      children: [
+                        if (store!.error != null)
+                          MaterialBanner(
+                            content: Text(store!.error!),
+                            actions: [
+                              TextButton(
+                                onPressed: _save,
+                                child: const Text('再試行'),
+                              ),
+                            ],
+                          ),
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final baseMapHeight = math.min(
+                                constraints.maxHeight * 0.6 + 12,
+                                math.max(0.0, constraints.maxHeight - 168),
+                              );
+                              // Reuse the former tips row for the map for every profile,
+                              // including the default profile without saved appearance data.
+                              final formerTipSize =
+                                  tipAppearance.controlInsetSize ??
+                                  TipSize.standard;
+                              final reclaimedHeight =
+                                  math.min(
+                                    formerTipSize.height,
+                                    math.max(
+                                          0,
+                                          constraints.maxHeight -
+                                              baseMapHeight -
+                                              16,
+                                        ) *
+                                        0.4,
+                                  ) +
+                                  8;
+                              final topHeight = baseMapHeight + reclaimedHeight;
+                              return Column(
+                                key: const Key('play-layout'),
+                                children: [
+                                  SizedBox(
+                                    key: const Key('fixed-region'),
+                                    height: topHeight,
+                                    child: _playMap(),
+                                  ),
+                                  Expanded(child: _controls()),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+    );
+  }
+
+  Widget _playMap() => Stack(
+    fit: StackFit.expand,
+    children: [
+      IgnorePointer(
+        ignoring: _quizActive,
+        child: ExcludeSemantics(
+          excluding: _quizActive,
+          child: _map(showTips: !_quizActive, showControls: !_quizActive),
+        ),
+      ),
+      if (game!.quiz != null || _feedbackQuiz != null) _quiz(),
+      if (_practice != null)
+        PracticeQuiz(
+          cityName: _practiceCityName!,
+          questions: _practice!.questions,
+          appearance: tipAppearance,
+          controller: _practice,
+          inline: true,
+          onClose: _closePractice,
+        ),
+    ],
+  );
+
+  Widget _landscapePlay(AppBar header) {
+    final g = game!;
+    final town = selected == null ? null : atlas!.towns[selected];
+    final city = town?.cityId ?? cityFilter;
+    final dualAttack =
+        !_quizActive &&
+        _completedCity == null &&
+        town != null &&
+        g.home != null &&
+        !g.owned.contains(town.id);
+    Widget stats(String title, String value, Key key) => Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 6),
+          Text(value, key: key, style: const TextStyle(fontSize: 18)),
+        ],
+      ),
+    );
+    Widget side({required bool right}) => LayoutBuilder(
+      builder:
+          (context, bounds) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (right) ...[
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: header.actions!,
+                          ),
+                        ),
+                        stats(
+                          city == null ? '市区町村未選択' : atlas!.cities[city]!,
+                          city == null
+                              ? '— / —'
+                              : '${number(g.currentCityPopulation(city))}\n/ ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}',
+                          const Key('city-progress'),
+                        ),
+                        stats(
+                          nationalView
+                              ? '全国'
+                              : national?.prefectures[prefectureFilter]?.name ??
+                                  '奈良県',
+                          nationalView
+                              ? '${number(g.population)}\n/ ${number(atlas!.totalPopulation)}'
+                              : '${number(g.currentPrefecturePopulation(prefectureFilter))}\n/ ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
+                          const Key('prefecture-progress'),
+                        ),
+                      ] else ...[
+                        Text(
+                          town?.name ??
+                              (city == null ? '町を選択' : atlas!.cities[city]!),
+                          key: const Key('current-location'),
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                        if (town != null) ...[
+                          const SizedBox(height: 20),
+                          Text(
+                            '${number(g.owned.contains(town.id) ? town.population : g.progress[town.id] ?? 0)}\n/ ${number(town.population)}',
+                            key: const Key('landscape-town-progress'),
+                            style: const TextStyle(
+                              fontSize: 28,
+                              color: gold,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                        if (store!.error != null) ...[
+                          Text(store!.error!),
+                          TextButton(
+                            onPressed: _save,
+                            child: const Text('再試行'),
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              if (!right || dualAttack)
+                SizedBox(
+                  height: math.min(104, bounds.maxHeight * .30),
+                  child: KeyedSubtree(
+                    key: ValueKey(
+                      right
+                          ? 'landscape-right-action'
+                          : 'landscape-left-action',
+                    ),
+                    child: _controls(),
+                  ),
+                ),
+            ],
+          ),
+    );
+    return SafeArea(
+      child: Row(
+        key: const Key('landscape-play-layout'),
+        children: [
+          Expanded(flex: 22, child: side(right: false)),
+          Expanded(flex: 56, child: _playMap()),
+          Expanded(flex: 22, child: side(right: true)),
+        ],
       ),
     );
   }

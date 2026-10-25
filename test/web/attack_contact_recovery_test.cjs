@@ -24,7 +24,7 @@ const server=http.createServer((req,res)=>{
   const context=await browser.newContext({viewport:{width:375,height:667},deviceScaleFactor:2,isMobile:true,hasTouch:true});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/');
-  const button=page.locator('.attack-tap-native');await button.waitFor({state:'visible',timeout:60000});
+  const button=page.locator('.attack-tap-native').first();await button.waitFor({state:'visible',timeout:60000});
   const box=await button.boundingBox(),left={id:1,x:box.x+40,y:box.y+80},right={id:2,x:box.x+120,y:box.y+80},third={id:3,x:box.x+80,y:box.y+110};
   const cdp=await context.newCDPSession(page);let expected=0;
   const touch=(type,touchPoints)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints});
@@ -76,6 +76,22 @@ const server=http.createServer((req,res)=>{
   await button.evaluate(e=>e.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerType:'touch',pointerId:77,isPrimary:true})));await count();
   await page.locator('#harness-toggle').click();await page.waitForFunction(()=>!document.querySelector('.attack-tap-native').disabled);assert(await button.isEnabled());
   await touch('touchStart',[left]);expected++;await count();await touch('touchEnd',[]);
+  await page.setViewportSize({width:844,height:390});
+  await page.waitForFunction(()=>document.querySelectorAll('.attack-tap-native').length===2);
+  await page.waitForTimeout(200);
+  const boxes=await Promise.all((await page.locator('.attack-tap-native').all()).map(b=>b.boundingBox()));
+  assert(boxes.every(b=>b&&b.width>0&&b.height>0));
+  const hands=boxes.map((b,i)=>({id:i+21,x:b.x+b.width/2,y:b.y+b.height/2}));
+  await touch('touchStart',hands);expected+=2;await count();await touch('touchEnd',[]);
+  await touch('touchStart',[hands[0]]);expected++;await count();
+  await touch('touchStart',hands);expected++;await count();
+  await touch('touchEnd',[]);
+  await page.setViewportSize({width:375,height:667});
+  await page.waitForFunction(()=>document.querySelectorAll('.attack-tap-native').length===1);
+  await page.waitForTimeout(200);
+  const restored=await button.boundingBox();
+  await touch('touchStart',[{id:31,x:restored.x+80,y:restored.y+80}]);expected++;await count();await touch('touchEnd',[]);
+  console.log('PASS landscape both hands, overlapping left/right contacts, and portrait restoration');
   assert.deepEqual(errors,[]);
   console.log('PASS rapid groups, lost mouse release, keyboard/accessible activation, disabled input and re-enable; accepted count:',expected);
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

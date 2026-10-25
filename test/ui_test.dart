@@ -340,7 +340,7 @@ void main() {
     tester.view.physicalSize = const Size(844, 390);
     await tester.pumpAndSettle();
     expectMapControlsInside(tester);
-    expect(find.byKey(const Key('portrait-guide')), findsOneWidget);
+    expect(find.byKey(const Key('landscape-play-layout')), findsOneWidget);
     expect(tester.takeException(), isNull);
     tester.view.physicalSize = const Size(390, 844);
     await tester.pumpAndSettle();

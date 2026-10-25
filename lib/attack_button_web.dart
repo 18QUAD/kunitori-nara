@@ -21,7 +21,6 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
     with WidgetsBindingObserver {
   web.HTMLButtonElement? _button;
   bool _routeCurrent = true;
-  bool _portraitAllowed = true;
   Rect? _rect;
   bool _placementPending = false;
   final _contacts = AttackContacts();
@@ -59,7 +58,7 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
         'left:${_rect?.left ?? 0}px;top:${_rect?.top ?? 0}px;'
         'width:${_rect?.width ?? 0}px;height:${_rect?.height ?? 0}px;'
         'pointer-events:auto;'
-        'visibility:${_routeCurrent && _portraitAllowed && _rect != null ? 'visible' : 'hidden'};'
+        'visibility:${_routeCurrent && _rect != null ? 'visible' : 'hidden'};'
         'border-radius:999px;box-sizing:border-box;cursor:pointer;appearance:none;'
         '-webkit-appearance:none;'
         'background:#${background.substring(2)}${background.substring(0, 2)} url("$image") '
@@ -72,7 +71,6 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _routeCurrent = ModalRoute.of(context)?.isCurrent ?? true;
-    _readPortrait();
     _update();
     _schedulePlacement();
   }
@@ -90,7 +88,6 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _placementPending = false;
       if (!mounted) return;
-      _readPortrait();
       final box = context.findRenderObject();
       if (box is RenderBox && box.hasSize) {
         _rect = box.localToGlobal(Offset.zero) & box.size;
@@ -98,13 +95,6 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
       }
     });
     WidgetsBinding.instance.ensureVisualUpdate();
-  }
-
-  void _readPortrait() {
-    final view = View.of(context);
-    _portraitAllowed =
-        view.physicalSize.width <= view.physicalSize.height ||
-        MediaQuery.viewInsetsOf(context).bottom > 0;
   }
 
   @override
@@ -199,8 +189,6 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
                 ? 'unmounted'
                 : !_routeCurrent
                 ? 'route_inactive'
-                : !_portraitAllowed
-                ? 'landscape'
                 : button.disabled || widget.onPressed == null
                 ? 'disabled'
                 : null;
@@ -259,7 +247,6 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
             !physicalPointer &&
             mounted &&
             _routeCurrent &&
-            _portraitAllowed &&
             !button.disabled) {
           widget.onPressed?.call();
         }
