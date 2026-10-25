@@ -6,6 +6,42 @@
   const effects = new WeakMap();
   let pending = false;
 
+  // iOS may recognize a cross-button pinch or double tap even when individual
+  // targets declare touch-action:none. Cancel native touch defaults only for
+  // contacts that started on attack buttons; pointerdown still counts them.
+  const attackTouches = new Set();
+  const attackTarget = node => node instanceof Element &&
+    node.closest('button.attack-tap-native, button.attack-tap-half');
+  const cancelDefault = event => {if (event.cancelable) event.preventDefault();};
+  document.addEventListener('touchstart', event => {
+    let attack = false;
+    for (const touch of event.changedTouches) {
+      if (attackTarget(touch.target)) {
+        attackTouches.add(touch.identifier);
+        attack = true;
+      }
+    }
+    if (attack) cancelDefault(event);
+  }, {capture: true, passive: false});
+  document.addEventListener('touchmove', event => {
+    if ([...event.changedTouches].some(touch => attackTouches.has(touch.identifier))) cancelDefault(event);
+  }, {capture: true, passive: false});
+  for (const type of ['touchend', 'touchcancel']) {
+    document.addEventListener(type, event => {
+      if ([...event.changedTouches].some(touch => attackTouches.has(touch.identifier))) cancelDefault(event);
+      for (const touch of event.changedTouches) attackTouches.delete(touch.identifier);
+    }, {capture: true, passive: false});
+  }
+  for (const type of ['gesturestart', 'gesturechange']) {
+    document.addEventListener(type, event => {
+      if (attackTouches.size || attackTarget(event.target)) cancelDefault(event);
+    }, {capture: true, passive: false});
+  }
+  window.addEventListener('blur', () => attackTouches.clear());
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) attackTouches.clear();
+  });
+
   function feedback(target) {
     effects.get(target)?.cancel();
     effects.set(target, target.animate(

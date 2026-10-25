@@ -64,6 +64,7 @@
     /* Override the native button shape, which Flutter refreshes inline. */
     .attack-tap-native, .attack-tap-half {
       border-radius: 16px !important;
+      touch-action: none !important;
     }
     .attack-tap-half { display: none !important; }
     @media (orientation: portrait) {
@@ -94,8 +95,8 @@
   <div id="browser-scroll-left" class="browser-scroll-rail" aria-hidden="true"></div>
   <div id="browser-scroll-right" class="browser-scroll-rail" aria-hidden="true"></div>
   <div id="safe-area-probe" aria-hidden="true"></div>
-  <script src="split_attack.js?v=landscape-independent-taps-20261025"></script>
+  <script src="split_attack.js?v=attack-zoom-guard-20261025"></script>
   <script src="landscape_scroll.js?v=auto-landscape-scroll-20261025"></script>
-  <script src="flutter_bootstrap.js?v=landscape-independent-taps-20261025" async></script>
+  <script src="flutter_bootstrap.js?v=attack-zoom-guard-20261025" async></script>
 </body>
 </html>
