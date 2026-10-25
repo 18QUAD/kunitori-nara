@@ -13,7 +13,8 @@ for (const build of _flutter.buildConfig.builds) {
     build.mainJsPath += '?v="253912822"';
   }
 }
-// Size the host to the visible viewport, including after browser rotation.
+// The large CSS viewport paints real map pixels behind translucent browser bars.
+// Never turn scrolling or the hidden part of that viewport into game padding.
 const appHost = document.getElementById('app-host');
 // Keep native selection menus off game controls; editing retains its normal menu.
 const editableSelector = 'input, textarea, [contenteditable]:not([contenteditable="false"])';
@@ -52,11 +53,6 @@ const safeAreaProbe = document.getElementById('safe-area-probe');
 let topInset = 0;
 let bottomInset = 0;
 function updateBrowserViewport() {
-  const viewport = window.visualViewport;
-  const visibleTop = viewport ? viewport.offsetTop : 0;
-  const visibleHeight = viewport ? viewport.height : window.innerHeight;
-  appHost.style.top = `${visibleTop}px`;
-  appHost.style.height = `${visibleHeight}px`;
   const safeArea = getComputedStyle(safeAreaProbe);
   const nextTop = Math.max(0, parseFloat(safeArea.paddingTop) || 0);
   const nextBottom = Math.max(0, parseFloat(safeArea.paddingBottom) || 0);
