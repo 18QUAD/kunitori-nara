@@ -3,13 +3,32 @@
   const host = document.getElementById('app-host');
   const portrait = window.matchMedia('(orientation: portrait)');
   const pairs = new Map();
+  const forwardedClicks = new WeakSet();
+  const effects = new WeakMap();
   let pending = false;
 
-  function pointerTap(button, event) {
+  function feedback(target) {
+    effects.get(target)?.cancel();
+    // Animations belong to this DOM target, so style synchronization cannot
+    // copy a left-side press effect onto the right-side button (or vice versa).
+    effects.set(target, target.animate(
+      [{filter: 'brightness(0.84)'}, {filter: 'brightness(1)'}],
+      {duration: 160, easing: 'ease-out'}));
+  }
+
+  function activate(button, target) {
+    if (button.disabled) return;
+    feedback(target);
+    forwardedClicks.add(button);
+    try { button.click(); }
+    finally { forwardedClicks.delete(button); }
+  }
+
+  function pointerTap(button, event, target = button) {
     if (!portrait.matches || event.button !== 0 || button.disabled) return;
     // Use the existing game callback, including its route and enabled checks.
     // Each pointer counts once on press; its later compatibility click is ignored.
-    button.click();
+    activate(button, target);
   }
 
   function attach(button) {
@@ -26,21 +45,22 @@
       pointerTap(button, event);
     }, true);
     button.addEventListener('click', event => {
-      if (portrait.matches && event.detail > 0) {
+      if (portrait.matches && event.detail === 0 && !event.pointerType && !button.disabled && !forwardedClicks.has(button)) feedback(button);
+      if (portrait.matches && (event.detail > 0 || event.pointerType)) {
         event.preventDefault();
         event.stopImmediatePropagation();
       }
     }, true);
     right.addEventListener('pointerdown', event => {
       event.stopPropagation();
-      pointerTap(button, event);
+      pointerTap(button, event, right);
     });
     for (const type of ['pointerup', 'pointermove', 'pointercancel', 'keydown', 'keyup']) {
       right.addEventListener(type, event => event.stopPropagation());
     }
     right.addEventListener('click', event => {
       event.stopPropagation();
-      if (event.detail === 0 && portrait.matches) button.click();
+      if (event.detail === 0 && !event.pointerType && portrait.matches) activate(button, right);
       else event.preventDefault();
     });
     right.addEventListener('contextmenu', event => event.preventDefault());

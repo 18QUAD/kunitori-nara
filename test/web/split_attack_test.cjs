@@ -31,24 +31,42 @@ const assert = require('node:assert/strict');
     assert.equal(a.width, b.width);
     assert.equal(b.x - a.x - a.width, 8);
     assert.equal(b.x + b.width, 378);
+    async function effectOn(selector) {
+      return page.evaluate(async selector => {
+        document.querySelector(selector).dispatchEvent(new PointerEvent('pointerdown', {button: 0, bubbles: true}));
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return [...document.querySelectorAll('.attack-tap-native, .attack-tap-half')].map(button => ({
+          active: button.getAnimations().some(animation => animation.playState === 'running'),
+          highlight: getComputedStyle(button).webkitTapHighlightColor,
+        }));
+      }, selector);
+    }
+    let effects = await effectOn('.attack-tap-half');
+    assert.deepEqual(effects.map(effect => effect.active), [false, true], 'Right press must not animate the left button, even after Flutter refreshes styles');
+    assert(effects.every(effect => effect.highlight === 'rgba(0, 0, 0, 0)'));
+    await page.waitForTimeout(180);
+    effects = await effectOn('.attack-tap-native');
+    assert.deepEqual(effects.map(effect => effect.active), [true, false], 'Left press must not animate the right button');
+    await page.waitForTimeout(180);
+    assert.equal(await page.evaluate(() => taps), 2);
     const cdp = await page.context().newCDPSession(page);
     const touch = (type, touchPoints) => cdp.send('Input.dispatchTouchEvent', {type, touchPoints});
     for (let i = 0; i < 5; i++) {
       await touch('touchStart', [{id: 1, x: 90, y: 660}, {id: 2, x: 285, y: 660}]);
       await touch('touchEnd', []);
       await page.waitForTimeout(50);
-      assert.equal(await page.evaluate(() => taps), (i + 1) * 2, 'Two simultaneous fingers must count twice without compatibility-click duplicates');
+      assert.equal(await page.evaluate(() => taps), (i + 1) * 2 + 2, 'Two simultaneous fingers must count twice without compatibility-click duplicates');
     }
     await left.focus();
     await page.keyboard.press('Enter');
     await right.focus();
     await page.keyboard.press('Space');
-    assert.equal(await page.evaluate(() => taps), 12);
+    assert.equal(await page.evaluate(() => taps), 14);
     await left.evaluate(button => button.disabled = true);
     await page.waitForFunction(() => document.querySelector('.attack-tap-half').disabled);
     await touch('touchStart', [{id: 1, x: 90, y: 660}, {id: 2, x: 285, y: 660}]);
     await touch('touchEnd', []);
-    assert.equal(await page.evaluate(() => taps), 12);
+    assert.equal(await page.evaluate(() => taps), 14);
     await left.evaluate(button => button.disabled = false);
     await page.setViewportSize({width: 844, height: 390});
     assert.equal(await right.isVisible(), false);
@@ -59,7 +77,7 @@ const assert = require('node:assert/strict');
     await right.waitFor({state: 'hidden'});
     await left.evaluate(button => button.remove());
     await right.waitFor({state: 'detached'});
-    console.log('Split attack checks passed: equal targets, simultaneous touch, no duplicate clicks, keyboard, disabled state, rotation, route visibility, cleanup.');
+    console.log('Split attack checks passed: equal targets, independent press effects, simultaneous touch, no duplicate clicks, keyboard, disabled state, rotation, route visibility, cleanup.');
   } finally {
     await browser.close();
   }
