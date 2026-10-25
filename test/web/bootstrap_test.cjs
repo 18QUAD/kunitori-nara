@@ -8,8 +8,10 @@ const source = fs.readFileSync('web/flutter_bootstrap.js', 'utf8')
 
 async function run(serviceWorker) {
   let loaded = 0, reloaded = 0;
+  const listeners = {};
   const buildConfig = {builds: [{mainJsPath: 'main.dart.js'}]};
   const host = {
+    style: {},
     addEventListener() {},
     getBoundingClientRect() {return {top: 0, bottom: 800};},
   };
@@ -22,7 +24,7 @@ async function run(serviceWorker) {
     navigator: serviceWorker ? {serviceWorker} : {},
     window: {
       location: {reload() { reloaded++; }}, innerHeight: 800,
-      addEventListener() {}, dispatchEvent() {},
+      addEventListener(name, callback) {listeners[name] = callback;}, dispatchEvent() {},
     },
     getComputedStyle() {return {paddingTop: '0px', paddingBottom: '0px'};},
     ResizeObserver: class {observe() {}},
@@ -30,6 +32,18 @@ async function run(serviceWorker) {
     _flutter: {buildConfig, loader: {load() { loaded++; }}},
   };
   await vm.runInNewContext(source, context);
+  assert.equal(host.style.height, '800px');
+  // A stale host rectangle and a scrolled viewport must not become game padding.
+  context.window.visualViewport = {offsetTop: 24, height: 390};
+  listeners.resize();
+  assert.equal(host.style.height, '390px');
+  assert.equal(host.style.top, '24px');
+  assert.equal(context.window.kunitoriViewport.top(), 0);
+  assert.equal(context.window.kunitoriViewport.bottom(), 0);
+  context.window.visualViewport = {offsetTop: 0, height: 844};
+  listeners.resize();
+  assert.equal(host.style.height, '844px');
+  assert.equal(host.style.top, '0px');
   assert.equal(buildConfig.builds[0].mainJsPath, 'main.dart.js?v=test-build-90');
   return {loaded, reloaded};
 }

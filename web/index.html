@@ -35,9 +35,9 @@
   <link rel="manifest" href="manifest.json">
   <style>
     html, body { margin: 0; background: #101C2B; }
-    html { min-height: 100%; }
-    body { min-height: 100vh; min-height: 100lvh; }
-    #app-host { position: relative; width: 100%; height: 100vh; height: 100lvh; background: #101C2B; }
+    html { height: 100%; overflow: hidden; }
+    body { height: 100%; overflow: hidden; }
+    #app-host { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; height: 100dvh; background: #101C2B; }
     /* Repeated taps must not select Flutter's accessibility text on iOS. */
     #app-host, #app-host * {
       -webkit-user-select: none !important;
@@ -59,6 +59,6 @@
 <body>
   <div id="app-host"></div>
   <div id="safe-area-probe" aria-hidden="true"></div>
-  <script src="flutter_bootstrap.js?v=attackable-search-20261020" async></script>
+  <script src="flutter_bootstrap.js?v=viewport-rotation-20261025" async></script>
 </body>
 </html>
