@@ -1189,23 +1189,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                             children: header.actions!,
                           ),
                         ),
-                        stats(
-                          city == null ? '市区町村未選択' : atlas!.cities[city]!,
-                          city == null
-                              ? '— / —'
-                              : '${number(g.currentCityPopulation(city))}\n/ ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}',
-                          const Key('city-progress'),
-                        ),
-                        stats(
-                          nationalView
-                              ? '全国'
-                              : national?.prefectures[prefectureFilter]?.name ??
-                                  '奈良県',
-                          nationalView
-                              ? '${number(g.population)}\n/ ${number(atlas!.totalPopulation)}'
-                              : '${number(g.currentPrefecturePopulation(prefectureFilter))}\n/ ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
-                          const Key('prefecture-progress'),
-                        ),
                       ] else ...[
                         Text(
                           town?.name ??
@@ -1228,6 +1211,24 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                             tapCount: g.totalTaps,
                           ),
                         ],
+                        const SizedBox(height: 20),
+                        stats(
+                          city == null ? '市区町村未選択' : atlas!.cities[city]!,
+                          city == null
+                              ? '— / —'
+                              : '${number(g.currentCityPopulation(city))}\n/ ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}',
+                          const Key('city-progress'),
+                        ),
+                        stats(
+                          nationalView
+                              ? '全国'
+                              : national?.prefectures[prefectureFilter]?.name ??
+                                  '奈良県',
+                          nationalView
+                              ? '${number(g.population)}\n/ ${number(atlas!.totalPopulation)}'
+                              : '${number(g.currentPrefecturePopulation(prefectureFilter))}\n/ ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
+                          const Key('prefecture-progress'),
+                        ),
                         if (store!.error != null) ...[
                           Text(store!.error!),
                           TextButton(
