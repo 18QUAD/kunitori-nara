@@ -62,7 +62,12 @@
       display: none;
     }
     /* Override the native button shape, which Flutter refreshes inline. */
-    .attack-tap-native { border-radius: 16px !important; }
+    .attack-tap-native, .attack-tap-half { border-radius: 16px !important; }
+    .attack-tap-half { display: none !important; }
+    @media (orientation: portrait) {
+      .attack-tap-native[data-split-ready] { width: var(--attack-half-width) !important; }
+      .attack-tap-half { display: block !important; }
+    }
     /* Repeated taps must not select Flutter's accessibility text on iOS. */
     #app-host, #app-host * {
       -webkit-user-select: none !important;
@@ -86,6 +91,7 @@
   <div id="browser-scroll-left" class="browser-scroll-rail" aria-hidden="true"></div>
   <div id="browser-scroll-right" class="browser-scroll-rail" aria-hidden="true"></div>
   <div id="safe-area-probe" aria-hidden="true"></div>
-  <script src="flutter_bootstrap.js?v=portrait-tap-fit-20261025" async></script>
+  <script src="split_attack.js?v=portrait-split-20261025"></script>
+  <script src="flutter_bootstrap.js?v=portrait-split-20261025" async></script>
 </body>
 </html>
