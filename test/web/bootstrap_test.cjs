@@ -32,18 +32,18 @@ async function run(serviceWorker) {
     _flutter: {buildConfig, loader: {load() { loaded++; }}},
   };
   await vm.runInNewContext(source, context);
-  assert.equal(host.style.height, '800px');
+  assert.equal(host.style.height, undefined);
   // A stale host rectangle and a scrolled viewport must not become game padding.
   context.window.visualViewport = {offsetTop: 24, height: 390};
   listeners.resize();
-  assert.equal(host.style.height, '390px');
-  assert.equal(host.style.top, '24px');
+  assert.equal(host.style.height, undefined);
+  assert.equal(host.style.top, undefined);
   assert.equal(context.window.kunitoriViewport.top(), 0);
   assert.equal(context.window.kunitoriViewport.bottom(), 0);
   context.window.visualViewport = {offsetTop: 0, height: 844};
   listeners.resize();
-  assert.equal(host.style.height, '844px');
-  assert.equal(host.style.top, '0px');
+  assert.equal(host.style.height, undefined);
+  assert.equal(host.style.top, undefined);
   assert.equal(buildConfig.builds[0].mainJsPath, 'main.dart.js?v=test-build-90');
   return {loaded, reloaded};
 }
