@@ -10,11 +10,11 @@ _flutter.buildConfig = {"engineRevision":"cf56914b326edb0ccb123ffdc60f00060bd513
 
 for (const build of _flutter.buildConfig.builds) {
   if (build.mainJsPath) {
-    build.mainJsPath += '?v="253912822"';
+    build.mainJsPath += '?v="4243228041"';
   }
 }
-// The large CSS viewport paints real map pixels behind translucent browser bars.
-// Never turn scrolling or the hidden part of that viewport into game padding.
+// Embed in the document rather than making body a fixed, non-scrolling surface.
+// The large viewport provides real page pixels behind floating browser controls.
 const appHost = document.getElementById('app-host');
 // Keep native selection menus off game controls; editing retains its normal menu.
 const editableSelector = 'input, textarea, [contenteditable]:not([contenteditable="false"])';
