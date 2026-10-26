@@ -77,6 +77,10 @@
       border-radius: 16px !important;
       touch-action: none !important;
     }
+    .attack-tap-native[data-thumb-side="left"]:enabled,
+    .attack-tap-half[data-side="left"]:enabled { background-image: var(--thumb-tap-left) !important; }
+    .attack-tap-native[data-thumb-side="right"]:enabled,
+    .attack-tap-half[data-side="right"]:enabled { background-image: var(--thumb-tap-right) !important; }
     .attack-tap-half { display: none !important; }
     @media (orientation: portrait) {
       .attack-tap-native, .attack-tap-half { -webkit-tap-highlight-color: transparent; }
@@ -109,8 +113,8 @@
   <div id="safe-area-probe" aria-hidden="true"></div>
   <script src="diagnostics.js?v=landscape-font-20261025-v1"></script>
   <script src="map-cache.js?v=landscape-font-20261025-v1"></script>
-  <script src="split_attack.js?v=attack-zoom-guard-20261025"></script>
+  <script src="split_attack.js?v=thumb-icons-20261026"></script>
   <script src="landscape_scroll.js?v=auto-landscape-scroll-20261025"></script>
-  <script src="flutter_bootstrap.js?v=left-stats-20261025" async></script>
+  <script src="flutter_bootstrap.js?v=thumb-icons-20261026" async></script>
 </body>
 </html>
