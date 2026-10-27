@@ -437,11 +437,11 @@ const META = 'kunitori-map-images-meta-v1';
 const BATCH = 48;
 const CONCURRENCY = 2;
 // Initial packs stream directly to disk, before the rendering engine starts.
-// Refill each of eight slots independently instead of waiting for a slow partner.
+// Four bounded pack bodies; report progress after each small download window.
 // Packs are <= 1 MiB; there are no decoded images or retained download buffers.
-const DOWNLOAD_CONCURRENCY = 8;
+const DOWNLOAD_CONCURRENCY = 4;
 const DOWNLOAD_WINDOW_MS = 1200;
-const DOWNLOAD_WINDOW_PACKS = 32;
+const DOWNLOAD_WINDOW_PACKS = 4;
 let inventoryPromise;
 let warming;
 const transfers = new Map();
@@ -605,40 +605,37 @@ async function storedImage(entry, mustStore = false) {
 
 // Packs reduce tens of thousands of HTTP and CacheStorage operations to a few
 // hundred. Each transfer is <= 1 MiB (apart from a single larger source asset).
+function packOperation(operation, label) {
+  let timer;
+  return Promise.race([
+    operation,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Map pack ${label} timed out`)), 20000);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
 async function storedPack(pack, storeName = PACK_STORE, downloadBase = ROOT) {
   const key = keyFor(pack);
-  const store = await caches.open(storeName);
-  const cached = await store.match(key);
-  if (cached) {await cached.body?.cancel(); return;}
   if (!transfers.has(key)) {
     const pending = (async () => {
+      const store = await packOperation(caches.open(storeName), 'open');
+      const cached = await packOperation(store.match(key), 'lookup');
+      // Cancelling a CacheStorage body is not needed to reuse its verified key.
+      if (cached) {cached.body?.cancel().catch(() => {}); return;}
       const abort = new AbortController();
-      const timeout = setTimeout(() => abort.abort(), 60000);
-      const hash = new sha256.Hash();
-      let length = 0;
+      const timeout = setTimeout(() => abort.abort(), 20000);
       try {
         const response = await fetch(new URL(`${pack[0]}?map-sha256=${pack[1]}`, downloadBase), {cache: 'no-store', signal: abort.signal});
         if (!response.ok) throw new Error(`Map pack HTTP ${response.status}`);
-        const checked = response.body.pipeThrough(new TransformStream({
-          transform(chunk, controller) {
-            length += chunk.byteLength;
-            if (length > pack[2]) throw new Error('Map pack length mismatch');
-            hash.update(chunk);
-            controller.enqueue(chunk);
-          },
-          flush() {
-            if (length !== pack[2]) throw new Error('Map pack length mismatch');
-            const digest = [...hash.digest()].map(byte => byte.toString(16).padStart(2, '0')).join('');
-            if (digest !== pack[1]) throw new Error('Map pack checksum mismatch');
-          },
-        }));
-        // Consume the network stream once, validating it before Cache.put commits.
-        // Never materialize a whole pack or copy it into a second Response body.
-        await store.put(key, new Response(checked));
-      } catch (error) {
-        await store.delete(key);
-        throw error;
-      } finally {clearTimeout(timeout); hash.clean();}
+        // Packs are bounded by the inventory (normally <= 1 MiB). Verify one
+        // bounded body before Cache.put, avoiding a live TransformStream in the
+        // Safari disk-cache transaction. At most four pack bodies are resident.
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (bytes.length !== pack[2]) throw new Error('Map pack length mismatch');
+        const digest = Array.from(sha256.hash(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+        if (digest !== pack[1]) throw new Error('Map pack checksum mismatch');
+        await packOperation(store.put(key, new Response(bytes)), 'save');
+      } finally {clearTimeout(timeout);}
     })().finally(() => transfers.delete(key));
     transfers.set(key, pending);
   }
