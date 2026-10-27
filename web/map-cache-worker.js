@@ -468,6 +468,15 @@ async function runtimeProgress(data, warm=false) {
   const key = new URL(`__runtime_progress__/${RUNTIME_REVISION}`,ROOT).href;
   const saved = await meta.match(key);
   let next = saved ? (await saved.json()).next : 0;
+  if (next === 0 && data.chunks.length) {
+    // Inventory revisions change after small UI updates, but chunk keys are
+    // content-addressed and remain valid. Recover the verified disk prefix
+    // instead of replaying the entire first-download sequence.
+    const store = await caches.open(RUNTIME_STORE);
+    const present = new Set((await store.keys()).map(request => request.url));
+    while (next < data.chunks.length && present.has(keyFor(data.chunks[next]))) next++;
+    if (next) await meta.put(key,new Response(JSON.stringify({next})));
+  }
   if (warm && next<data.chunks.length) {
     const result = await downloadPackWindow(data.chunks, next, RUNTIME_STORE);
     next=result.next;
