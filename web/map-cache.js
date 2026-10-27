@@ -31,7 +31,7 @@ window.kunitoriMapStorage = (async () => {
       panel.id = 'map-download-status';
       panel.setAttribute('aria-label', '地図データのダウンロード状況');
       const title = document.createElement('p');
-      title.textContent = '地図・ゲームデータを端末に保存中';
+      title.textContent = '保存済みデータを確認しています';
       const bar = document.createElement('progress');
       bar.max = 100;
       bar.setAttribute('aria-label', '地図データのダウンロード');
@@ -47,16 +47,16 @@ window.kunitoriMapStorage = (async () => {
     if (lastProgress?.bytes > 0) {
       const percent = Math.min(100, Math.floor(lastProgress.savedBytes / lastProgress.bytes * 100));
       bar.value = lastProgress.savedBytes / lastProgress.bytes * 100;
-      detail.textContent = `初回保存 · ${(lastProgress.savedBytes / 1e6).toFixed(1)} / ${(lastProgress.bytes / 1e6).toFixed(1)} MB（${percent}%）`;
+      detail.textContent = `データ保存 · ${(lastProgress.savedBytes / 1e6).toFixed(1)} / ${(lastProgress.bytes / 1e6).toFixed(1)} MB（${percent}%）`;
     } else {
       bar.removeAttribute('value');
       detail.textContent = setupAttempts > 1
         ? `保存処理を復旧しています（再試行 ${setupAttempts - 1} 回）`
-        : '初回ダウンロードを準備しています';
+        : '保存済みデータを確認しています';
     }
     panel.querySelector('p').textContent = waiting
       ? (navigator.onLine ? '地図データのダウンロードを再開しています' : '接続を待っています。続きから再開します')
-      : '地図・ゲームデータを端末に保存中';
+      : (lastProgress ? '地図・ゲームデータを端末に保存中' : '保存済みデータを確認しています');
   }
   function request(type, data = {}, timeoutMs = 90000) {
     return new Promise((resolve, reject) => {
@@ -227,7 +227,7 @@ window.kunitoriMapStorage = (async () => {
       navigator.storage?.persist?.().catch(() => {});
       // Read the saved cursor before starting work: resumed downloads keep their
       // percentage, and completed downloads never flash a new progress panel.
-      request('map-images-status').then(result => {
+      await request('map-images-status').then(result => {
         if (!running && (!lastProgress || result.saved >= lastProgress.saved)) {
           done = result.done;
           showProgress(result, !navigator.onLine);
@@ -240,7 +240,7 @@ window.kunitoriMapStorage = (async () => {
       });
       // The game engine starts only after the initial disk store is complete.
       window.kunitoriDiagnostics?.record?.('map_storage_start', JSON.stringify({}));
-      downloadTimer = setTimeout(next, 500);
+      if (!done) downloadTimer = setTimeout(next, 0);
     } catch (error) {
       connected = false;
       record('map_storage_setup_retry', {error: String(error), context: phase});
