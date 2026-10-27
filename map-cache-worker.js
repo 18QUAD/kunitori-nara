@@ -825,11 +825,30 @@ function progressReport(data, next, done) {
   return {done, saved: next, total: data.assetCount, savedBytes: data.byteOffsets[next], bytes: data.bytes};
 }
 
+// Recover map packs independently of a revision-specific metadata cursor.
+// The pack cache contains only verified, content-addressed responses.
+async function imageProgress(data, meta) {
+  const saved = await meta.match(progressKey);
+  const progress = saved ? await saved.json() : {next: 0};
+  if (progress.next === 0 && data.packs?.length) {
+    const store = await caches.open(PACK_STORE);
+    const present = new Set((await store.keys()).map(request => request.url));
+    for (const pack of data.packs) {
+      if (!present.has(keyFor(pack))) break;
+      progress.next = pack[4];
+    }
+    if (progress.next) {
+      await meta.put(progressKey, new Response(JSON.stringify(progress)));
+    }
+  }
+  return progress;
+}
+
 async function imageStorageStatus() {
   const data = await inventory();
   const meta = await caches.open(META);
   const saved = await meta.match(progressKey);
-  const progress = saved ? await saved.json() : {next: 0};
+  const progress = await imageProgress(data, meta);
   return progressReport(data, progress.next, progress.next === data.assetCount && !!progress.cleaned);
 }
 
@@ -837,7 +856,7 @@ async function imageWarmBatch() {
   const data = await inventory();
   const meta = await caches.open(META);
   const saved = await meta.match(progressKey);
-  const progress = saved ? await saved.json() : {next: 0};
+  const progress = await imageProgress(data, meta);
   if (data.packSchema >= 1) return warmPacks(data, meta, progress);
   const start = progress.next;
   if (start === data.assetCount && progress.cleaned) {
@@ -867,7 +886,7 @@ async function imageWarmBatch() {
 
 // All non-image runtime files are verified on disk too. Large files use bounded
 // gzip chunks; neither initial download nor disk reads buffer a complete county.
-const RUNTIME_REVISION = 'ca4e7b4bef3b5f872ef6f627b5738fc48b48b32e6fe85cfa24b6885c90e13a7c';
+const RUNTIME_REVISION = 'f591cd6c470db717dbc09f78cac4d6c783bf38f8f5328f91107b9b437880d445';
 const RUNTIME_STORE = 'kunitori-runtime-data-v1';
 const RUNTIME_META = 'kunitori-runtime-meta-v1';
 let runtimeInventoryPromise;
