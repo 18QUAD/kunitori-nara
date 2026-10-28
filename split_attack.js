@@ -3,8 +3,8 @@
   const host = document.getElementById('app-host');
   const portrait = window.matchMedia('(orientation: portrait)');
   // Mirrored thumb silhouettes point inward from the corresponding hand.
-  host.style.setProperty('--thumb-tap-left', 'url("icons/tap-left.png")');
-  host.style.setProperty('--thumb-tap-right', 'url("icons/tap-right.png")');
+  host.style.setProperty('--thumb-tap-left', 'url("icons/tap-left.png?v=black-tap-20261028")');
+  host.style.setProperty('--thumb-tap-right', 'url("icons/tap-right.png?v=black-tap-20261028")');
 
   const pairs = new Map();
   const effects = new WeakMap();
