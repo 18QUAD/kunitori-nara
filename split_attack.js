@@ -3,8 +3,8 @@
   const host = document.getElementById('app-host');
   const portrait = window.matchMedia('(orientation: portrait)');
   // Mirrored thumb silhouettes point inward from the corresponding hand.
-  host.style.setProperty('--thumb-tap-left', "url(\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cg%20fill%3D%22%23101C2B%22%3E%3Cpath%20d%3D%22M15%2061l-1-8C8%2050%206%2045%207%2039l2-8c1-4%206-5%209-2%201-5%207-5%2010-1%204-2%208%201%208%205l6-15c2-5%207-6%2010-3s2%207%200%2011l-9%2020c-1%204-4%207-8%209l-1%206z%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23EDE2D1%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M18%2030l-2%2010m12-11-3%2012m10-7-5%2011%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23101C2B%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M45%207V3m10%207%204-3m-3%2013%205%201%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E\")");
-  host.style.setProperty('--thumb-tap-right', "url(\"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cg%20transform%3D%22translate%2864%200%29%20scale%28-1%201%29%22%3E%3Cg%20fill%3D%22%23101C2B%22%3E%3Cpath%20d%3D%22M15%2061l-1-8C8%2050%206%2045%207%2039l2-8c1-4%206-5%209-2%201-5%207-5%2010-1%204-2%208%201%208%205l6-15c2-5%207-6%2010-3s2%207%200%2011l-9%2020c-1%204-4%207-8%209l-1%206z%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23EDE2D1%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M18%2030l-2%2010m12-11-3%2012m10-7-5%2011%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23101C2B%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M45%207V3m10%207%204-3m-3%2013%205%201%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E\")");
+  host.style.setProperty('--thumb-tap-left', 'url("icons/tap-left.png")');
+  host.style.setProperty('--thumb-tap-right', 'url("icons/tap-right.png")');
 
   const pairs = new Map();
   const effects = new WeakMap();

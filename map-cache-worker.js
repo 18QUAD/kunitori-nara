@@ -883,7 +883,7 @@ async function imageWarmBatch() {
 
 // All non-image runtime files are verified on disk too. Large files use bounded
 // gzip chunks; neither initial download nor disk reads buffer a complete county.
-const RUNTIME_REVISION = 'f591cd6c470db717dbc09f78cac4d6c783bf38f8f5328f91107b9b437880d445';
+const RUNTIME_REVISION = '4172608b381259adda02e617b98ac47093f02d3beea0bf77656b57dfeb10061a';
 const RUNTIME_STORE = 'kunitori-runtime-data-v1';
 const RUNTIME_META = 'kunitori-runtime-meta-v1';
 let runtimeInventoryPromise;
@@ -974,7 +974,7 @@ self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET'||url.origin!==ROOT.origin) return;
   const relative=url.pathname.slice(ROOT.pathname.length);
   const shell=relative===''||['index.html','flutter_bootstrap.js','map-cache.js','diagnostics.js','split_attack.js','landscape_scroll.js'].includes(relative);
-  const asset=relative==='main.dart.js'||relative.startsWith('assets/')||relative.startsWith('canvaskit/');
+  const asset=relative==='main.dart.js'||relative.startsWith('assets/')||relative.startsWith('icons/')||relative.startsWith('canvaskit/');
   if(!shell&&!asset || relative.startsWith('assets/assets/data/map_images/') && relative.endsWith('.webp')) return;
   event.respondWith((async()=>{
     const pinnedShell = shell && APP_BUILD && !APP_BUILD.startsWith('__') &&
