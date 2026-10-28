@@ -4,7 +4,6 @@ import 'package:web/web.dart' as web;
 import 'browser_insets.dart';
 import 'action_button_style.dart';
 import 'attack_contacts.dart';
-import 'diagnostics.dart';
 
 Widget protectAttackTap({required Widget child, VoidCallback? onPressed}) =>
     _NativeAttackButton(onPressed: onPressed);
@@ -22,6 +21,7 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
   web.HTMLButtonElement? _button;
   bool _routeCurrent = true;
   Rect? _rect;
+  String? _lastStyle;
   bool _placementPending = false;
   final _contacts = AttackContacts();
   late final JSFunction _releaseContact;
@@ -38,8 +38,10 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
         .toARGB32()
         .toRadixString(16)
         .padLeft(8, '0');
-    button.disabled = !enabled;
-    button.setAttribute('aria-label', enabled ? 'タップで進軍 · 1人' : '隣接する自領が必要です');
+    if (button.disabled == enabled) button.disabled = !enabled;
+    final label = enabled ? 'タップで進軍 · 1人' : '隣接する自領が必要です';
+    if (button.getAttribute('aria-label') != label)
+      button.setAttribute('aria-label', label);
     final image =
         enabled
             ? Uri.parse(
@@ -53,7 +55,7 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
               mimeType: 'image/svg+xml',
             );
     // No DOM text or image element for iOS to select or open an image menu on.
-    button.style.cssText =
+    final style =
         'display:block;position:absolute;z-index:20;margin:0;padding:0;border:0;'
         'left:${_rect?.left ?? 0}px;top:${_rect?.top ?? 0}px;'
         'width:${_rect?.width ?? 0}px;height:${_rect?.height ?? 0}px;'
@@ -65,6 +67,10 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
         'center / ${enabled ? 56 : 48}px ${enabled ? 56 : 48}px no-repeat;'
         'touch-action:none;-webkit-user-select:none;user-select:none;'
         '-webkit-touch-callout:none;';
+    if (_lastStyle != style) {
+      button.style.cssText = style;
+      _lastStyle = style;
+    }
   }
 
   @override
@@ -78,8 +84,7 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
   @override
   void didUpdateWidget(covariant _NativeAttackButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _update();
-    _schedulePlacement();
+    if ((oldWidget.onPressed == null) != (widget.onPressed == null)) _update();
   }
 
   void _schedulePlacement() {
@@ -90,8 +95,11 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
       if (!mounted) return;
       final box = context.findRenderObject();
       if (box is RenderBox && box.hasSize) {
-        _rect = box.localToGlobal(Offset.zero) & box.size;
-        _update();
+        final rect = box.localToGlobal(Offset.zero) & box.size;
+        if (_rect != rect) {
+          _rect = rect;
+          _update();
+        }
       }
     });
     WidgetsBinding.instance.ensureVisualUpdate();
@@ -143,25 +151,12 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
           if (!event.isPrimary) return;
           final before = _contacts.length;
           _contacts.startSequence(event.pointerType);
-          if (_contacts.length != before) {
-            recordDiagnostic('trace_button', {
-              'phase': 'reset_primary_sequence',
-              'operation': event.pointerId,
-              'count': _contacts.length,
-              'resource': event.pointerType,
-            });
-          }
+          if (_contacts.length != before) {}
         }).toJS;
     web.document.addEventListener('pointerdown', _startSequence, true.toJS);
     _releaseContact =
         ((web.PointerEvent event) {
           if (!_contacts.end(event.pointerId)) return;
-          recordDiagnostic('trace_button', {
-            'phase': event.type,
-            'operation': event.pointerId,
-            'count': _contacts.length,
-            'resource': event.pointerType,
-          });
         }).toJS;
     for (final type in ['pointerup', 'pointercancel']) {
       web.document.addEventListener(type, _releaseContact, true.toJS);
@@ -170,10 +165,6 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
         ((web.Event event) {
           if (event.type == 'blur' || web.document.hidden) {
             _contacts.clear();
-            recordDiagnostic('trace_button', {
-              'phase': 'reset_${event.type}',
-              'count': 0,
-            });
           }
         }).toJS;
     web.window.addEventListener('blur', _resetContacts);
@@ -193,12 +184,6 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
                 ? 'disabled'
                 : null;
         if (rejected != null) {
-          recordDiagnostic('trace_button', {
-            'phase': rejected,
-            'operation': event.pointerId,
-            'count': _contacts.length,
-            'resource': event.pointerType,
-          });
           return;
         }
         final previousContacts = _contacts.length;
@@ -207,16 +192,7 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
           event.pointerType,
           primary: event.isPrimary,
         );
-        recordDiagnostic('trace_button', {
-          'phase':
-              accepted
-                  ? (previousContacts > 0 ? 'accepted_recovered' : 'accepted')
-                  : 'overlapping_contact',
-          'operation': event.pointerId,
-          'count': _contacts.length,
-          'resource':
-              '${event.pointerType}:${event.isPrimary ? 'primary' : 'secondary'}',
-        });
+
         if (accepted) widget.onPressed?.call();
       }).toJS,
     );

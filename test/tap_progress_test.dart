@@ -4,7 +4,7 @@ import 'package:kunitori/tap_progress.dart';
 
 void main() {
   testWidgets(
-    'new taps pulse, rapid taps restart, selection resets and reduced motion stays still',
+    'new taps pulse, rapid taps share the active pulse, selection resets and reduced motion stays still',
     (tester) async {
       Widget scene(int taps, {String town = 'a', bool reduced = false}) =>
           MaterialApp(
@@ -52,10 +52,9 @@ void main() {
         tester.getRect(find.byKey(const Key('attack-progress'))).height,
         greaterThan(populationRect.height),
       );
+      final activeScale = scale();
       await tester.pumpWidget(scene(2));
-      expect(scale(), 1);
-      await tester.pump(const Duration(milliseconds: 96));
-      expect(scale(), greaterThan(1.1));
+      expect(scale(), activeScale);
       await tester.pump(const Duration(milliseconds: 144));
       expect(scale(), 1);
       expect(find.text('2'), findsOneWidget);

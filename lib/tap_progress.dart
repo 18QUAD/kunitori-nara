@@ -52,7 +52,8 @@ class _TapProgressState extends State<TapProgress>
     if (widget.townId != oldWidget.townId) {
       _controller.reset();
     } else if (widget.tapCount > oldWidget.tapCount &&
-        !MediaQuery.disableAnimationsOf(context)) {
+        !MediaQuery.disableAnimationsOf(context) &&
+        !_controller.isAnimating) {
       _controller.forward(from: 0);
     }
   }

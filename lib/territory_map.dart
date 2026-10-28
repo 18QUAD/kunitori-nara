@@ -13,7 +13,6 @@ import 'map_compass.dart';
 import 'border_tiles.dart';
 import 'map_paint_snapshot.dart';
 import 'map_controls.dart';
-import 'diagnostics.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -126,18 +125,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
     final preparation = Stopwatch()..start();
     _buildPaths();
     _buildCities();
-    recordDiagnostic('geometry_paths_ready', {
-      'destinationPrefecture': widget.prefectureId,
-      'city': widget.cityId,
-      'durationMs': preparation.elapsedMilliseconds,
-      'prebuiltTowns': widget.atlas.preparedGeometryPrefectures.contains(
-        widget.prefectureId,
-      ),
-      'prebuiltCities':
-          widget.atlas.cityPolygons.keys
-              .where((id) => id.startsWith(widget.prefectureId))
-              .length,
-    });
+
     officePoints = {
       for (final o in widget.atlas.mapOffices.values.where(
         (o) => o.cityId.startsWith(widget.prefectureId),
@@ -500,16 +488,8 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 _projection,
               ),
               maxScale: MapImageScale.scale(_maxImageLevel, _projection),
-              onInteractionStart:
-                  (_) => recordDiagnostic('trace_map', {
-                    'phase': 'gesture_start',
-                    'scale': controller.value.getMaxScaleOnAxis(),
-                  }),
+
               onInteractionEnd: (_) {
-                recordDiagnostic('trace_map', {
-                  'phase': 'gesture_end',
-                  'scale': controller.value.getMaxScaleOnAxis(),
-                });
                 _zoom(1);
               },
               boundaryMargin: const EdgeInsets.all(2000),
@@ -871,8 +851,10 @@ class _MapPainter extends CustomPainter {
     this.colors = false,
     this.colorOpacity = 1.0,
   }) : snapshot = MapPaintSnapshot(game),
+       semanticsTransform = transform.value.clone(),
        super(repaint: foreground ? transform : null);
   final MapPaintSnapshot snapshot;
+  final Matrix4 semanticsTransform;
   final MapLabelCache? labelCache;
   final bool foreground;
   final bool colors;
@@ -1112,7 +1094,14 @@ class _MapPainter extends CustomPainter {
   };
 
   @override
-  bool shouldRebuildSemantics(covariant _MapPainter oldDelegate) => true;
+  bool shouldRebuildSemantics(covariant _MapPainter old) =>
+      foreground != old.foreground ||
+      (foreground &&
+          (atlas != old.atlas ||
+              cityId != old.cityId ||
+              officePoints != old.officePoints ||
+              viewportSize != old.viewportSize ||
+              semanticsTransform != old.semanticsTransform));
 
   @override
   bool shouldRepaint(covariant _MapPainter old) =>

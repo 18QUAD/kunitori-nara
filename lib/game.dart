@@ -294,6 +294,10 @@ class Atlas {
   final Map<String, List<List<List<Point<double>>>>> prefecturePolygons = {};
   final Map<String, List<LocalFact>> facts = {};
   final Set<String> additionalFactIds = {};
+  late final Map<String, int> cityPopulations = {
+    for (final entry in byCity.entries)
+      entry.key: entry.value.fold<int>(0, (sum, town) => sum + town.population),
+  };
   late final int totalPopulation = towns.values.fold<int>(
     0,
     (sum, town) => sum + town.population,
@@ -581,6 +585,7 @@ class Game {
         : atlas.towns[target]?.cityId;
   }
 
+  final Map<String, (List<LocalFact>, List<LocalFact>)> _tipLists = {};
   List<LocalFact> tipsFor({
     String? selectedTown,
     String? selectedCity,
@@ -594,11 +599,15 @@ class Game {
     if (city == null) return const [];
     final local = atlas.facts[city]!;
     if (!city.startsWith('29')) return local;
-    return [
+    final cached = _tipLists[city];
+    if (cached != null && identical(cached.$1, local)) return cached.$2;
+    final result = [
       ...local.where((f) => !f.quizEligible),
       ...local.where((f) => f.id == '$city:heritage'),
       ...local.where((f) => f.category.startsWith('県の')),
     ];
+    _tipLists[city] = (local, result);
+    return result;
   }
 
   Iterable<String> citiesInPrefecture(String prefecture) =>

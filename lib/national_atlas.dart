@@ -13,7 +13,6 @@ import 'nearest_connections.dart';
 import 'office_marker.dart';
 import 'national_tips.dart';
 import 'national_conquest.dart';
-import 'diagnostics.dart';
 
 /// Population and adjacency are resident; detailed polygons are loaded by prefecture.
 class NationalAtlas {
@@ -226,9 +225,6 @@ class NationalAtlas {
     if (_resident == prefecture) return;
     _releaseGeometry();
 
-    recordDiagnostic('geometry_load_start', {
-      'destinationPrefecture': prefecture,
-    });
     try {
       final prepared = await PreparedTerritory.load(prefecture);
       final decoded = <String, List<List<List<Point<double>>>>>{};
@@ -251,15 +247,7 @@ class NationalAtlas {
       atlas.prefecturePolygons[prefecture] = outline;
       atlas.preparedGeometryPrefectures.add(prefecture);
       _resident = prefecture;
-      recordDiagnostic('geometry_load_done', {
-        'destinationPrefecture': prefecture,
-        'geometryPrepared': true,
-      });
     } catch (error) {
-      recordDiagnostic('geometry_load_error', {
-        'destinationPrefecture': prefecture,
-        'error': error.toString(),
-      });
       rethrow;
     }
   }

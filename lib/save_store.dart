@@ -1,8 +1,8 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game.dart';
 import 'map_view.dart';
-import 'diagnostics.dart';
 
 /// Serial writes, coalescing quick taps while a previous write is in flight.
 /// A failed write remains retryable and never displays a false "saved" status.
@@ -12,13 +12,36 @@ class SaveStore {
   static const key = 'kunitori.nara.v1';
   static const mapViewKey = 'kunitori.nara.mapView.v1';
   final Map<String, String> _pending = {};
-  final Map<String, int?> _pendingParents = {};
-  int _writeOperation = 0;
+
   Future<void>? _writing;
   bool _notifyAfterWrite = false;
   String? error;
   void Function()? onChanged;
-  bool get saving => _writing != null;
+  Timer? _saveTimer;
+  Game? _queuedGame;
+
+  Completer<void>? _queuedCompletion;
+  bool get saving => _writing != null || _queuedGame != null;
+
+  Future<void> queueSave(Game game) {
+    _queuedGame = game;
+
+    _queuedCompletion ??= Completer<void>();
+    // A fixed maximum delay, not a debounce that can starve during a long burst.
+    _saveTimer ??= Timer(const Duration(milliseconds: 200), () {
+      unawaited(flush());
+    });
+    return _queuedCompletion!.future;
+  }
+
+  Future<void> flush() {
+    _saveTimer?.cancel();
+    _saveTimer = null;
+    final game = _queuedGame;
+    if (game == null) return _writing ?? Future<void>.value();
+    return save(game);
+  }
+
   Game load(Atlas atlas) {
     final raw = preferences.getString(key);
     return raw == null
@@ -42,40 +65,33 @@ class SaveStore {
 
   Future<void> saveMapView(MapViewState view) =>
       _saveValue(mapViewKey, jsonEncode(view.toJson()));
-  int _operation = 0;
-  Future<void> save(Game game, {int? tapOperation}) {
-    final operation = ++_operation;
-    recordDiagnostic('trace_save_encode', {
-      'operation': operation,
-      'phase': 'start',
-      'parentOperation': tapOperation,
-      'totalTaps': game.totalTaps,
-    });
+
+  Future<void> save(Game game) {
+    _saveTimer?.cancel();
+    _saveTimer = null;
+    _queuedGame = null;
+
+    final completion = _queuedCompletion;
+    _queuedCompletion = null;
+
     try {
       final value = jsonEncode(game.toJson());
-      recordDiagnostic('trace_save_encode', {
-        'operation': operation,
-        'phase': 'end',
-        'parentOperation': tapOperation,
-        'bytes': value.length,
-      });
-      return _saveValue(key, value, parentOperation: tapOperation);
+
+      final result = _saveValue(key, value);
+      if (completion != null) {
+        result.then(completion.complete, onError: completion.completeError);
+      }
+      return result;
     } catch (error, stack) {
-      recordDiagnostic('save_error', {
-        'error': error.toString(),
-        'stack': stack.toString(),
-      });
+      completion?.completeError(error, stack);
+
       rethrow;
     }
   }
 
-  Future<void> _saveValue(
-    String storageKey,
-    String value, {
-    int? parentOperation,
-  }) {
-    _notifyAfterWrite |= storageKey == key || error != null;
-    _pendingParents[storageKey] = parentOperation;
+  Future<void> _saveValue(String storageKey, String value) {
+    _notifyAfterWrite |= error != null;
+
     _pending[storageKey] = value;
     if (_writing != null) return _writing!;
     final future = _drain();
@@ -95,35 +111,14 @@ class SaveStore {
     while (_pending.isNotEmpty) {
       final storageKey = _pending.keys.first;
       final value = _pending.remove(storageKey)!;
-      final parent = _pendingParents.remove(storageKey);
-      final writeOperation = ++_writeOperation;
-      recordDiagnostic('trace_save_write', {
-        'operation': writeOperation,
-        'parentOperation': parent,
-        'phase': 'start',
-        'resource': storageKey,
-        'bytes': value.length,
-      });
+
       try {
         if (!await preferences.setString(storageKey, value)) {
           throw StateError('書き込み失敗');
         }
-        recordDiagnostic('trace_save_write', {
-          'operation': writeOperation,
-          'parentOperation': parent,
-          'phase': 'end',
-          'resource': storageKey,
-        });
       } catch (failure, stack) {
         _notifyAfterWrite = true;
-        recordDiagnostic('save_error', {
-          'resource': storageKey,
-          'error': failure.toString(),
-          'stack': stack.toString(),
-        });
-        if (!_pending.containsKey(storageKey)) {
-          _pendingParents[storageKey] = parent;
-        }
+
         _pending.putIfAbsent(storageKey, () => value);
         error = '保存できませんでした。空き容量を確認して再試行してください。';
         break;

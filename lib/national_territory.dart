@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'dart:ui';
-import 'diagnostics.dart';
 import 'prepared_territory.dart';
 
 /// Read only requested offline-unioned town contours. No census JSON, parent
@@ -12,10 +11,6 @@ Future<Map<String, Path>> loadNationalTerritory({
   required Offset Function(Point<double>) project,
   required bool Function() isCurrent,
 }) async {
-  recordDiagnostic('national_territory_start', {
-    'territoryPrefecture': prefecture,
-    'requestedTowns': towns.length,
-  });
   final paths = <String, Path>{};
   try {
     final prepared = await PreparedTerritory.load(prefecture);
@@ -24,21 +19,13 @@ Future<Map<String, Path>> loadNationalTerritory({
       if (sourceToTown[id] != id) throw FormatException('Invalid town ID $id');
       paths[id] = prepared.path(id, project);
     }
-    recordDiagnostic('national_territory_done', {
-      'territoryPrefecture': prefecture,
-      'territoryBytes': prepared.bytes.lengthInBytes,
-      'territoryTowns': paths.length,
-      'territoryPrepared': true,
-    });
+
     return paths;
   } catch (error) {
     for (final path in paths.values) {
       path.reset();
     }
-    recordDiagnostic('national_territory_error', {
-      'territoryPrefecture': prefecture,
-      'error': error.toString(),
-    });
+
     rethrow;
   }
 }

@@ -1,5 +1,4 @@
 import 'map_view_save_queue.dart';
-import 'dart:ui' show PlatformDispatcher, FramePhase;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -30,7 +29,6 @@ import 'regional_ad_card.dart';
 import 'geography_tiles.dart';
 import 'map_image_budget.dart';
 import 'rendering_memory.dart';
-import 'diagnostics.dart';
 
 const ink = Color(0xFF101C2B),
     panel = Color(0xFF192A3A),
@@ -38,52 +36,13 @@ const ink = Color(0xFF101C2B),
     gold = Color(0xFFEEC47C);
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  recordDiagnostic('flutter_start', {'appBuild': 'landscape-font-20261025-v1'});
-  final previousErrorHandler = FlutterError.onError;
-  FlutterError.onError = (details) {
-    recordDiagnostic('flutter_error', {
-      'error': details.exceptionAsString(),
-      'stack': details.stack?.toString(),
-      'context': details.context?.toDescription(),
-      'library': details.library,
-    });
-    previousErrorHandler?.call(details);
-  };
-  final previousPlatformErrorHandler = PlatformDispatcher.instance.onError;
-  PlatformDispatcher.instance.onError = (error, stack) {
-    recordDiagnostic('platform_error', {
-      'error': error.toString(),
-      'stack': stack.toString(),
-    });
-    return previousPlatformErrorHandler?.call(error, stack) ?? false;
-  };
-  if (kIsWeb) {
-    var lastFrameLog = Duration.zero;
-    WidgetsBinding.instance.addTimingsCallback((timings) {
-      if (timings.isEmpty) return;
-      final now = Duration(
-        microseconds: timings.last.timestampInMicroseconds(
-          FramePhase.rasterFinish,
-        ),
-      );
-      if (now - lastFrameLog < const Duration(seconds: 5)) return;
-      lastFrameLog = now;
-      recordDiagnostic('flutter_frame', {
-        'lastFlutterFrame': DateTime.now().millisecondsSinceEpoch,
-        'buildMicros': timings.last.buildDuration.inMicroseconds,
-        'rasterMicros': timings.last.rasterDuration.inMicroseconds,
-        'frameTotalMicros': timings.last.totalSpan.inMicroseconds,
-      }, important: false);
-    });
-  }
+
   await configureRenderingMemory();
   try {
     MapImageBudget.shared.configure(
       await readMapCacheMegabytes().timeout(const Duration(seconds: 3)),
     );
-  } catch (error) {
-    recordDiagnostic('map_budget_setting_error', {'error': error.toString()});
-  }
+  } catch (error) {}
   if (!kIsWeb) {
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -187,88 +146,29 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   bool _tipsRequested = false;
   int _tipsRevision = 0;
 
-  Timer? _diagnosticTimer;
+  final _tapChanges = ValueNotifier<int>(0);
+  final Map<String, int> _cityCounts = {}, _prefectureCounts = {};
+  int? _nationalCount;
 
-  void _diagnose(String event, {bool important = true, MapViewState? view}) {
-    if (!kIsWeb) return;
-    final v = view ?? _restoredMapView;
-    final cache = PaintingBinding.instance.imageCache;
-    recordDiagnostic(event, {
-      'map':
-          nationalView
-              ? 'national'
-              : (cityFilter == null ? 'prefecture' : 'city'),
-      'prefecture': prefectureFilter,
-      'city': cityFilter,
-      'selected': selected,
-      'scale': v?.scale,
-      'centerX': v?.center.dx,
-      'centerY': v?.center.dy,
-      'terrain': v?.showGeography,
-      'changingMap': _changingMap,
-      'totalTaps': game?.totalTaps,
-      'territories': game?.owned.length,
-      'attackTarget': game?.attackTarget,
-      'flutterImageBytes': cache.currentSizeBytes,
-      'flutterImageCount': cache.currentSize,
-      'flutterLiveImages': cache.liveImageCount,
-      'flutterPendingImages': cache.pendingImageCount,
-      'mapImageCache': GeographyImageCache.shared.diagnosticCounts,
-    }, important: important);
+  @override
+  void setState(VoidCallback fn) {
+    _cityCounts.clear();
+    _prefectureCounts.clear();
+    _nationalCount = null;
+    super.setState(fn);
   }
 
-  void _recordView(MapViewState view) {
-    final old = _restoredMapView;
-    _diagnose(
-      'map_view',
-      view: view,
-      important:
-          old?.scale != view.scale ||
-          old?.showGeography != view.showGeography ||
-          old?.cityId != view.cityId ||
-          old?.nationalView != view.nationalView ||
-          old?.prefectureId != view.prefectureId,
-    );
-  }
-
-  Future<void> _showDiagnostics() async {
-    _diagnose('open_diagnostics');
-    final report = diagnosticReport();
-    final data = jsonDecode(report) as Map<String, dynamic>;
-    final sessions = data['sessions'] as List? ?? [];
-    await showDialog<void>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('診断ログ'),
-            content: SingleChildScrollView(
-              child: Text(
-                '${data['storageAvailable'] == false ? '端末へのログ保存が利用できません。' : '直近の記録 ${sessions.length}回分を端末内に保存しています。'}\n\n'
-                '再読み込み前の地図・縮尺・操作・画像キャッシュ・取得可能なメモリ情報を記録します。\n\n'
-                'Safariでは端末全体のメモリ使用量や強制終了の原因は取得できません。終了通知がない場合もメモリ不足とは断定しません。\n\n'
-                '診断ログは起動時と約1分ごとに自動送信し、管理者だけが取得できます。地図上の表示位置と攻略状況の件数・IDを含みます。セーブ本体は送信しません。サーバーでは最大7日間保持します。JSONの保存・コピーも利用できます。',
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('閉じる'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: report));
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: const Text('コピー'),
-              ),
-              FilledButton(
-                onPressed: downloadDiagnostics,
-                child: const Text('JSONを保存'),
-              ),
-            ],
-          ),
-    );
-  }
+  int _cityPopulation(String city) =>
+      _cityCounts.putIfAbsent(city, () => game!.currentCityPopulation(city));
+  int _prefecturePopulation(String prefecture) => _prefectureCounts.putIfAbsent(
+    prefecture,
+    () => game!.currentPrefecturePopulation(prefecture),
+  );
+  int get _population => _nationalCount ??= game!.population;
+  Widget _liveCounts(Widget Function() builder) => ListenableBuilder(
+    listenable: _tapChanges,
+    builder: (context, child) => builder(),
+  );
 
   void _ensureRegionalTips(String? city) {
     final tips = national?.tips;
@@ -457,10 +357,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _diagnose('game_load_start');
-    _diagnosticTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      _diagnose('game_checkpoint', important: false);
-    });
+
     _load();
     unawaited(
       (widget.adRepository == null
@@ -478,7 +375,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   void didHaveMemoryPressure() {
-    _diagnose('memory_pressure');
     PaintingBinding.instance.imageCache.clear();
     GeographyImageCache.shared.clearUnused();
   }
@@ -486,7 +382,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     timer?.cancel();
-    _diagnosticTimer?.cancel();
+
+    _tapChanges.dispose();
+    unawaited(store?.flush() ?? Future<void>.value());
     tipsTimer?.cancel();
     _conquestTimer?.cancel();
     _practice?.dispose();
@@ -544,7 +442,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               .substring(0, 2);
       nationalView =
           national != null && (_restoredMapView?.nationalView ?? false);
-      _diagnose('game_loaded');
+
       final expiredOnLoad = g.expire(DateTime.now());
       _rememberVisibleFact();
       setState(() {});
@@ -580,7 +478,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _diagnose('lifecycle_${state.name}');
     if (state != AppLifecycleState.resumed) {
       unawaited(_mapViewSaves?.flush() ?? Future<void>.value());
     }
@@ -608,10 +505,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _save({int? tapOperation}) {
-    _diagnose('game_state', important: false);
+  void _save({bool deferred = false}) {
     if (game != null && store != null) {
-      unawaited(store!.save(game!, tapOperation: tapOperation));
+      unawaited(!deferred ? store!.save(game!) : store!.queueSave(game!));
     }
   }
 
@@ -784,7 +680,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Future<void> _focusCampaign() async {
     if (_changingMap) return;
-    _diagnose('home_start');
+
     final target = game!.attackTarget ?? game!.home;
     if (target == null) return;
     final destination = atlas!.towns[target]!.cityId.substring(0, 2);
@@ -808,52 +704,53 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _save();
   }
 
-  int _tapOperation = 0;
   void _attack() {
-    final operation = ++_tapOperation;
-    void step(String phase, [Map<String, Object?> extra = const {}]) {
-      recordDiagnostic('trace_tap', {
-        'operation': operation,
-        'phase': phase,
-        'selected': selected,
-        'totalTaps': game?.totalTaps,
-        ...extra,
-      });
-    }
-
-    step('input');
     final g = game!;
     final oldCity =
         g.attackTarget == null ? null : atlas!.towns[g.attackTarget]!.cityId;
     final before = g.totalTaps;
-    if ((g.progress[selected!] ?? 0) + 1 >=
-        g.requiredTaps(atlas!.towns[selected!]!)) {
-      _diagnose('conquest_before');
-    }
+    final oldTarget = g.attackTarget;
+    final tappedTown = atlas!.towns[selected!]!;
+    final oldProgress = g.progress[selected!] ?? 0;
+    final oldBand = oldProgress * 10 ~/ math.max(1, tappedTown.population);
+
     final won = g.tap(selected!, DateTime.now());
-    step('calculated', {'won': won});
+
     if (g.totalTaps == before) {
-      step('ignored');
       return;
     }
     if (won) {
-      _diagnose('conquest_after');
       HapticFeedback.mediumImpact();
     }
-    setState(() {
-      final newCity =
-          g.attackTarget == null ? null : atlas!.towns[g.attackTarget]!.cityId;
-      if (won) _celebrateConquest(atlas!.towns[selected!]!.name, selected!);
-      if (oldCity != newCity) factIndex = 0;
-      _rememberVisibleFact();
-    });
-    step('update_requested');
-    _save(tapOperation: operation);
-    step('save_requested');
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      step('frame_submitted');
-      // Flutter submitted its frame; this does not prove GPU presentation.
-    });
+    final newCity =
+        g.attackTarget == null ? null : atlas!.towns[g.attackTarget]!.cityId;
+    final newBand =
+        (g.progress[selected!] ?? 0) * 10 ~/ math.max(1, tappedTown.population);
+    if (won || oldTarget != g.attackTarget || oldBand != newBand) {
+      setState(() {
+        if (won) _celebrateConquest(tappedTown.name, selected!);
+        if (oldCity != newCity) factIndex = 0;
+        if (won || oldCity != newCity) _rememberVisibleFact();
+      });
+    } else {
+      // Existing cached totals advance in O(1); unvisited regions remain lazy.
+      final delta =
+          math.min(oldProgress + 1, tappedTown.population) -
+          math.min(oldProgress, tappedTown.population);
+      final city = tappedTown.cityId;
+      final prefecture = city.substring(0, 2);
+      if (_cityCounts.containsKey(city))
+        _cityCounts[city] = _cityCounts[city]! + delta.toInt();
+      if (_prefectureCounts.containsKey(prefecture)) {
+        _prefectureCounts[prefecture] =
+            _prefectureCounts[prefecture]! + delta.toInt();
+      }
+      if (_nationalCount != null)
+        _nationalCount = _nationalCount! + delta.toInt();
+      _tapChanges.value++;
+    }
+
+    _save(deferred: !won);
   }
 
   @override
@@ -911,88 +808,90 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       backgroundColor: ink,
       titleSpacing: 24,
       toolbarHeight: 88,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Tooltip(
-                  message: location,
-                  child: Text(
-                    town?.name ??
-                        (city == null
-                            ? (nationalView
-                                ? '全国'
-                                : national
-                                        ?.prefectures[prefectureFilter]
-                                        ?.name ??
-                                    '奈良県')
-                            : atlas!.cities[city]!),
-                    key: const Key('current-location'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+      title: _liveCounts(
+        () => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Tooltip(
+                    message: location,
+                    child: Text(
+                      town?.name ??
+                          (city == null
+                              ? (nationalView
+                                  ? '全国'
+                                  : national
+                                          ?.prefectures[prefectureFilter]
+                                          ?.name ??
+                                      '奈良県')
+                              : atlas!.cities[city]!),
+                      key: const Key('current-location'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              if (town != null) ...[
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: math.min(
-                      200,
-                      MediaQuery.sizeOf(context).width * .45,
+                if (town != null) ...[
+                  const SizedBox(width: 8),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: math.min(
+                        200,
+                        MediaQuery.sizeOf(context).width * .45,
+                      ),
+                    ),
+                    child: TapProgress(
+                      townId: town.id,
+                      value:
+                          g.owned.contains(town.id)
+                              ? town.population
+                              : g.progress[town.id] ?? 0,
+                      population: town.population,
+                      tapCount: g.totalTaps,
                     ),
                   ),
-                  child: TapProgress(
-                    townId: town.id,
-                    value:
-                        g.owned.contains(town.id)
-                            ? town.population
-                            : g.progress[town.id] ?? 0,
-                    population: town.population,
-                    tapCount: g.totalTaps,
+                ],
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${city == null ? '市区町村未選択' : atlas!.cities[city]!} ${city == null ? "— / —" : "${number(_cityPopulation(city))} / ${number(atlas!.cityPopulations[city]!)}"}',
+                      key: const Key('city-progress'),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      nationalView
+                          ? '全国 ${number(_population)} / ${number(atlas!.totalPopulation)}'
+                          : '${national?.prefectures[prefectureFilter]?.name ?? '奈良県'} ${number(_prefecturePopulation(prefectureFilter))} / ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
+                      key: const Key('prefecture-progress'),
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ),
                 ),
               ],
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '${city == null ? '市区町村未選択' : atlas!.cities[city]!} ${city == null ? "— / —" : "${number(g.currentCityPopulation(city))} / ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}"}',
-                    key: const Key('city-progress'),
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    nationalView
-                        ? '全国 ${number(g.population)} / ${number(atlas!.totalPopulation)}'
-                        : '${national?.prefectures[prefectureFilter]?.name ?? '奈良県'} ${number(g.currentPrefecturePopulation(prefectureFilter))} / ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
-                    key: const Key('prefecture-progress'),
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
       actions: [
         PopupMenuButton<String>(
@@ -1003,7 +902,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             if (value == 'records') _showRecords();
             if (value == 'help') _about();
             if (value == 'tips') _tipSettings();
-            if (value == 'diagnostics') _showDiagnostics();
             if (value == 'map-cache') _mapCacheSettings();
           },
           itemBuilder:
@@ -1037,14 +935,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       title: Text('地図キャッシュ'),
                     ),
                   ),
-                if (kIsWeb)
-                  PopupMenuItem(
-                    value: 'diagnostics',
-                    child: ListTile(
-                      leading: Icon(Icons.description_outlined),
-                      title: Text('診断ログ'),
-                    ),
-                  ),
+
                 PopupMenuItem(
                   value: 'help',
                   child: ListTile(
@@ -1178,66 +1069,70 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (right) ...[
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: header.actions!,
+                  child: _liveCounts(
+                    () => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (right) ...[
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: header.actions!,
+                            ),
                           ),
-                        ),
-                      ] else ...[
-                        Text(
-                          town?.name ??
-                              (city == null ? '町を選択' : atlas!.cities[city]!),
-                          key: const Key('current-location'),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                        ] else ...[
+                          Text(
+                            town?.name ??
+                                (city == null ? '町を選択' : atlas!.cities[city]!),
+                            key: const Key('current-location'),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        if (town != null) ...[
+                          if (town != null) ...[
+                            const SizedBox(height: 20),
+                            TapProgress(
+                              townId: town.id,
+                              value:
+                                  g.owned.contains(town.id)
+                                      ? town.population
+                                      : g.progress[town.id] ?? 0,
+                              population: town.population,
+                              tapCount: g.totalTaps,
+                            ),
+                          ],
                           const SizedBox(height: 20),
-                          TapProgress(
-                            townId: town.id,
-                            value:
-                                g.owned.contains(town.id)
-                                    ? town.population
-                                    : g.progress[town.id] ?? 0,
-                            population: town.population,
-                            tapCount: g.totalTaps,
+                          stats(
+                            city == null ? '市区町村未選択' : atlas!.cities[city]!,
+                            city == null
+                                ? '— / —'
+                                : '${number(_cityPopulation(city))}\n/ ${number(atlas!.cityPopulations[city]!)}',
+                            const Key('city-progress'),
                           ),
-                        ],
-                        const SizedBox(height: 20),
-                        stats(
-                          city == null ? '市区町村未選択' : atlas!.cities[city]!,
-                          city == null
-                              ? '— / —'
-                              : '${number(g.currentCityPopulation(city))}\n/ ${number(atlas!.byCity[city]!.fold<int>(0, (sum, t) => sum + t.population))}',
-                          const Key('city-progress'),
-                        ),
-                        stats(
-                          nationalView
-                              ? '全国'
-                              : national?.prefectures[prefectureFilter]?.name ??
-                                  '奈良県',
-                          nationalView
-                              ? '${number(g.population)}\n/ ${number(atlas!.totalPopulation)}'
-                              : '${number(g.currentPrefecturePopulation(prefectureFilter))}\n/ ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
-                          const Key('prefecture-progress'),
-                        ),
-                        if (store!.error != null) ...[
-                          Text(store!.error!),
-                          TextButton(
-                            onPressed: _save,
-                            child: const Text('再試行'),
+                          stats(
+                            nationalView
+                                ? '全国'
+                                : national
+                                        ?.prefectures[prefectureFilter]
+                                        ?.name ??
+                                    '奈良県',
+                            nationalView
+                                ? '${number(_population)}\n/ ${number(atlas!.totalPopulation)}'
+                                : '${number(_prefecturePopulation(prefectureFilter))}\n/ ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
+                            const Key('prefecture-progress'),
                           ),
+                          if (store!.error != null) ...[
+                            Text(store!.error!),
+                            TextButton(
+                              onPressed: _save,
+                              child: const Text('再試行'),
+                            ),
+                          ],
                         ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -1634,8 +1529,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Future<void> _selectPrefecture(String id) async {
     if (_changingMap) return;
-    recordDiagnostic('select_prefecture_start', {'destinationPrefecture': id});
-    _diagnose('leave_map');
+
     await _retireMapBeforeNavigation();
     if (!mounted) return;
     setState(() {
@@ -1656,12 +1550,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     setState(() => _changingMap = true);
     await WidgetsBinding.instance.endOfFrame;
     await retireMapImages();
-    _diagnose('map_images_retired');
   }
 
   Future<void> _showNational() async {
     if (_completedCity != null || _changingMap) return;
-    _diagnose('show_national_start');
+
     setState(() {
       _changingMap = true;
       nationalView = true;
@@ -1674,7 +1567,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     await retireMapImages();
     if (mounted) {
       setState(() => _changingMap = false);
-      _diagnose('show_national_retired');
     }
   }
 
@@ -1719,7 +1611,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     ? _restoredMapView
                                     : null,
                             onViewChanged: (view) {
-                              _recordView(view);
                               _restoredMapView = view;
                               _mapViewSaves?.schedule(view);
                             },
@@ -1755,7 +1646,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                       ? _restoredMapView
                                       : null,
                               onViewChanged: (view) {
-                                _recordView(view);
                                 _restoredMapView = view;
                                 _mapViewSaves?.schedule(view);
                               },
