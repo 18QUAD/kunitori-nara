@@ -61,7 +61,7 @@ class _NativeAttackButtonState extends State<_NativeAttackButton>
         'width:${_rect?.width ?? 0}px;height:${_rect?.height ?? 0}px;'
         'pointer-events:auto;'
         'visibility:${_routeCurrent && _rect != null ? 'visible' : 'hidden'};'
-        'border-radius:999px;box-sizing:border-box;cursor:pointer;appearance:none;'
+        'border-radius:16px;box-sizing:border-box;cursor:pointer;appearance:none;'
         '-webkit-appearance:none;'
         'background:#${background.substring(2)}${background.substring(0, 2)} url("$image") '
         'center / ${enabled ? 56 : 48}px ${enabled ? 56 : 48}px no-repeat;'

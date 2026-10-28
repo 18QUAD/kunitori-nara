@@ -24,6 +24,7 @@ import 'territory_map.dart';
 import 'tap_progress.dart';
 import 'attack_button.dart';
 import 'action_button_style.dart';
+import 'action_choices.dart';
 import 'regional_ads.dart';
 import 'regional_ad_card.dart';
 import 'geography_tiles.dart';
@@ -78,12 +79,22 @@ class KunitoriApp extends StatelessWidget {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(48, 52),
+          shape: actionButtonShape,
           textStyle: const TextStyle(
             fontFamily: 'NotoSansJP',
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(shape: actionButtonShape),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(shape: actionButtonShape),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(shape: actionButtonShape),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -1061,6 +1072,16 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         ],
       ),
     );
+    final splitChoices =
+        _practice != null ||
+        g.quiz?.pausedRemaining != null ||
+        (_completedCity != null &&
+            _conquestPage == _conquestPages.length - 1) ||
+        (!_quizActive &&
+            _completedCity == null &&
+            town != null &&
+            g.canPracticeAt(town.id) &&
+            g.canStartQuizAt(town.id));
     Widget side({required bool right}) => LayoutBuilder(
       builder:
           (context, bounds) => Column(
@@ -1136,7 +1157,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-              if (!right || dualAttack)
+              if (!right || dualAttack || splitChoices)
                 SizedBox(
                   height: math.min(104, bounds.maxHeight * .30),
                   child: KeyedSubtree(
@@ -1145,7 +1166,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                           ? 'landscape-right-action'
                           : 'landscape-left-action',
                     ),
-                    child: _controls(),
+                    child: ActionChoiceRegion(right: right, child: _controls()),
                   ),
                 ),
             ],
@@ -1202,32 +1223,26 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return const Center(child: Text('正解は吹き出しで確認できます'));
     }
     if (q.pausedRemaining != null) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      return ActionChoices(
         children: [
-          Expanded(
-            child: FilledButton(
-              onPressed: () {
-                setState(() => game!.quiz = null);
-                _startTipsTimer();
-                _save();
-              },
-              child: const Text('はい'),
-            ),
+          FilledButton(
+            onPressed: () {
+              setState(() => game!.quiz = null);
+              _startTipsTimer();
+              _save();
+            },
+            child: const Text('はい'),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: FilledButton(
-              style: actionButtonStyle(),
-              onPressed: () {
-                setState(() {
-                  q.deadline = DateTime.now().add(q.pausedRemaining!);
-                  q.pausedRemaining = null;
-                });
-                _save();
-              },
-              child: const Text('いいえ'),
-            ),
+          FilledButton(
+            style: actionButtonStyle(),
+            onPressed: () {
+              setState(() {
+                q.deadline = DateTime.now().add(q.pausedRemaining!);
+                q.pausedRemaining = null;
+              });
+              _save();
+            },
+            child: const Text('いいえ'),
           ),
         ],
       );
@@ -1259,25 +1274,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         ),
       );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return ActionChoices(
       children: [
-        Expanded(
-          child: FilledButton(
-            style: actionButtonStyle(),
-            onPressed: () => _finishConquestGuide(startQuiz: false),
-            child: const Text('あとで'),
-          ),
+        FilledButton(
+          style: actionButtonStyle(),
+          onPressed: () => _finishConquestGuide(startQuiz: false),
+          child: const Text('あとで'),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: FilledButton(
-            onPressed: () => _finishConquestGuide(startQuiz: true),
-            child: Text(
-              atlas!.offices[_completedCity]!.usesConquestHub
-                  ? '制圧拠点へ移動して挑戦'
-                  : '役所へ移動して挑戦',
-            ),
+        FilledButton(
+          onPressed: () => _finishConquestGuide(startQuiz: true),
+          child: Text(
+            atlas!.offices[_completedCity]!.usesConquestHub
+                ? '制圧拠点へ移動して挑戦'
+                : '役所へ移動して挑戦',
           ),
         ),
       ],
@@ -1374,26 +1383,20 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     // Captured offices have their own actions; an attack button never shares
     // space with practice, and quiz/practice buttons have separate hit areas.
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return ActionChoices(
       children: [
         if (g.canStartQuizAt(townId)) ...[
-          Expanded(
-            child: FilledButton.icon(
-              onPressed: () => _confirmQuiz(townId),
-              icon: const Icon(Icons.quiz_outlined),
-              label: const Text('制圧クイズに挑戦'),
-            ),
+          FilledButton.icon(
+            onPressed: () => _confirmQuiz(townId),
+            icon: const Icon(Icons.quiz_outlined),
+            label: const Text('制圧クイズに挑戦'),
           ),
-          const SizedBox(width: 8),
         ],
-        Expanded(
-          child: FilledButton.icon(
-            style: actionButtonStyle(),
-            onPressed: () => _startPractice(townId),
-            icon: const Icon(Icons.school_outlined),
-            label: const Text('クイズを予習'),
-          ),
+        FilledButton.icon(
+          style: actionButtonStyle(),
+          onPressed: () => _startPractice(townId),
+          icon: const Icon(Icons.school_outlined),
+          label: const Text('クイズを予習'),
         ),
       ],
     );
