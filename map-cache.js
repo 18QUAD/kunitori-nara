@@ -84,8 +84,8 @@ window.kunitoriMapStorage = (async () => {
       const result = await request('warm-map-images');
       done = result.done;
       showProgress(result);
-      checkpoint(result, done);
-      if (done) {finishMapDownload(); window.kunitoriDiagnostics?.record?.('map_storage_complete', JSON.stringify({}));}
+      
+      if (done) {finishMapDownload(); }
       retry = 1000;
       if (!done) downloadTimer = setTimeout(next, 0);
     } catch (error) {
@@ -94,9 +94,9 @@ window.kunitoriMapStorage = (async () => {
       try {
         const saved = await request('map-images-status');
         showProgress(saved, true);
-        checkpoint(saved, true);
+        
       } catch (_) {showProgress(null, true);}
-      window.kunitoriDiagnostics?.record?.('map_storage_retry', JSON.stringify({error: String(error)}));
+      
       downloadTimer = setTimeout(next, retry);
       retry = Math.min(retry * 2, 30000);
     } finally {running = false;}
@@ -109,42 +109,16 @@ window.kunitoriMapStorage = (async () => {
     async release() {
       await window.kunitoriMapStorage;
       const memory = await request('map-memory-release');
-      window.kunitoriDiagnostics?.record?.('map_memory_released', JSON.stringify({
-        mapCacheLimitMb: memory.megabytes, mapCacheBytes: memory.bytes,
-      }));
+      
       return memory.bytes;
     },
     async set(megabytes) {
       await window.kunitoriMapStorage;
       const memory = await request('map-memory-set', {megabytes});
-      window.kunitoriDiagnostics?.record?.('map_memory_setting', JSON.stringify({mapCacheLimitMb: memory.megabytes}));
+      
       return memory.megabytes;
     },
   };
-  function recordMemory(memory) {
-    window.kunitoriDiagnostics?.record?.('map_memory', JSON.stringify({
-      mapCacheLimitMb: memory.megabytes, mapCacheBytes: memory.bytes,
-    }), false);
-  }
-  navigator.serviceWorker.addEventListener('message', event => {
-    if (event.data?.type === 'map-memory-state') recordMemory(event.data);
-  });
-  // One startup snapshot; do not keep an idle worker/cache alive by polling it.
-  window.kunitoriMapDownload.then(async () => {
-    try {recordMemory(await request('map-memory-get'));} catch (_) {}
-  });
-  let lastCheckpoint = 0;
-  function checkpoint(result, force = false) {
-    if (!force && Date.now() - lastCheckpoint < 5000) return;
-    lastCheckpoint = Date.now();
-    window.kunitoriDiagnostics?.record?.('map_storage_progress', JSON.stringify({
-      mapDownloadSaved: result.saved,
-      mapDownloadTotal: result.total,
-      mapDownloadBytes: result.savedBytes,
-      mapDownloadTotalBytes: result.bytes,
-    }));
-  }
-  const record = (event, data = {}) => window.kunitoriDiagnostics?.record?.(event, JSON.stringify(data));
   function bounded(operation, phase) {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error(`Map worker ${phase} timed out`)), 15000);
@@ -166,7 +140,7 @@ window.kunitoriMapStorage = (async () => {
     let registration;
     let phase = 'registration';
     try {
-      record('map_storage_register_start');
+      
       const existing = await navigator.serviceWorker.getRegistration?.(root.href);
       registration = existing?.active?.scriptURL === worker.href && !existing.installing && !existing.waiting
         ? existing
@@ -174,7 +148,7 @@ window.kunitoriMapStorage = (async () => {
       if (existing === registration && navigator.onLine && registration.update) {
         try {await bounded(registration.update(), 'update');} catch (_) {}
       }
-      record('map_storage_registered');
+      
       phase = 'activation';
       const pending = registration.installing || registration.waiting;
       if (pending && pending.state !== 'activated') {
@@ -193,7 +167,7 @@ window.kunitoriMapStorage = (async () => {
           changed();
         });
       }
-      record('map_storage_activated');
+      
       phase = 'control';
       if (!controlled()) {
         await new Promise((resolve, reject) => {
@@ -208,14 +182,14 @@ window.kunitoriMapStorage = (async () => {
           changed();
         });
       }
-      record('map_storage_controller_ready', {error: null});
+      
       phase = 'identity';
       const identity = await request('map-runtime-version', {}, 15000);
       if (identity.build && identity.build !== version) {
         // An old cached document may install a newer worker. Do not start its
         // old bootstrap against new data. The worker serves this pinned entry
         // from the verified current runtime, even when the HTTP cache is stale.
-        record('map_build_replaced', {error: `${version} -> ${identity.build}`});
+        
         const current = new URL(root);
         current.searchParams.set('app-build', identity.build);
         window.location.replace(current.href);
@@ -231,19 +205,19 @@ window.kunitoriMapStorage = (async () => {
         if (!running && (!lastProgress || result.saved >= lastProgress.saved)) {
           done = result.done;
           showProgress(result, !navigator.onLine);
-          checkpoint(result, true);
+          
           if (done) finishMapDownload();
         }
       }).catch(error => {
-        record('map_storage_status_retry', {error: String(error)});
+        
         if (!done) showProgress(null, true);
       });
       // The game engine starts only after the initial disk store is complete.
-      window.kunitoriDiagnostics?.record?.('map_storage_start', JSON.stringify({}));
+      
       if (!done) downloadTimer = setTimeout(next, 0);
     } catch (error) {
       connected = false;
-      record('map_storage_setup_retry', {error: String(error), context: phase});
+      
       // An old worker can remain stuck on extended events. Replace only this
       // app's registration; its disk cache and all game saves remain intact.
       if (registration && phase !== 'registration' && registration.scope === root.href) {
@@ -254,9 +228,9 @@ window.kunitoriMapStorage = (async () => {
         })) {
           try {
             await bounded(registration.unregister(), 'recovery');
-            record('map_storage_registration_recovered');
+            
           } catch (recoveryError) {
-            record('map_storage_recovery_retry', {error: String(recoveryError)});
+            
           }
         }
       }

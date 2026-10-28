@@ -47,9 +47,10 @@
   });
 
   function feedback(target) {
-    effects.get(target)?.cancel();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+        effects.get(target)?.playState === 'running') return;
     effects.set(target, target.animate(
-      [{filter: 'brightness(0.84)'}, {filter: 'brightness(1)'}],
+      [{backgroundColor: '#cebea5'}, {backgroundColor: '#efe3cf'}],
       {duration: 160, easing: 'ease-out'}));
   }
 
@@ -145,7 +146,8 @@
         }
         if (target.disabled !== bridge.disabled) target.disabled = bridge.disabled;
         const suffix = side === 'left' ? '' : '（右）';
-        target.setAttribute('aria-label', `${bridge.getAttribute('aria-label') || 'タップで進軍'}${suffix}`);
+        const label = `${bridge.getAttribute('aria-label') || 'タップで進軍'}${suffix}`;
+        if (target.getAttribute('aria-label') !== label) target.setAttribute('aria-label', label);
       }
     }
   }
