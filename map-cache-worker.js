@@ -883,7 +883,7 @@ async function imageWarmBatch() {
 
 // All non-image runtime files are verified on disk too. Large files use bounded
 // gzip chunks; neither initial download nor disk reads buffer a complete county.
-const RUNTIME_REVISION = 'fb0115e3130a8b714f155753bdf59e75a303bb090d9285657188997b77d91229';
+const RUNTIME_REVISION = '71c225a1766a2201239ed6b70a0962b15ea83b6b063b2e08fdcabed4ea8ec3dc';
 const RUNTIME_STORE = 'kunitori-runtime-data-v1';
 const RUNTIME_META = 'kunitori-runtime-meta-v1';
 let runtimeInventoryPromise;

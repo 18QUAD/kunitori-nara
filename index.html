@@ -78,7 +78,7 @@
       touch-action: none !important;
     }
     .attack-tap-native[data-thumb-side="left"]:enabled,
-    .attack-tap-half[data-side="left"]:enabled { background-image: var(--thumb-tap-left) !important; }
+    .attack-tap-half[data-side="left"]:enabled { background-image: var(--thumb-tap-left) !important; transform: scaleX(-1); }
     .attack-tap-native[data-thumb-side="right"]:enabled,
     .attack-tap-half[data-side="right"]:enabled { background-image: var(--thumb-tap-right) !important; }
     .attack-tap-half { display: none !important; }
@@ -112,8 +112,8 @@
   <div id="browser-scroll-right" class="browser-scroll-rail" aria-hidden="true"></div>
   <div id="safe-area-probe" aria-hidden="true"></div>
   <script src="map-cache.js?v=landscape-font-20261025-v1"></script>
-  <script src="split_attack.js?v=performance-20261028"></script>
+  <script src="split_attack.js?v=classic-tap-20261029"></script>
   <script src="landscape_scroll.js?v=auto-landscape-scroll-20261025"></script>
-  <script src="flutter_bootstrap.js?v=choices-20261028" async></script>
+  <script src="flutter_bootstrap.js?v=classic-tap-20261029" async></script>
 </body>
 </html>
