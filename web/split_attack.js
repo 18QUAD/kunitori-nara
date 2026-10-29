@@ -2,9 +2,9 @@
 (() => {
   const host = document.getElementById('app-host');
   const portrait = window.matchMedia('(orientation: portrait)');
-  // Mirrored thumb silhouettes point inward from the corresponding hand.
-  host.style.setProperty('--thumb-tap-left', 'url("icons/tap-left.png?v=black-tap-20261028")');
-  host.style.setProperty('--thumb-tap-right', 'url("icons/tap-right.png?v=black-tap-20261028")');
+  // Restore the classic tap icon. CSS mirrors only the left button.
+  host.style.setProperty('--thumb-tap-left', 'url("assets/assets/icons/tap.png?v=classic-tap-20261029")');
+  host.style.setProperty('--thumb-tap-right', 'url("assets/assets/icons/tap.png?v=classic-tap-20261029")');
 
   const pairs = new Map();
   const effects = new WeakMap();
