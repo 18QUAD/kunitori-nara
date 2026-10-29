@@ -190,25 +190,13 @@ class GeographyImageCache {
     }
   }
 
-  bool get canPrefetch {
-    if (_pending.isNotEmpty) return false;
-    final preferred = _preferred.values.expand((s) => s).toSet();
-    final pinned = _pins.values.expand((s) => s).toSet();
-    final reclaimable = _images.entries.where(
-      (e) => !preferred.contains(e.key) && !pinned.contains(e.key),
-    );
-    final reclaimBytes = reclaimable.fold(
-      0,
-      (n, e) => n + e.value.width * e.value.height * 4,
-    );
-    return length - reclaimable.length < capacity &&
-        MapImageBudget.shared.retainedBytes -
-                reclaimBytes +
-                MapImageBudget.mib <=
-            MapImageBudget.shared.limit(MapImageKind.source);
-  }
+  bool get canPrefetch =>
+      _pending.isEmpty &&
+      length < capacity &&
+      MapImageBudget.shared.retainedBytes + MapImageBudget.mib <=
+          MapImageBudget.shared.limit(MapImageKind.source);
 
-  Future<ui.Image> load(String key) {
+  Future<ui.Image> load(String key, {bool prefetch = false}) {
     final cached = peek(key);
     if (cached != null) return Future.value(cached);
     return _pending.putIfAbsent(key, () async {
@@ -219,7 +207,18 @@ class GeographyImageCache {
         final parts = key.split('~');
         final side = parts.length == 1 ? 512 : int.parse(parts.last);
         final bytesNeeded = side * side * 4;
-        trim(bytesNeeded);
+        // Speculative work must never evict a previously displayed image.
+        // Recheck after waiting for the decoder: visible work may have filled
+        // the budget while this request was queued.
+        if (prefetch) {
+          if (length >= capacity ||
+              MapImageBudget.shared.retainedBytes + bytesNeeded >
+                  MapImageBudget.shared.limit(MapImageKind.source)) {
+            throw StateError('No spare capacity for prefetch');
+          }
+        } else {
+          trim(bytesNeeded);
+        }
         final kind =
             parts.first.endsWith('_background') ||
                     parts.first.endsWith('_overview')
@@ -547,7 +546,15 @@ class _GeographyTilesState extends State<GeographyTiles> {
     // visible image or replaces a warm adjacent level just to fill the budget.
     for (final key in adjacentKeys) {
       if (!mounted || token != revision || !cache.canPrefetch) return;
-      if (cache.peek(key) == null) await cache.load(key);
+      if (cache.peek(key) == null) {
+        try {
+          await cache.load(key, prefetch: true);
+        } catch (_) {
+          // The visible map is complete. A speculative miss must not put it
+          // into the failed/retry loop or repeatedly decode the same tiles.
+          return;
+        }
+      }
     }
   }
 
