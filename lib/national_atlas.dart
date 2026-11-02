@@ -13,6 +13,7 @@ import 'nearest_connections.dart';
 import 'office_marker.dart';
 import 'national_tips.dart';
 import 'national_conquest.dart';
+import 'compact_towns.dart';
 
 /// Population and adjacency are resident; detailed polygons are loaded by prefecture.
 class NationalAtlas {
@@ -83,9 +84,146 @@ class NationalAtlas {
     atlas.prefecturePolygons.remove(old);
     atlas.preparedGeometryPrefectures.remove(old);
     _resident = null;
+    atlas.pinMetadata(null);
   }
 
   static Future<NationalAtlas> load() async {
+    if (_cached != null) return _cached!;
+    final data =
+        jsonDecode(
+              await rootBundle.loadString(
+                'assets/data/compact/index.json',
+                cache: false,
+              ),
+            )
+            as Map<String, dynamic>;
+    if (data['schema'] != 1)
+      throw const FormatException('Invalid national index');
+    final coast = await rootBundle.load('assets/data/compact/coast.bin');
+    var offset = 0;
+    int count() {
+      final v = coast.getUint32(offset, Endian.little);
+      offset += 4;
+      return v;
+    }
+
+    final prefectures = <String, Prefecture>{};
+    for (final p in data['prefectures'] as List) {
+      final polygons = <List<List<Point<double>>>>[];
+      final np = count();
+      for (var i = 0; i < np; i++) {
+        final rings = <List<Point<double>>>[];
+        final nr = count();
+        for (var j = 0; j < nr; j++) {
+          final n = count();
+          final xy = Float64List(n * 2);
+          for (var k = 0; k < n * 2; k++) {
+            xy[k] = coast.getFloat64(offset, Endian.little);
+            offset += 8;
+          }
+          rings.add(_CoordinateRing.fromBuffer(xy));
+        }
+        polygons.add(rings);
+      }
+      prefectures[p['id']] = Prefecture.prepared(p['id'], p['name'], polygons);
+    }
+    final index = CompactTowns.empty();
+    for (final path in data['townFiles']) {
+      index.addRows(
+        jsonDecode(
+              await rootBundle.loadString(
+                'assets/data/compact/$path',
+                cache: false,
+              ),
+            )
+            as List,
+      );
+    }
+    index.finish();
+    final atlas = Atlas.fromPrepared(data, preparedTowns: index);
+    final offices = jsonDecode(
+      await rootBundle.loadString(
+        'assets/data/japan_offices.json',
+        cache: false,
+      ),
+    );
+    final sourceIds = <String, String>{};
+    for (final row in offices['offices']) {
+      final city = row['cityId'] as String;
+      final source = row['sourceTownId'] as String?;
+      if (row['id'] == city && source != null) sourceIds[city] = source;
+      atlas.mapOffices[row['id']] = OfficeMarker(
+        id: row['id'],
+        cityId: city,
+        name: row['name'],
+        address: row['address'],
+        point: Point(
+          (row['point'][0] as num).toDouble(),
+          (row['point'][1] as num).toDouble(),
+        ),
+        isCity: row['isCity'],
+        townId: source == null ? null : atlas.sourceToTown[source],
+      );
+    }
+    enableNationalConquest(atlas, {
+      for (final p in prefectures.values) p.id: p.name,
+    }, officeSourceTownIds: sourceIds);
+    atlas.enableSeaTravel(seaTownConnections);
+    atlas.enableNearbyTravel(nearestTownConnections);
+    return _cached = NationalAtlas(
+      atlas,
+      prefectures,
+      tips: await NationalTips.load(atlas),
+    );
+  }
+
+  Future<void> prepareLegacySave(Map<String, dynamic>? save) async {
+    if (save == null || save['territoryUnit'] == 'town-v1') return;
+    final ids = <String>{
+      ...((save['owned'] as List?) ?? []).cast<String>(),
+      ...((save['everOwned'] as List?) ?? []).cast<String>(),
+      ...((save['progress'] as Map?) ?? {}).keys.cast<String>(),
+      if (save['home'] is String) save['home'] as String,
+    };
+    for (final pref in ids.map((id) => id.substring(0, 2)).toSet()) {
+      final rows =
+          jsonDecode(
+                await rootBundle.loadString(
+                  'assets/data/compact/legacy/$pref.json',
+                  cache: false,
+                ),
+              )
+              as List;
+      for (final row in rows) {
+        final id = row[0] as String, target = row[1] as String;
+        final town = Town.fromJson({
+          'id': id,
+          'name': '',
+          'cityId': id.substring(0, 5),
+          'population': row[2],
+          'area': 0,
+          'neighbors': const [],
+          'polygons': const [],
+        });
+        atlas.sourceTowns[id] = town;
+        atlas.sourceToTown[id] = target;
+        atlas.membersByTown.putIfAbsent(target, () => []).add(town);
+      }
+    }
+  }
+
+  void releaseLegacySave() {
+    atlas.sourceTowns.clear();
+    atlas.membersByTown.clear();
+    // Keep the tiny office aliases, discarding only migration-only IDs.
+    final aliases = atlas.sourceToTown;
+    final keep = <String>{...atlas.offices.values.map((o) => o.sourceTownId)};
+    // CompactAliases identity lookups do not allocate national alias entries.
+    if (aliases is CompactAliases)
+      aliases.aliases.removeWhere((id, _) => !keep.contains(id));
+  }
+
+  static Future<NationalAtlas> loadUnpackedForBuild() async {
     if (_cached != null) return _cached!;
     final nara =
         jsonDecode(
@@ -224,13 +362,14 @@ class NationalAtlas {
   Future<void> _readGeometry(String prefecture) async {
     if (_resident == prefecture) return;
     _releaseGeometry();
+    atlas.pinMetadata(prefecture);
 
     try {
       final prepared = await PreparedTerritory.load(prefecture);
       final decoded = <String, List<List<List<Point<double>>>>>{};
-      for (final town in atlas.towns.values.where(
-        (t) => t.id.startsWith(prefecture),
-      )) {
+      for (final town in atlas.byCity.entries
+          .where((e) => e.key.startsWith(prefecture))
+          .expand((e) => e.value)) {
         decoded[town.id] = prepared.polygons(town.id);
       }
       final cityShapes = <String, List<List<List<Point<double>>>>>{};
@@ -256,6 +395,7 @@ class NationalAtlas {
 // Coastlines contain many points. Store doubles in one buffer per ring instead
 // of retaining a Dart Point object and list slot for every coastline vertex.
 class _CoordinateRing extends ListBase<Point<double>> {
+  _CoordinateRing.fromBuffer(this._xy);
   _CoordinateRing(List<dynamic> json) : _xy = Float64List(json.length * 2) {
     for (var i = 0; i < json.length; i++) {
       _xy[i * 2] = (json[i][0] as num).toDouble();
@@ -279,6 +419,7 @@ class _CoordinateRing extends ListBase<Point<double>> {
 }
 
 class Prefecture {
+  Prefecture.prepared(this.id, this.name, this.polygons);
   Prefecture.fromJson(Map<String, dynamic> j)
     : id = j['id'] as String,
       name = j['name'] as String,

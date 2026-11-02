@@ -1,4 +1,5 @@
 import 'game.dart';
+import 'lazy_city_facts.dart';
 import 'municipal_office.dart';
 
 const nationalOfficeSource =
@@ -10,7 +11,17 @@ void enableNationalConquest(
   Atlas atlas,
   Map<String, String> prefectures, {
   Map<String, String> officeSourceTownIds = const {},
+  bool lazy = false,
 }) {
+  final initialFacts = atlas.facts;
+  if (lazy) {
+    for (final entry in initialFacts.entries.where(
+      (e) => !e.key.startsWith('29'),
+    )) {
+      atlas.additionalFactIds.addAll(entry.value.map((f) => f.id));
+    }
+    atlas.facts = LazyCityFacts(initialFacts);
+  }
   for (final city in atlas.cities.entries.where(
     (c) => !c.key.startsWith('29'),
   )) {
@@ -34,7 +45,7 @@ void enableNationalConquest(
     atlas.offices[city.key] = MunicipalOffice(
       city.key,
       marker.name,
-      officeSourceTownIds[city.key] ?? atlas.membersByTown[hub]!.first.id,
+      officeSourceTownIds[city.key] ?? hub,
       marker.address,
       nationalOfficeSource,
       marker.point.x,
@@ -42,87 +53,96 @@ void enableNationalConquest(
       isCityOffice: marker.isCity,
       usesConquestHub: marker.townId == null,
     );
-    final prefecture = prefectures[city.key.substring(0, 2)]!;
-    final maxNames =
-        towns
-            .where((t) => t.population == largest.population)
-            .map((t) => t.name)
-            .toSet();
-    final largestDecoys = <String>{};
-    for (final name in [
-      ...towns
-          .where((t) => t.population < largest.population)
-          .map((t) => t.name),
-      ...atlas.cities.values.take(12),
-    ]) {
-      if (!maxNames.contains(name)) largestDecoys.add(name);
-      if (largestDecoys.length == 3) break;
+    if (!lazy)
+      atlas.additionalFactIds.addAll(atlas.facts[city.key]!.map((f) => f.id));
+    List<LocalFact> generate() {
+      final prefecture = prefectures[city.key.substring(0, 2)]!;
+      final maxNames =
+          towns
+              .where((t) => t.population == largest.population)
+              .map((t) => t.name)
+              .toSet();
+      final largestDecoys = <String>{};
+      for (final name in [
+        ...towns
+            .where((t) => t.population < largest.population)
+            .map((t) => t.name),
+        ...atlas.cities.values.take(12),
+      ]) {
+        if (!maxNames.contains(name)) largestDecoys.add(name);
+        if (largestDecoys.length == 3) break;
+      }
+      final location = atlas.towns[hub]!.name;
+      final locationDecoys = <String>{};
+      for (final name in [
+        ...towns.map((t) => t.name),
+        ...atlas.cities.values.take(12),
+      ]) {
+        if (name != location) locationDecoys.add(name);
+        if (locationDecoys.length == 3) break;
+      }
+      // Old placeholder IDs can already occur in reading history.
+      return [
+        LocalFact(
+          '${city.key}:conquest:count',
+          city.key,
+          '地理',
+          '${city.value}の攻略対象は${towns.length}町です。全領土を獲得すると制圧クイズに挑戦できます。',
+          '${city.value}の攻略対象は何町？',
+          '${towns.length}町',
+          _numericDecoys(towns.length, '町'),
+          Atlas.censusSource,
+        ),
+        LocalFact(
+          '${city.key}:conquest:population',
+          city.key,
+          '統計',
+          '${city.value}の収録地域の人口合計は${number(population)}人。2020年国勢調査に基づきます。',
+          '${city.value}の収録地域の人口合計は？',
+          '${number(population)}人',
+          _numericDecoys(population, '人'),
+          Atlas.censusSource,
+        ),
+        LocalFact(
+          '${city.key}:conquest:largest',
+          city.key,
+          '地域',
+          '${city.value}で収録人口が最も多い町${maxNames.length > 1 ? 'の一つ' : ''}は${largest.name}（${number(largest.population)}人）です。',
+          '${city.value}で収録人口が最も多い町${maxNames.length > 1 ? 'の一つ' : ''}は？',
+          largest.name,
+          largestDecoys.toList(),
+          Atlas.censusSource,
+        ),
+        LocalFact(
+          '${city.key}:conquest:prefecture',
+          city.key,
+          '地理',
+          '${city.value}がある都道府県は$prefectureです。',
+          '${city.value}がある都道府県は？',
+          prefecture,
+          prefectures.values.where((p) => p != prefecture).take(3).toList(),
+          Atlas.censusSource,
+        ),
+        LocalFact(
+          '${city.key}:conquest:office',
+          city.key,
+          '制圧クイズ',
+          marker.townId == null
+              ? '${marker.name}は区域外にあるため、$locationを制圧拠点にします。'
+              : '${marker.name}がある町は$location。全領土獲得後、ここから制圧クイズに挑戦できます。',
+          '${city.value}の制圧クイズに挑戦する町は？',
+          location,
+          locationDecoys.toList(),
+          nationalOfficeSource,
+        ),
+      ];
     }
-    final location = atlas.towns[hub]!.name;
-    final locationDecoys = <String>{};
-    for (final name in [
-      ...towns.map((t) => t.name),
-      ...atlas.cities.values.take(12),
-    ]) {
-      if (name != location) locationDecoys.add(name);
-      if (locationDecoys.length == 3) break;
+
+    if (lazy && atlas.facts is LazyCityFacts) {
+      (atlas.facts as LazyCityFacts).register(city.key, generate);
+    } else {
+      atlas.facts[city.key] = generate();
     }
-    // Old placeholder IDs can already occur in reading history.
-    atlas.additionalFactIds.addAll(atlas.facts[city.key]!.map((f) => f.id));
-    atlas.facts[city.key] = [
-      LocalFact(
-        '${city.key}:conquest:count',
-        city.key,
-        '地理',
-        '${city.value}の攻略対象は${towns.length}町です。全領土を獲得すると制圧クイズに挑戦できます。',
-        '${city.value}の攻略対象は何町？',
-        '${towns.length}町',
-        _numericDecoys(towns.length, '町'),
-        Atlas.censusSource,
-      ),
-      LocalFact(
-        '${city.key}:conquest:population',
-        city.key,
-        '統計',
-        '${city.value}の収録地域の人口合計は${number(population)}人。2020年国勢調査に基づきます。',
-        '${city.value}の収録地域の人口合計は？',
-        '${number(population)}人',
-        _numericDecoys(population, '人'),
-        Atlas.censusSource,
-      ),
-      LocalFact(
-        '${city.key}:conquest:largest',
-        city.key,
-        '地域',
-        '${city.value}で収録人口が最も多い町${maxNames.length > 1 ? 'の一つ' : ''}は${largest.name}（${number(largest.population)}人）です。',
-        '${city.value}で収録人口が最も多い町${maxNames.length > 1 ? 'の一つ' : ''}は？',
-        largest.name,
-        largestDecoys.toList(),
-        Atlas.censusSource,
-      ),
-      LocalFact(
-        '${city.key}:conquest:prefecture',
-        city.key,
-        '地理',
-        '${city.value}がある都道府県は$prefectureです。',
-        '${city.value}がある都道府県は？',
-        prefecture,
-        prefectures.values.where((p) => p != prefecture).take(3).toList(),
-        Atlas.censusSource,
-      ),
-      LocalFact(
-        '${city.key}:conquest:office',
-        city.key,
-        '制圧クイズ',
-        marker.townId == null
-            ? '${marker.name}は区域外にあるため、$locationを制圧拠点にします。'
-            : '${marker.name}がある町は$location。全領土獲得後、ここから制圧クイズに挑戦できます。',
-        '${city.value}の制圧クイズに挑戦する町は？',
-        location,
-        locationDecoys.toList(),
-        nationalOfficeSource,
-      ),
-    ];
   }
 }
 

@@ -422,7 +422,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final appearanceStore = TipAppearanceStore(saver.preferences);
       Game g;
       try {
+        final raw = saver.preferences.getString(SaveStore.key);
+        await national?.prepareLegacySave(raw == null ? null : jsonDecode(raw));
         g = saver.load(data);
+        national?.releaseLegacySave();
       } catch (_) {
         corrupt = true;
         rethrow;

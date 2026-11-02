@@ -154,9 +154,12 @@ class _TerritoryMapState extends State<TerritoryMap> {
     super.dispose();
   }
 
+  Iterable<Town> get _prefectureTowns => widget.atlas.byCity.entries
+      .where((e) => e.key.startsWith(widget.prefectureId))
+      .expand((e) => e.value);
+
   void _buildPaths() {
-    final points = widget.atlas.towns.values
-        .where((t) => t.cityId.startsWith(widget.prefectureId))
+    final points = _prefectureTowns
         .expand((t) => t.polygons)
         .expand((p) => p)
         .expand((r) => r);
@@ -183,9 +186,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
     paths = {};
     townOutlines = {};
     bounds = {};
-    for (final t in widget.atlas.towns.values.where(
-      (t) => t.cityId.startsWith(widget.prefectureId),
-    )) {
+    for (final t in _prefectureTowns) {
       if (widget.atlas.preparedGeometryPrefectures.contains(
         widget.prefectureId,
       )) {
@@ -390,9 +391,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
     if (size == null) return;
     final towns =
         widget.cityId == null
-            ? widget.atlas.towns.values.where(
-              (t) => t.cityId.startsWith(widget.prefectureId),
-            )
+            ? _prefectureTowns
             : widget.atlas.byCity[widget.cityId]!;
     var box = towns
         .map((t) => bounds[t.id]!)

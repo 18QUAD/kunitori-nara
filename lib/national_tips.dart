@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'game.dart';
+import 'lazy_city_facts.dart';
 
 /// Keeps short text for one prefecture. The small ID catalogue stays resident
 /// so restoring reading history does not require decoding all prefectures.
@@ -35,11 +36,12 @@ class NationalTips {
     }
     // Earlier versions stored these IDs in reading history. Keep them valid
     // even while real text temporarily replaces their placeholder facts.
-    for (final entry in atlas.facts.entries.where(
-      (e) => !e.key.startsWith('29'),
-    )) {
-      atlas.additionalFactIds.addAll(entry.value.map((f) => f.id));
-    }
+    if (atlas.facts is! LazyCityFacts)
+      for (final entry in atlas.facts.entries.where(
+        (e) => !e.key.startsWith('29'),
+      )) {
+        atlas.additionalFactIds.addAll(entry.value.map((f) => f.id));
+      }
     return NationalTips._(atlas, index['tips'] as int, assets);
   }
 
@@ -50,6 +52,8 @@ class NationalTips {
   }
 
   Future<bool> ensure(String? prefecture) {
+    if (atlas.facts is LazyCityFacts)
+      (atlas.facts as LazyCityFacts).pin(prefecture);
     final target = prefecture == '29' ? null : prefecture;
     if (_requested == target && _pending != null) return _pending!;
     if (_pending == null && residentPrefecture == target) {

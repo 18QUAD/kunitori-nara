@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'compact_towns.dart';
+import 'lazy_city_facts.dart';
 import 'regional_tips.dart';
 import 'municipal_offices.dart';
 import 'municipal_office.dart';
@@ -69,6 +71,8 @@ class Atlas {
   // National import owns these temporary rows and can release each decoded row.
   // Other callers keep their input intact by default.
   Atlas.fromJson(Map<String, dynamic> j, {bool consumeTownRows = false}) {
+    towns = {};
+    sourceToTown = {};
     for (final c in j['cities'] as List) {
       cities[c['id'] as String] = c['name'] as String;
     }
@@ -148,6 +152,10 @@ class Atlas {
       }
       town.neighbors.remove(town.id);
     }
+    _initializeFactsAndOffices();
+  }
+
+  void _initializeFactsAndOffices() {
     for (final office in municipalOffices) {
       final townId = sourceToTown[office.sourceTownId];
       if (townId == null || towns[townId]!.cityId != office.cityId) {
@@ -261,6 +269,25 @@ class Atlas {
       ];
     }
   }
+
+  Atlas.fromPrepared(Map<String, dynamic> j, {CompactTowns? preparedTowns}) {
+    cities.addAll(Map<String, String>.from(j['cities']));
+    final index = preparedTowns ?? CompactTowns(j['towns'] as List);
+    towns = index;
+    sourceToTown = CompactAliases(index, j['officeAliases']);
+    final groups = <String, List<int>>{};
+    for (var i = 0; i < index.ids.length; i++) {
+      groups.putIfAbsent(index.ids[i].substring(0, 5), () => []).add(i);
+    }
+    for (final e in groups.entries)
+      byCity[e.key] = CompactTownList(index, e.value);
+    _initializeFactsAndOffices();
+  }
+  void pinMetadata(String? prefecture) {
+    final index = towns;
+    if (index is CompactTowns) index.pinPrefecture(prefecture);
+  }
+
   static const censusSource = 'https://geoshape.ex.nii.ac.jp/ka/';
   static String _withoutChome(String name) {
     final stem = name.replaceFirst(RegExp(r'[一二三四五六七八九十百0-9０-９]+丁目$'), '');
@@ -285,14 +312,18 @@ class Atlas {
 
   final Map<String, Town> sourceTowns = {};
   final Set<String> preparedGeometryPrefectures = {};
-  final Map<String, String> sourceToTown = {};
+  late final Map<String, String> sourceToTown;
   final Map<String, List<Town>> membersByTown = {};
-  final Map<String, Town> towns = {};
+  late final Map<String, Town> towns;
   final Map<String, String> cities = {};
   final Map<String, List<Town>> byCity = {};
   final Map<String, List<List<List<Point<double>>>>> cityPolygons = {};
   final Map<String, List<List<List<Point<double>>>>> prefecturePolygons = {};
-  final Map<String, List<LocalFact>> facts = {};
+  Map<String, List<LocalFact>> facts = {};
+  Iterable<String> get knownFactIds =>
+      facts is LazyCityFacts
+          ? (facts as LazyCityFacts).knownIds
+          : facts.values.expand((fs) => fs).map((f) => f.id);
   final Set<String> additionalFactIds = {};
   late final Map<String, int> cityPopulations = {
     for (final entry in byCity.entries)
@@ -947,10 +978,7 @@ class Game {
       }
     }
     final validIds = atlas.towns.keys.toSet();
-    final validFacts = {
-      ...atlas.facts.values.expand((f) => f).map((f) => f.id),
-      ...atlas.additionalFactIds,
-    };
+    final validFacts = {...atlas.knownFactIds, ...atlas.additionalFactIds};
     if (!validIds.containsAll(g.owned) ||
         !validIds.containsAll(g.everOwned) ||
         !g.everOwned.containsAll(g.owned) ||
