@@ -19,6 +19,8 @@ import 'tip_settings.dart';
 import 'map_cache_settings.dart';
 import 'map_cache_bridge.dart';
 import 'save_store.dart';
+import 'save_transfer.dart';
+import 'save_transfer_screen.dart';
 import 'map_view.dart';
 import 'territory_map.dart';
 import 'tap_progress.dart';
@@ -142,6 +144,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   NationalAtlas? national;
   bool nationalView = false;
   bool _changingMap = false;
+  bool _transferActive = false;
   String prefectureFilter = '29';
   Atlas? atlas;
   Game? game;
@@ -465,6 +468,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (g.home != null) _save();
       timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
         if (!mounted ||
+            _transferActive ||
             game!.quiz == null ||
             game!.quiz!.pausedRemaining != null ||
             _answerFeedbackOpen) {
@@ -520,8 +524,82 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _save({bool deferred = false}) {
-    if (game != null && store != null) {
+    if (!_transferActive && game != null && store != null) {
       unawaited(!deferred ? store!.save(game!) : store!.queueSave(game!));
+    }
+  }
+
+  Future<void> _transferData() async {
+    if (_transferActive || store == null || game == null) return;
+    _transferActive = true;
+    try {
+      await _mapViewSaves?.flush();
+      await store!.save(game!);
+      await store!.flush();
+      if (store!.error != null) throw StateError(store!.error!);
+      if (!mounted) return;
+      final prefs = store!.preferences;
+      final values = await Navigator.push<Map<String, String?>>(
+        context,
+        MaterialPageRoute(
+          builder:
+              (_) => SaveTransferScreen(
+                exportCode: SaveTransfer.encode(SaveTransfer.snapshot(prefs)),
+                backup: prefs.getString(SaveTransfer.backupKey),
+                preview: (values) async {
+                  final data =
+                      jsonDecode(values[SaveStore.key]!)
+                          as Map<String, dynamic>;
+                  try {
+                    await national?.prepareLegacySave(data);
+                    final restored = Game.restore(atlas!, data);
+                    final view = values[SaveStore.mapViewKey];
+                    if (view != null &&
+                        MapViewState.fromJson(
+                              jsonDecode(view) as Map<String, dynamic>,
+                              atlas!,
+                            ) ==
+                            null) {
+                      throw const FormatException('地図の保存形式が違います。');
+                    }
+                    final appearance = values[TipAppearanceStore.key];
+                    if (appearance != null)
+                      TipAppearance.fromJson(
+                        jsonDecode(appearance) as Map<String, dynamic>,
+                      );
+                    return '本拠地：${atlas!.towns[restored.home]?.name ?? "未設定"}\n領土：${restored.owned.length}町\n累計タップ：${number(restored.totalTaps)}';
+                  } finally {
+                    national?.releaseLegacySave();
+                  }
+                },
+              ),
+        ),
+      );
+      if (values == null || !mounted) return;
+      await SaveTransfer.install(prefs, values);
+      // Detach all writers before loading the new save into a fresh screen.
+      timer?.cancel();
+      tipsTimer?.cancel();
+      _conquestTimer?.cancel();
+      _mapViewSaves?.cancel();
+      store!.onChanged = null;
+      store = null;
+      setState(() => game = null);
+      await WidgetsBinding.instance.endOfFrame;
+      await national?.releaseGeometry();
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => GameScreen(adRepository: widget.adRepository),
+        ),
+      );
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('データを保存できませんでした。元の進行データを保持しています。')),
+        );
+    } finally {
+      _transferActive = false;
     }
   }
 
@@ -594,6 +672,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     tipsTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       final lifecycle = WidgetsBinding.instance.lifecycleState;
       if (!mounted ||
+          _transferActive ||
           !tipAppearance.showTips ||
           _quizActive ||
           _conquestName != null ||
@@ -917,6 +996,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             if (value == 'help') _about();
             if (value == 'tips') _tipSettings();
             if (value == 'map-cache') _mapCacheSettings();
+            if (value == 'transfer') _transferData();
           },
           itemBuilder:
               (_) => const [
@@ -932,6 +1012,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   child: ListTile(
                     leading: Icon(Icons.chat_bubble_outline),
                     title: Text('キャラ・吹き出し'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'transfer',
+                  child: ListTile(
+                    leading: Icon(Icons.swap_horiz),
+                    title: Text('データ引き継ぎ'),
                   ),
                 ),
                 PopupMenuItem(
@@ -1518,11 +1605,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         : '隣接する自領が必要です',
                 child:
                     can
-                        ? Image.asset(
-                          'assets/icons/tap.png',
-                          width: 56,
-                          height: 56,
-                          excludeFromSemantics: true,
+                        ? Builder(
+                          builder:
+                              (context) => Transform.flip(
+                                flipX:
+                                    !kIsWeb &&
+                                    ActionChoiceRegion.sideOf(context) == false,
+                                child: Image.asset(
+                                  'assets/icons/tap.png',
+                                  width: 56,
+                                  height: 56,
+                                  excludeFromSemantics: true,
+                                ),
+                              ),
                         )
                         : const Icon(Icons.lock_outline, size: 48),
               ),
@@ -1618,7 +1713,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     : null,
                             onViewChanged: (view) {
                               _restoredMapView = view;
-                              _mapViewSaves?.schedule(view);
+                              if (!_transferActive)
+                                _mapViewSaves?.schedule(view);
                             },
                             controls: [
                               IconButton.filledTonal(
@@ -1653,7 +1749,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                       : null,
                               onViewChanged: (view) {
                                 _restoredMapView = view;
-                                _mapViewSaves?.schedule(view);
+                                if (!_transferActive)
+                                  _mapViewSaves?.schedule(view);
                               },
                               fitScale: 1,
                               showControls:

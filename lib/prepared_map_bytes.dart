@@ -3,9 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'map_image_budget.dart';
+import 'native_pack_store_stub.dart'
+    if (dart.library.io) 'native_pack_store_io.dart';
 
 /// Web uses the verified disk packs in its worker. Native builds read the same
-/// prepared packs from the app bundle; neither platform generates map pixels.
+/// prepared packs from a verified, bounded on-demand disk cache.
 class PreparedMapBytes {
   PreparedMapBytes() {
     MapImageBudget.shared.addListener(_trim);
@@ -15,6 +17,9 @@ class PreparedMapBytes {
   final _locations = <String, int>{};
   late Uint32List _sizes, _packs, _offsets;
   late List<String> _paths;
+  late List<String> _digests;
+  late List<int> _packSizes;
+  late Uri _baseUrl;
   final _memory = <int, Uint8List>{};
   final _pending = <int, Future<Uint8List>>{};
   int _bytes = 0;
@@ -30,9 +35,10 @@ class PreparedMapBytes {
     _sizes = Uint32List(assets.length);
     _packs = Uint32List(assets.length);
     _offsets = Uint32List(assets.length);
-    _paths = [
-      for (final pack in data['packs']) 'data/prepared_maps/${pack[0]}',
-    ];
+    _paths = [for (final pack in data['packs']) pack[0] as String];
+    _digests = [for (final pack in data['packs']) pack[1] as String];
+    _packSizes = [for (final pack in data['packs']) pack[2] as int];
+    _baseUrl = Uri.parse(data['packBaseUrl'] as String);
     for (var p = 0; p < _paths.length; p++) {
       final pack = data['packs'][p];
       var offset = 0;
@@ -83,10 +89,10 @@ class PreparedMapBytes {
     } else {
       bytes = await _pending.putIfAbsent(pack, () async {
         try {
-          final data = await rootBundle.load(_paths[pack]);
-          final result = data.buffer.asUint8List(
-            data.offsetInBytes,
-            data.lengthInBytes,
+          final result = await loadNativePack(
+            _baseUrl.resolve(_paths[pack]),
+            _digests[pack],
+            _packSizes[pack],
           );
           while (_memory.isNotEmpty &&
               _bytes + result.length > MapImageBudget.shared.compressedBytes) {

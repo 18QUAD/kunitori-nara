@@ -1,8 +1,30 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
+import 'action_choices.dart';
 
 Widget protectAttackTap({required Widget child, VoidCallback? onPressed}) =>
-    _ContactAttackButton(onPressed: onPressed, child: child);
+    Builder(
+      builder: (context) {
+        if (ActionChoiceRegion.sideOf(context) != null) {
+          return _ContactAttackButton(onPressed: onPressed, child: child);
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final right in [false, true])
+              Expanded(
+                child: ActionChoiceRegion(
+                  right: right,
+                  child: _ContactAttackButton(
+                    onPressed: onPressed,
+                    child: child,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
 
 class _ContactAttackButton extends StatefulWidget {
   const _ContactAttackButton({required this.child, this.onPressed});
@@ -43,8 +65,7 @@ class _ContactAttackButtonState extends State<_ContactAttackButton>
         behavior: HitTestBehavior.opaque,
         onPointerDown: (event) {
           if ((event.buttons & kPrimaryButton) == 0) return;
-          final first = _contacts.isEmpty;
-          if (_contacts.add(event.pointer) && first) widget.onPressed?.call();
+          if (_contacts.add(event.pointer)) widget.onPressed?.call();
         },
         // Flutter routes releases and cancellations here even outside the box.
         onPointerUp: (event) => _contacts.remove(event.pointer),
