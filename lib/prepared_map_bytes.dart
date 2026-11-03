@@ -38,7 +38,10 @@ class PreparedMapBytes {
     _paths = [for (final pack in data['packs']) pack[0] as String];
     _digests = [for (final pack in data['packs']) pack[1] as String];
     _packSizes = [for (final pack in data['packs']) pack[2] as int];
-    _baseUrl = Uri.parse(data['packBaseUrl'] as String);
+    _baseUrl = Uri.parse(
+      data['packBaseUrl'] as String? ??
+          'https://raw.githubusercontent.com/18QUAD/kunitori-nara/aec6d812ed774e4edaf71223cf49f73b650a8c69/data/prepared_maps/',
+    );
     for (var p = 0; p < _paths.length; p++) {
       final pack = data['packs'][p];
       var offset = 0;
