@@ -27,6 +27,9 @@ class MapPaintSnapshot {
   final Object? quiz;
   final Map<String, int> bands;
 
+  bool sameOwnership(MapPaintSnapshot other) =>
+      identical(game, other.game) && home == other.home && owned == other.owned;
+
   bool sameColors(MapPaintSnapshot other) =>
       identical(game, other.game) &&
       home == other.home &&

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'game.dart';
@@ -607,7 +608,19 @@ class _TerritoryMapState extends State<TerritoryMap> {
                             size,
                             paths,
                             colors: true,
+                            separateProgress: true,
                             colorOpacity: showGeography ? 0.55 : 1.0,
+                          ),
+                        ),
+                      ),
+                      RepaintBoundary(
+                        child: CustomPaint(
+                          willChange: true,
+                          painter: TownProgressPainter(
+                            widget.game,
+                            paths,
+                            cityId: widget.cityId,
+                            opacity: showGeography ? .55 : 1,
                           ),
                         ),
                       ),
@@ -848,8 +861,10 @@ class _MapPainter extends CustomPainter {
     this.labelCache,
     this.foreground = false,
     this.colors = false,
+    this.separateProgress = false,
     this.colorOpacity = 1.0,
-  }) : snapshot = MapPaintSnapshot(game),
+  }) : progressKeys = Set<String>.of(game.progress.keys),
+       snapshot = MapPaintSnapshot(game),
        semanticsTransform = transform.value.clone(),
        super(repaint: foreground ? transform : null);
   final MapPaintSnapshot snapshot;
@@ -857,6 +872,8 @@ class _MapPainter extends CustomPainter {
   final MapLabelCache? labelCache;
   final bool foreground;
   final bool colors;
+  final bool separateProgress;
+  final Set<String> progressKeys;
   final double colorOpacity;
   final TransformationController transform;
   final Map<String, Path> paths;
@@ -885,6 +902,7 @@ class _MapPainter extends CustomPainter {
     }
     if (colors) {
       for (final entry in townPaths.entries) {
+        if (separateProgress && progressKeys.contains(entry.key)) continue;
         final town = atlas.towns[entry.key]!;
         if (!overview && town.cityId != cityId) continue;
         final reachable = game.isReachable(entry.key);
@@ -1106,6 +1124,7 @@ class _MapPainter extends CustomPainter {
   bool shouldRepaint(covariant _MapPainter old) =>
       foreground != old.foreground ||
       colors != old.colors ||
+      separateProgress != old.separateProgress ||
       colorOpacity != old.colorOpacity ||
       paths != old.paths ||
       cityId != old.cityId ||
@@ -1117,5 +1136,51 @@ class _MapPainter extends CustomPainter {
               viewportSize != old.viewportSize ||
               reliefClip != old.reliefClip ||
               !snapshot.sameForeground(old.snapshot)
-          : colors && !snapshot.sameColors(old.snapshot));
+          : colors &&
+              (separateProgress
+                  ? !snapshot.sameOwnership(old.snapshot) ||
+                      !setEquals(progressKeys, old.progressKeys)
+                  : !snapshot.sameColors(old.snapshot)));
+}
+
+/// Progress updates repaint only active town geometry, preserving the much
+/// larger ownership display list and its GPU geometry during repeated taps.
+class TownProgressPainter extends CustomPainter {
+  TownProgressPainter(this.game, this.paths, {this.cityId, this.opacity = 1})
+    : snapshot = MapPaintSnapshot(game),
+      progressIds = Set.of(game.progress.keys);
+  final Game game;
+  final Map<String, Path> paths;
+  final String? cityId;
+  final double opacity;
+  final MapPaintSnapshot snapshot;
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final id in game.progress.keys) {
+      final town = game.atlas.towns[id];
+      final path = paths[id];
+      if (town == null ||
+          path == null ||
+          (cityId != null && town.cityId != cityId))
+        continue;
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = townFillColor(
+            town,
+            game,
+            reachable: game.isReachable(id),
+          ).withValues(alpha: opacity),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(TownProgressPainter old) =>
+      paths != old.paths ||
+      cityId != old.cityId ||
+      opacity != old.opacity ||
+      !snapshot.sameColors(old.snapshot) ||
+      !setEquals(game.progress.keys.toSet(), old.progressIds);
+  final Set<String> progressIds;
 }

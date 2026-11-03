@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/game.dart';
 import 'package:kunitori/national_atlas.dart';
 import 'package:kunitori/compact_towns.dart';
+import 'package:kunitori/lazy_city_facts.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -16,8 +17,15 @@ void main() {
       expect(a.sourceTowns, isEmpty);
       expect(a.membersByTown, isEmpty);
       expect(a.towns, isA<CompactTowns>());
-      final meta=jsonDecode(File('assets/data/compact/index.json').readAsStringSync());
-      final rows=[for(final path in meta['townFiles'])...(jsonDecode(File('assets/data/compact/$path').readAsStringSync()) as List)];
+      expect(a.facts, isA<LazyCityFacts>());
+      final meta = jsonDecode(
+        File('assets/data/compact/index.json').readAsStringSync(),
+      );
+      final rows = [
+        for (final path in meta['townFiles'])
+          ...(jsonDecode(File('assets/data/compact/$path').readAsStringSync())
+              as List),
+      ];
       final ids = [for (final row in rows) row[0] as String];
       for (final row in rows) {
         final t = a.towns[row[0]]!;

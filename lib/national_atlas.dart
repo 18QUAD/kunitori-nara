@@ -165,9 +165,12 @@ class NationalAtlas {
         townId: source == null ? null : atlas.sourceToTown[source],
       );
     }
-    enableNationalConquest(atlas, {
-      for (final p in prefectures.values) p.id: p.name,
-    }, officeSourceTownIds: sourceIds);
+    enableNationalConquest(
+      atlas,
+      {for (final p in prefectures.values) p.id: p.name},
+      officeSourceTownIds: sourceIds,
+      lazy: true,
+    );
     atlas.enableSeaTravel(seaTownConnections);
     atlas.enableNearbyTravel(nearestTownConnections);
     return _cached = NationalAtlas(
