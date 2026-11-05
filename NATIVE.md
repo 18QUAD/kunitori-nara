@@ -27,3 +27,7 @@ AndroidにはJava17とAndroid SDK、iOSにはmacOS・Xcode・CocoaPodsが必要�
 `.github/workflows/native.yml` はAndroidとiOSをGitHub Actions上でビルドし、成果物を保存します。
 
 生成されるAndroid APKは開発用鍵で署名したテスト配布用です。Google Play向けの正式署名は別途設定してください。iOSの成果物は未署名の実機用.appとシミュレータ用.appです。実機へのインストール／TestFlight配布にはApple Developerの署名設定が必要です。Safariでのクラッシュが解消されたことは、実機での連続プレイ試験で確認する必要があります。
+
+## TestFlight配布
+
+Macなしでの署名・アップロードは [TESTFLIGHT.md](TESTFLIGHT.md) を参照してください。

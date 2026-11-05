@@ -1,0 +1,121 @@
+name: iOS TestFlight
+on:
+  push:
+    branches: [attackable-place-search]
+    paths:
+      - '.github/workflows/testflight.yml'
+      - '.github/testflight-trigger.txt'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+jobs:
+  configuration:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/scripts/
+            /test/testflight_pipeline_test.py
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify signing configuration helpers
+        run: python -m unittest discover -s test -p testflight_pipeline_test.py -v
+      - name: Check Apple credentials
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          IOS_CERTIFICATE_PRIVATE_KEY: ${{ secrets.IOS_CERTIFICATE_PRIVATE_KEY }}
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+        run: python .github/scripts/testflight_config.py check
+  upload:
+    needs: configuration
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /lib/
+            /test/
+            /assets/
+            /ios/
+            /.github/scripts/
+            /data/prepared_maps/map-image-manifest.json
+            /pubspec.yaml
+            /pubspec.lock
+            /analysis_options.yaml
+            /.metadata
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install signing tools
+        run: python -m pip install 'codemagic-cli-tools==0.70.2'
+      - name: Select App Store compatible Xcode
+        run: |
+          developer_path=$(python .github/scripts/testflight_config.py select-xcode)
+          sudo xcode-select --switch "$developer_path"
+          xcodebuild -version
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - name: Test progress transfer
+        run: flutter test --no-pub test/save_transfer_test.dart test/game_test.dart test/attack_button_test.dart
+      - name: Fetch signing certificate and profile
+        env:
+          APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          CERTIFICATE_PRIVATE_KEY: ${{ secrets.IOS_CERTIFICATE_PRIVATE_KEY }}
+        run: |
+          keychain --path "$RUNNER_TEMP/kunitori-signing.keychain-db" initialize
+          app-store-connect fetch-signing-files io.github.quad18.kunitori --type IOS_APP_STORE --strict-match-identifier --create
+          keychain add-certificates
+          xcode-project use-profiles --project ios/Runner.xcodeproj --export-options-plist "$RUNNER_TEMP/ExportOptions.plist"
+      - name: Allocate a new Apple build number
+        id: version
+        env:
+          APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+        run: |
+          latest=$(app-store-connect get-latest-build-number "$ASC_APP_ID" --all-versions)
+          number=$(printf '%s' "$latest" | python .github/scripts/testflight_config.py next-build-number)
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+      - name: Build signed IPA
+        env:
+          BUILD_NUMBER: ${{ steps.version.outputs.number }}
+        run: flutter build ipa --release --no-pub --build-number "$BUILD_NUMBER" --export-options-plist "$RUNNER_TEMP/ExportOptions.plist"
+      - name: Upload to App Store Connect for internal TestFlight testing
+        env:
+          APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: app-store-connect publish --path 'build/ios/ipa/*.ipa'
+      - name: Store signed IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: kunitori-testflight-${{ steps.version.outputs.number }}
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove temporary signing material
+        if: always()
+        run: |
+          if command -v keychain >/dev/null && [ -f "$RUNNER_TEMP/kunitori-signing.keychain-db" ]; then
+            keychain --path "$RUNNER_TEMP/kunitori-signing.keychain-db" delete
+          fi
+          rm -rf "$HOME/Library/MobileDevice/Certificates" "$HOME/Library/MobileDevice/Provisioning Profiles"
