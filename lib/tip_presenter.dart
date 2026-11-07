@@ -1,7 +1,10 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'tip_appearance.dart';
 import 'tip_character.dart';
+
+const _speechWeight = kIsWeb ? FontWeight.w600 : FontWeight.normal;
 
 class TipPresenter extends StatelessWidget {
   const TipPresenter({
@@ -68,7 +71,7 @@ class TipPresenter extends StatelessWidget {
                 const TextStyle(
                   fontSize: 16,
                   height: 1.4,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: _speechWeight,
                 ),
               ),
             ),
@@ -115,7 +118,7 @@ class TipPresenter extends StatelessWidget {
                       fontSize: fontSize,
                       height: expandForText ? 1.4 : 1.25,
                       fontWeight:
-                          a.showBubble ? FontWeight.w600 : FontWeight.normal,
+                          a.showBubble ? _speechWeight : FontWeight.normal,
                       color: a.showBubble ? foreground : Colors.white,
                       shadows:
                           a.showBubble
