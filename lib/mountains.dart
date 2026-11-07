@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'coastal_assets.dart';
 import 'map_label.dart';
+import 'app_typography.dart';
 
 class MountainLabel {
   MountainLabel(this.name, this.point, {this.overview});
@@ -112,7 +113,7 @@ class MountainLayer {
         text: TextSpan(
           text: label.name,
           style: TextStyle(
-            fontFamily: 'NotoSansJP',
+            fontFamily: appFontFamily,
             fontSize: 11 / zoom,
             color: const Color(0xFFFFF1C2),
             fontWeight: FontWeight.bold,

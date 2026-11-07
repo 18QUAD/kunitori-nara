@@ -69,6 +69,24 @@ def select_xcode():
     print(max(candidates)[1] / 'Contents/Developer')
 
 
+def workflow_build_number(latest, run_number, run_attempt):
+    # Apple can still report the previous build while a just-uploaded IPA is
+    # processing. Workflow run/attempt numbers remain unique during that delay.
+    next_build_number(latest)  # Validate the API response, including its format.
+    if not re.fullmatch(r'[1-9][0-9]{0,3}', run_number or ''):
+        raise ValueError('Workflow run number must be between 1 and 9999')
+    if not re.fullmatch(r'[1-9][0-9]?', run_attempt or ''):
+        raise ValueError('Workflow attempt must be between 1 and 99')
+    number = f'{int(run_number)}.{int(run_attempt)}'
+    old = '0' if latest.strip() in ('', 'null', 'None') else latest.strip()
+    def parts(value):
+        values = [int(p) for p in value.split('.')]
+        return tuple(values + [0] * (3 - len(values)))
+    if parts(number) <= parts(old):
+        raise ValueError('Workflow build number must exceed the Apple build number')
+    return number
+
+
 if __name__ == '__main__':
     try:
         command = sys.argv[1]
@@ -86,6 +104,10 @@ if __name__ == '__main__':
             print('TestFlight credentials and app identifier are configured.')
         elif command == 'next-build-number':
             print(next_build_number(sys.stdin.read()))
+        elif command == 'workflow-build-number':
+            print(workflow_build_number(sys.stdin.read(),
+                                        os.environ.get('GITHUB_RUN_NUMBER'),
+                                        os.environ.get('GITHUB_RUN_ATTEMPT')))
         elif command == 'select-xcode':
             select_xcode()
         else:

@@ -60,6 +60,21 @@ class TestFlightConfigurationTest(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 config.next_build_number(value)
 
+    def test_processing_delay_does_not_reuse_previous_upload_number(self):
+        self.assertEqual(config.workflow_build_number('3', '7', '1'), '7.1')
+        self.assertEqual(config.workflow_build_number('3', '8', '1'), '8.1')
+
+    def test_retry_always_has_a_new_build_number(self):
+        self.assertEqual(config.workflow_build_number('7.1', '7', '2'), '7.2')
+        self.assertEqual(config.workflow_build_number('3', '7', '2'), '7.2')
+
+    def test_run_build_number_must_be_newer_and_valid(self):
+        for latest, run, attempt in [('7.2', '7', '2'), ('8', '7', '1'),
+                                     ('bad response', '7', '1'), ('3', '', '1'),
+                                     ('3', '10000', '1'), ('3', '7', '100')]:
+            with self.subTest(latest=latest, run=run, attempt=attempt), self.assertRaises(ValueError):
+                config.workflow_build_number(latest, run, attempt)
+
 
 if __name__ == '__main__':
     unittest.main()

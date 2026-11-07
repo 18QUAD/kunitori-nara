@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'game.dart';
+import 'app_typography.dart';
 import 'national_atlas.dart';
 import 'territory_map.dart';
 import 'map_view.dart';
@@ -544,7 +545,7 @@ class _NationalPainter extends CustomPainter {
         text: TextSpan(
           text: data.prefectures[e.key]!.name,
           style: TextStyle(
-            fontFamily: 'NotoSansJP',
+            fontFamily: appFontFamily,
             color: Colors.white,
             fontSize: 11 / zoom,
           ),

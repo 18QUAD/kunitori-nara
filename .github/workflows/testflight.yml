@@ -72,7 +72,7 @@ jobs:
           cache: true
       - run: flutter pub get --enforce-lockfile
       - name: Test progress transfer and native display
-        run: flutter test --no-pub test/save_transfer_test.dart test/game_test.dart test/attack_button_test.dart test/native_display_test.dart test/action_choices_test.dart
+        run: flutter test --no-pub test/save_transfer_test.dart test/game_test.dart test/attack_button_test.dart test/native_display_test.dart test/action_choices_test.dart test/app_typography_test.dart
       - name: Fetch signing certificate and profile
         env:
           APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.ASC_KEY_ID }}
@@ -93,7 +93,7 @@ jobs:
           ASC_APP_ID: ${{ vars.ASC_APP_ID }}
         run: |
           latest=$(app-store-connect get-latest-build-number "$ASC_APP_ID" --all-versions)
-          number=$(printf '%s' "$latest" | python .github/scripts/testflight_config.py next-build-number)
+          number=$(printf '%s' "$latest" | python .github/scripts/testflight_config.py workflow-build-number)
           echo "number=$number" >> "$GITHUB_OUTPUT"
       - name: Build signed IPA
         env:

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_typography.dart';
 
 /// A crisp, screen-sized halo keeps geography names readable on every territory.
 void paintMapLabel(
@@ -80,7 +81,7 @@ class MapLabelCache {
 class CachedMapLabel {
   CachedMapLabel(String name, double zoom, {this.retained = true}) {
     final style = TextStyle(
-      fontFamily: 'NotoSansJP',
+      fontFamily: appFontFamily,
       fontSize: 12 / zoom,
       color: Colors.white,
       fontWeight: FontWeight.bold,

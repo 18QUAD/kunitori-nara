@@ -1,1 +1,1 @@
-TestFlight: explicitly render native city and prefecture counters at Noto Sans JP weight 600 for readable strokes.
+TestFlight: match browser font weights using registered native fonts; use unique run/attempt build numbers.

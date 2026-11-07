@@ -30,6 +30,7 @@ import 'action_choices.dart';
 import 'regional_ads.dart';
 import 'regional_ad_card.dart';
 import 'native_display.dart';
+import 'app_typography.dart';
 import 'geography_tiles.dart';
 import 'map_image_budget.dart';
 import 'rendering_memory.dart';
@@ -65,7 +66,7 @@ class KunitoriApp extends StatelessWidget {
     title: 'くにとり · 全国',
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
-      fontFamily: 'NotoSansJP',
+      fontFamily: appFontFamily,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: ink,
       colorScheme: const ColorScheme.dark(
@@ -84,7 +85,7 @@ class KunitoriApp extends StatelessWidget {
           minimumSize: const Size(48, 52),
           shape: actionButtonShape,
           textStyle: const TextStyle(
-            fontFamily: 'NotoSansJP',
+            fontFamily: appFontFamily,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -967,13 +968,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     child: Text(
                       '${city == null ? '市区町村未選択' : atlas!.cities[city]!} ${city == null ? "— / —" : "${number(_cityPopulation(city))} / ${number(atlas!.cityPopulations[city]!)}"}',
                       key: const Key('city-progress'),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: kIsWeb ? null : Color(0xFFE3EAF2),
-                        fontWeight: kIsWeb ? null : FontWeight.w600,
-                        fontVariations:
-                            kIsWeb ? null : [FontVariation('wght', 600)],
-                      ),
+                      style: const TextStyle(fontSize: 12),
                     ),
                   ),
                 ),
@@ -987,13 +982,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                           ? '全国 ${number(_population)} / ${number(atlas!.totalPopulation)}'
                           : '${national?.prefectures[prefectureFilter]?.name ?? '奈良県'} ${number(_prefecturePopulation(prefectureFilter))} / ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
                       key: const Key('prefecture-progress'),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: kIsWeb ? null : Color(0xFFE3EAF2),
-                        fontWeight: kIsWeb ? null : FontWeight.w600,
-                        fontVariations:
-                            kIsWeb ? null : [FontVariation('wght', 600)],
-                      ),
+                      style: const TextStyle(fontSize: 12),
                     ),
                   ),
                 ),

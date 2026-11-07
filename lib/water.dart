@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'map_label.dart';
 import 'coastal_assets.dart';
+import 'app_typography.dart';
 
 class WaterLabel {
   WaterLabel(this.name, this.point, {this.detail = false});
@@ -257,7 +258,7 @@ class WaterLayer {
         text: TextSpan(
           text: label.name,
           style: TextStyle(
-            fontFamily: 'NotoSansJP',
+            fontFamily: appFontFamily,
             fontSize: 11 / zoom,
             color: const Color(0xFFBDEEFF),
             fontWeight: FontWeight.bold,

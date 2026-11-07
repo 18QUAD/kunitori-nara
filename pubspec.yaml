@@ -92,6 +92,18 @@ flutter:
     - assets/data/mountains/
     - assets/fonts/OFL.txt
   fonts:
+    - family: KunitoriNotoJP
+      fonts:
+        - asset: assets/fonts/NotoSansJPNative-400.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSansJPNative-500.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSansJPNative-600.ttf
+          weight: 600
+        - asset: assets/fonts/NotoSansJPNative-700.ttf
+          weight: 700
+        - asset: assets/fonts/NotoSansJPNative-900.ttf
+          weight: 900
     - family: NotoSansJP
       fonts:
         - asset: assets/fonts/NotoSansJP.ttf
