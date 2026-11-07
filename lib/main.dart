@@ -29,6 +29,7 @@ import 'action_button_style.dart';
 import 'action_choices.dart';
 import 'regional_ads.dart';
 import 'regional_ad_card.dart';
+import 'native_display.dart';
 import 'geography_tiles.dart';
 import 'map_image_budget.dart';
 import 'rendering_memory.dart';
@@ -122,7 +123,10 @@ class KunitoriApp extends StatelessWidget {
               child: Padding(
                 padding: insets,
                 child: MediaQuery(
-                  data: media.copyWith(size: visibleSize),
+                  data: media.copyWith(
+                    size: visibleSize,
+                    textScaler: displayTextScaler(media.textScaler),
+                  ),
                   child: child!,
                 ),
               ),

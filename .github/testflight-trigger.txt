@@ -1,1 +1,1 @@
-TestFlight: align app and Flutter framework minimum iOS version to 13.0 for Apple upload validation.
+TestFlight: match browser text baseline and compact portrait attack buttons with an 8px center gap.

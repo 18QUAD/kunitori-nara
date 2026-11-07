@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'action_choices.dart';
+import 'native_display.dart';
 
 Widget protectAttackTap({required Widget child, VoidCallback? onPressed}) =>
     Builder(
@@ -8,20 +9,30 @@ Widget protectAttackTap({required Widget child, VoidCallback? onPressed}) =>
         if (ActionChoiceRegion.sideOf(context) != null) {
           return _ContactAttackButton(onPressed: onPressed, child: child);
         }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final right in [false, true])
-              Expanded(
-                child: ActionChoiceRegion(
-                  right: right,
-                  child: _ContactAttackButton(
-                    onPressed: onPressed,
-                    child: child,
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxHeight: nativePortraitAttackHeight,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final right in [false, true]) ...[
+                  if (right) const SizedBox(width: nativePortraitAttackGap),
+                  Expanded(
+                    child: ActionChoiceRegion(
+                      right: right,
+                      child: _ContactAttackButton(
+                        onPressed: onPressed,
+                        child: child,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-          ],
+                ],
+              ],
+            ),
+          ),
         );
       },
     );
