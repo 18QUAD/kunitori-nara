@@ -970,6 +970,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       style: const TextStyle(
                         fontSize: 12,
                         color: kIsWeb ? null : Color(0xFFE3EAF2),
+                        fontWeight: kIsWeb ? null : FontWeight.w600,
+                        fontVariations:
+                            kIsWeb ? null : [FontVariation('wght', 600)],
                       ),
                     ),
                   ),
@@ -987,6 +990,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       style: const TextStyle(
                         fontSize: 12,
                         color: kIsWeb ? null : Color(0xFFE3EAF2),
+                        fontWeight: kIsWeb ? null : FontWeight.w600,
+                        fontVariations:
+                            kIsWeb ? null : [FontVariation('wght', 600)],
                       ),
                     ),
                   ),

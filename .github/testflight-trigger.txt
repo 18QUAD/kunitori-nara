@@ -1,1 +1,1 @@
-TestFlight: brighten native city and prefecture progress counters against the dark header.
+TestFlight: explicitly render native city and prefecture counters at Noto Sans JP weight 600 for readable strokes.
