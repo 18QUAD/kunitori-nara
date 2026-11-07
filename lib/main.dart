@@ -967,7 +967,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     child: Text(
                       '${city == null ? '市区町村未選択' : atlas!.cities[city]!} ${city == null ? "— / —" : "${number(_cityPopulation(city))} / ${number(atlas!.cityPopulations[city]!)}"}',
                       key: const Key('city-progress'),
-                      style: const TextStyle(fontSize: 12),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: kIsWeb ? null : Color(0xFFE3EAF2),
+                      ),
                     ),
                   ),
                 ),
@@ -981,7 +984,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                           ? '全国 ${number(_population)} / ${number(atlas!.totalPopulation)}'
                           : '${national?.prefectures[prefectureFilter]?.name ?? '奈良県'} ${number(_prefecturePopulation(prefectureFilter))} / ${number(atlas!.prefecturePopulations[prefectureFilter] ?? 0)}',
                       key: const Key('prefecture-progress'),
-                      style: const TextStyle(fontSize: 12),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: kIsWeb ? null : Color(0xFFE3EAF2),
+                      ),
                     ),
                   ),
                 ),
