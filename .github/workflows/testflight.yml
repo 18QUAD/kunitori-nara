@@ -80,7 +80,7 @@ jobs:
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
           CERTIFICATE_PRIVATE_KEY: ${{ secrets.IOS_CERTIFICATE_PRIVATE_KEY }}
         run: |
-          keychain --path "$RUNNER_TEMP/kunitori-signing.keychain-db" initialize
+          keychain initialize --path "$RUNNER_TEMP/kunitori-signing.keychain-db"
           app-store-connect fetch-signing-files io.github.quad18.kunitori --type IOS_APP_STORE --strict-match-identifier --create
           keychain add-certificates
           xcode-project use-profiles --project ios/Runner.xcodeproj --export-options-plist "$RUNNER_TEMP/ExportOptions.plist"
@@ -116,6 +116,6 @@ jobs:
         if: always()
         run: |
           if command -v keychain >/dev/null && [ -f "$RUNNER_TEMP/kunitori-signing.keychain-db" ]; then
-            keychain --path "$RUNNER_TEMP/kunitori-signing.keychain-db" delete
+            keychain delete --path "$RUNNER_TEMP/kunitori-signing.keychain-db"
           fi
           rm -rf "$HOME/Library/MobileDevice/Certificates" "$HOME/Library/MobileDevice/Provisioning Profiles"
