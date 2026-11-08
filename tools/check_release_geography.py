@@ -6,6 +6,7 @@ import re
 root = Path(__file__).resolve().parents[1]/'build/web'
 compiled = (root/'main.dart.js').read_text()
 build = re.search(r'flutter_bootstrap\.js\?v=([a-zA-Z0-9-]+)', (root/'index.html').read_text()).group(1)
+assert f'map-cache.js?v={build}' in (root/'index.html').read_text(), 'Cache and bootstrap release identities must match'
 assert f"const APP_BUILD = '{build}';" in (root/'map-cache-worker.js').read_text(), 'Worker and runtime must match the release'
 
 for folder in ['water','urban','relief','map_tiles','map_tiles_v2']:
