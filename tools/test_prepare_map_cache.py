@@ -1,4 +1,4 @@
-"""Check lossless pack layout, stable legacy revision and repeat preparation."""
+"""Native app packs preserve exact image bytes and stable identities."""
 import hashlib
 import json
 import tempfile
@@ -9,34 +9,34 @@ import prepare_map_cache as build
 
 
 class PackTest(unittest.TestCase):
-    def test_roundtrip_and_legacy_revision(self):
+    def test_native_roundtrip_and_stable_revision(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            originals = {}
-            for folder in ('map_images',):
-                directory = root/'assets/assets/data'/folder
-                directory.mkdir(parents=True)
-                for name in ('a.webp', 'b.webp', 'index.json'):
-                    data = (folder+name).encode()
-                    path = directory/name
-                    path.write_bytes(data)
-                    originals[str(path.relative_to(root))] = data
-            with patch.object(build, 'PACK_BYTES', 64), patch.object(build, 'PACK_FILES', 2):
-                build.prepare(root)
-            manifest = json.loads((root/'map-image-manifest.json').read_text())
-            legacy = [[path, hashlib.sha256(data).hexdigest(), len(data)] for path, data in originals.items()]
-            self.assertEqual(manifest['revision'], hashlib.sha256(json.dumps(legacy, separators=(',', ':')).encode()).hexdigest())
-            for name, digest, size, start, end in manifest['packs']:
-                packed = (root/name).read_bytes()
-                self.assertEqual(hashlib.sha256(packed).hexdigest(), digest)
-                self.assertEqual(len(packed), size)
-                offset = 0
-                for path, checksum, length in manifest['assets'][start:end]:
-                    self.assertEqual(packed[offset:offset+length], originals[path])
-                    self.assertEqual((root/path).exists(), path.endswith('.json'))
-                    offset += length
-            build.prepare(root)
-            self.assertEqual(json.loads((root/'map-image-manifest.json').read_text()), manifest)
+            source = Path(tmp) / 'source'
+            images = source / 'map_images'
+            images.mkdir(parents=True)
+            originals = {'a.webp': b'first-image', 'b.webp': b'second-image'}
+            for name, data in originals.items():
+                (images / name).write_bytes(data)
+            (images / 'index.json').write_text(json.dumps({'tiles': {'a': {}, 'b': {}}}))
+            output = Path(tmp) / 'packs'
+            output.mkdir()
+            with patch.object(build, 'PACK_BYTES', 16):
+                build.prepare(output, source)
+                manifest = json.loads((output / 'map-image-manifest.json').read_text())
+                self.assertEqual(manifest['packSchema'], 2)
+                for name, digest, size, start, end in manifest['packs']:
+                    data = (output / name).read_bytes()
+                    self.assertEqual(hashlib.sha256(data).hexdigest(), digest)
+                    self.assertEqual(len(data), size)
+                    offset = 0
+                    for filename, length in manifest['assets'][start:end]:
+                        self.assertEqual(data[offset:offset + length], originals[filename])
+                        self.assertEqual((images / filename).read_bytes(), originals[filename])
+                        offset += length
+                    self.assertEqual(offset, size)
+                build.prepare(output, source)
+                self.assertEqual(json.loads((output / 'map-image-manifest.json').read_text()), manifest)
+            self.assertFalse((output / 'map-cache-worker.js').exists())
 
 
 if __name__ == '__main__':

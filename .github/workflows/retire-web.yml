@@ -1,0 +1,35 @@
+name: Retire browser publication
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+
+concurrency:
+  group: retire-browser-publication
+  cancel-in-progress: false
+
+jobs:
+  unpublish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Delete the GitHub Pages site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if gh api "repos/$REPOSITORY/pages" >/tmp/pages.json 2>/tmp/pages-error; then
+            gh api --method DELETE "repos/$REPOSITORY/pages"
+          elif ! grep -q 'HTTP 404' /tmp/pages-error; then
+            cat /tmp/pages-error
+            exit 1
+          fi
+          if gh api "repos/$REPOSITORY/pages" >/tmp/pages.json 2>/tmp/pages-error; then
+            echo 'GitHub Pages is still enabled.'
+            exit 1
+          fi
+          grep -q 'HTTP 404' /tmp/pages-error
+          echo 'GitHub Pages is disabled.' >> "$GITHUB_STEP_SUMMARY"

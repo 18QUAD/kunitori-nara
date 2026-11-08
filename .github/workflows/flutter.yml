@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  android-and-web:
+  android:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -60,24 +60,11 @@ jobs:
       - name: Build Android development APK
         run: flutter build apk --debug --no-pub
 
-      - name: Build Web preview bundle
-        run: |
-          flutter build web --release --no-pub
-          python3 tools/prepare_map_cache.py build/web
-
       - name: Store Android APK
         uses: actions/upload-artifact@v4
         with:
           name: kunitori-android-debug-${{ github.sha }}
           path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Store Web preview bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: kunitori-web-${{ github.sha }}
-          path: build/web/
           if-no-files-found: error
           retention-days: 7
 

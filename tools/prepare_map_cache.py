@@ -1,83 +1,26 @@
-"""Bundle compressed map bytes into bounded disk/download packs (no image decode)."""
+"""Pack map images for native app downloads without decoding them."""
 import hashlib
 import json
 import shutil
 import sys
-import subprocess
 from pathlib import Path
 
 PACK_BYTES = 1024 * 1024
 PACK_FILES = 512
-PAGES_IMAGE_BUDGET = 750 * 1024 * 1024
 
 
-def worker_source():
-    web = Path(__file__).resolve().parents[1]/'web'
-    return (web/'vendor/fast-sha256.js').read_text() + '\n' + (web/'map-cache-worker.js').read_text()
-
-
-def prepare(root, source_root=None):
-    prepared = Path(__file__).resolve().parents[1]/'data/prepared_maps'
-    index = root/'assets/assets/data/map_images/index.json'
-    packed_build = (source_root is None and index.exists()
-                    and not any(index.parent.glob('*.webp'))
-                    and (prepared/'map-image-manifest.json').exists())
-    if packed_build:
-        manifest = json.loads((prepared/'map-image-manifest.json').read_text())
-        packed_build = hashlib.sha256(index.read_bytes()).hexdigest() == manifest['indexSha256']
-        if not packed_build and (root/'main.dart.js').exists():
-            raise ValueError('Prepared map packs do not match the built geographic index; regenerate and rebuild')
-    if packed_build:
-        # The source repository stores bounded, finished packs. Flutter's asset
-        # manifest contains only the geographic index, not hundreds of thousands
-        # of individual tile names that would be parsed into memory at startup.
-        shutil.rmtree(root/'map-packs', ignore_errors=True)
-        if manifest['bytes'] > PAGES_IMAGE_BUDGET:
-            # Keep full-resolution images when the prepared nationwide pyramid
-            # exceeds Pages' site limit. These are the same public repository's
-            # immutable committed bytes, downloaded once and verified on disk.
-            repo = prepared.parents[1]
-            # Code-only releases keep the same CDN URLs. Otherwise every
-            # application update creates cold URLs for identical 1.6 GiB bytes.
-            commit = subprocess.check_output(['git','log','-1','--format=%H','HEAD','--',
-                'data/prepared_maps'],cwd=repo,text=True).strip()
-            committed = subprocess.check_output(['git','show','HEAD:data/prepared_maps/map-image-manifest.json'],cwd=repo)
-            if committed != (prepared/'map-image-manifest.json').read_bytes():
-                raise ValueError('Commit the finished image packs before preparing the public build')
-            manifest['packBaseUrl'] = f'https://raw.githubusercontent.com/18QUAD/kunitori-nara/{commit}/data/prepared_maps/'
-        else:
-            shutil.copytree(prepared/'map-packs', root/'map-packs', dirs_exist_ok=True)
-        (root/'map-image-manifest.json').write_text(json.dumps(manifest,separators=(',',':'))+'\n')
-        # Native platforms bundle these packs. The web worker serves one copy
-        # from map-packs/, so don't ship a second copy in Flutter's asset tree.
-        shutil.rmtree(root/'assets/data/prepared_maps', ignore_errors=True)
-        (root/'map-cache-worker.js').write_text(worker_source().replace('__MAP_IMAGE_REVISION__', manifest['revision']))
-        if (root/'main.dart.js').exists():
-            from prepare_runtime_cache import prepare as prepare_runtime
-            prepare_runtime(root)
-        return
-    previous = root / 'map-image-manifest.json'
-    if source_root is None and previous.exists() and not any((root/'assets/assets/data/map_images').glob('*.webp')):
-        manifest = json.loads(previous.read_text())
-        if manifest.get('packSchema') in (1, 2):
-            assert all((root/pack[0]).is_file() for pack in manifest['packs'])
-            source = worker_source()
-            (root/'map-cache-worker.js').write_text(source.replace('__MAP_IMAGE_REVISION__', manifest['revision']))
-            print(f'Map packs already prepared: {len(manifest["packs"]):,}')
-            if (root/'main.dart.js').exists():
-                from prepare_runtime_cache import prepare as prepare_runtime
-                prepare_runtime(root)
-            return
+def prepare(root, source_root):
+    """Pack canonical map images for the Android/iOS download cache."""
     assets = []
     sources = []
     for folder in ('map_images',):
-        directory = (source_root or root / 'assets/assets/data') / folder
-        index = json.loads((directory/'index.json').read_text()) if source_root is not None else {}
+        directory = source_root / folder
+        index = json.loads((directory/'index.json').read_text())
         allowed = {f'{key}.webp' for key in index['tiles']} | {'index.json'} if 'tiles' in index else None
         for path in sorted(directory.iterdir()):
             if path.suffix not in ('.webp', '.json'):
                 continue
-            if source_root is not None and path.suffix == '.json':
+            if path.suffix == '.json':
                 # The geographic index can be larger than a bounded image pack.
                 # It is bundled separately and streamed through runtime chunks.
                 continue
@@ -90,7 +33,7 @@ def prepare(root, source_root=None):
         raise ValueError('Build the Flutter web bundle before preparing map storage')
     encoded = json.dumps(assets, separators=(',', ':')).encode()
     # Keep the image revision/cursor stable: existing individual downloads remain valid.
-    compact = source_root is not None
+    compact = True
     index_digest = hashlib.sha256((source_root/'map_images/index.json').read_bytes()).hexdigest() if compact else ''
     revision = hashlib.sha256(encoded + index_digest.encode()).hexdigest()
     directory = root / 'map-packs'
@@ -123,19 +66,10 @@ def prepare(root, source_root=None):
         manifest['assetPrefix'] = 'assets/assets/data/map_images/'
         manifest['indexSha256'] = index_digest
     (root / 'map-image-manifest.json').write_text(json.dumps(manifest, separators=(',', ':')) + '\n')
-    if source_root is None:
-        source = worker_source()
-        (root / 'map-cache-worker.js').write_text(source.replace('__MAP_IMAGE_REVISION__', revision))
-    # The worker serves original asset URLs from packs. Do not double the Pages
-    # release by shipping 44,396 separate images as well. Keep JSON indices direct.
-    for path in sources:
-        if source_root is None and path.suffix == '.webp':
-            path.unlink()
-    print(f'Map storage: {len(assets):,} assets, {len(packs):,} requests/writes, {manifest["bytes"]:,} bytes, revision {revision[:12]}')
-    if (root/'main.dart.js').exists():
-        from prepare_runtime_cache import prepare as prepare_runtime
-        prepare_runtime(root)
+    print(f'Map storage: {len(assets):,} assets, {len(packs):,} packs, {manifest["bytes"]:,} bytes, revision {revision[:12]}')
 
 
 if __name__ == '__main__':
-    prepare(Path(sys.argv[1] if len(sys.argv) > 1 else 'build/web'))
+    if len(sys.argv) != 3:
+        raise SystemExit('Usage: prepare_map_cache.py OUTPUT_DIRECTORY SOURCE_DATA_DIRECTORY')
+    prepare(Path(sys.argv[1]), Path(sys.argv[2]))

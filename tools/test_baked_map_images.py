@@ -41,31 +41,6 @@ class BakedImagesTest(unittest.TestCase):
             with Image.open(output/'shared.webp') as image:
                 self.assertEqual(image.getchannel('A').getextrema(), (128,128))
 
-    def test_large_public_packs_use_committed_immutable_bytes_and_stable_keys(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            repo=Path(tmp);prepared=repo/'data/prepared_maps';prepared.mkdir(parents=True)
-            web=repo/'build/web';index=web/'assets/assets/data/map_images/index.json'
-            index.parent.mkdir(parents=True);index.write_bytes(b'{"schema":2}')
-            original=dict(packSchema=2,bytes=10,revision='images-v1',packs=[['map-packs/example.bin','digest',10,0,1]],
-                          indexSha256=hashlib.sha256(index.read_bytes()).hexdigest(),assets=[['a.webp',10]])
-            manifest=prepared/'map-image-manifest.json';manifest.write_text(json.dumps(original))
-            commit='a'*40
-            with patch.object(packer,'__file__',str(repo/'tools/prepare_map_cache.py')), \
-                 patch.object(packer,'PAGES_IMAGE_BUDGET',0), \
-                 patch.object(packer,'worker_source',return_value='__MAP_IMAGE_REVISION__'), \
-                 patch.object(packer.subprocess,'check_output',side_effect=[commit+'\n',manifest.read_bytes()]):
-                packer.prepare(web)
-            public=json.loads((web/'map-image-manifest.json').read_text())
-            self.assertEqual(public['packs'],original['packs'])
-            self.assertEqual(public['packBaseUrl'],f'https://raw.githubusercontent.com/18QUAD/kunitori-nara/{commit}/data/prepared_maps/')
-            self.assertFalse((web/'map-packs').exists())
-            self.assertEqual(json.loads(manifest.read_text()),original)
-            with patch.object(packer,'__file__',str(repo/'tools/prepare_map_cache.py')), \
-                 patch.object(packer,'PAGES_IMAGE_BUDGET',0), \
-                 patch.object(packer.subprocess,'check_output',side_effect=[commit+'\n',b'old manifest']):
-                with self.assertRaisesRegex(ValueError,'Commit the finished'):
-                    packer.prepare(web)
-
     def test_delivery_encoding_is_idempotent_even_without_the_work_journal(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'sample_background.webp'
