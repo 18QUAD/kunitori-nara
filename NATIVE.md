@@ -14,6 +14,10 @@ Flutter 3.29.3 の描画・入力を使用するAndroid／iOS専用アプリで�
 
 全国の地図画像を初回表示時にHTTPSで取得し、サイズとSHA-256を検証して端末内に保存します。画像ディスクキャッシュは最大512MiB、メモリ内の画像保持量は32MiBの予算から分配します。未訪問の地域には通信が必要です。進行データと地図キャッシュは別管理です。
 
+## 配布元と修正の反映
+
+iOS／TestFlightの配布元は `attackable-place-search` ブランチです。`main` の変更だけでは端末のiOS版へ反映されません。配布元へ修正を適用し、`.github/testflight-trigger.txt` の更新または `iOS TestFlight` の手動実行で新しいビルドを送信します。Apple側の処理後に、TestFlightから新しいビルドへ更新してください。
+
 ## ビルド
 
 ```
