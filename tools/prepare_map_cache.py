@@ -22,7 +22,7 @@ def prepare(root, source_root):
                 continue
             if path.suffix == '.json':
                 # The geographic index can be larger than a bounded image pack.
-                # It is bundled separately and streamed through runtime chunks.
+                # It is bundled separately from the native image packs.
                 continue
             if allowed is not None and path.name not in allowed:
                 continue
@@ -30,11 +30,10 @@ def prepare(root, source_root):
             assets.append([f'assets/assets/data/{folder}/{path.name}', hashlib.sha256(data).hexdigest(), len(data)])
             sources.append(path)
     if not assets:
-        raise ValueError('Build the Flutter web bundle before preparing map storage')
+        raise ValueError('Generate canonical map images before preparing native packs')
     encoded = json.dumps(assets, separators=(',', ':')).encode()
     # Keep the image revision/cursor stable: existing individual downloads remain valid.
-    compact = True
-    index_digest = hashlib.sha256((source_root/'map_images/index.json').read_bytes()).hexdigest() if compact else ''
+    index_digest = hashlib.sha256((source_root/'map_images/index.json').read_bytes()).hexdigest()
     revision = hashlib.sha256(encoded + index_digest.encode()).hexdigest()
     directory = root / 'map-packs'
     shutil.rmtree(directory, ignore_errors=True)
@@ -58,13 +57,12 @@ def prepare(root, source_root):
         start = end
     # Prepared images have no legacy per-image disk entries. Pack checksums
     # authenticate every byte; repeating a 64-character hash and full URL for
-    # every tiny image needlessly bloats the worker's resident inventory.
-    entries = [[Path(a[0]).name, a[2]] for a in assets] if compact else assets
-    manifest = dict(schema=1, packSchema=2 if compact else 1, revision=revision,
+    # every tiny image needlessly bloats the native download inventory.
+    entries = [[Path(a[0]).name, a[2]] for a in assets]
+    manifest = dict(schema=1, packSchema=2, revision=revision,
                     bytes=sum(a[2] for a in assets), assets=entries, packs=packs)
-    if compact:
-        manifest['assetPrefix'] = 'assets/assets/data/map_images/'
-        manifest['indexSha256'] = index_digest
+    manifest['assetPrefix'] = 'assets/assets/data/map_images/'
+    manifest['indexSha256'] = index_digest
     (root / 'map-image-manifest.json').write_text(json.dumps(manifest, separators=(',', ':')) + '\n')
     print(f'Map storage: {len(assets):,} assets, {len(packs):,} packs, {manifest["bytes"]:,} bytes, revision {revision[:12]}')
 

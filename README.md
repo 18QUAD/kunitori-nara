@@ -179,7 +179,7 @@ python tools/import_wikipedia_tips.py --check
 
 `Flutter checks and builds` は解析・テストとAndroid開発用APKの生成を行います。`Native Android and iOS` はAndroid／iOSのアプリ成果物を生成します。取得・署名に関する注意点は [NATIVE.md](NATIVE.md) を参照してください。
 
-GitHub Pagesでのブラウザ版公開と、Webプレビュー成果物の生成は終了しました。`Retire browser publication` は公開停止専用の管理処理です。
+GitHub Pagesでのブラウザ版公開と、Webプレビュー成果物の生成は終了しました。
 
 ## 全国の地域広告（楽天API）
 
