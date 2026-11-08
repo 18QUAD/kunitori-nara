@@ -203,7 +203,7 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final box = (current.child as GestureDetector).child as SizedBox;
-        final stack = box.child as Stack;
+        final stack = (box.child as ClipPath).child as Stack;
         final overlays = stack.children.whereType<RepaintBoundary>();
         final boundary = foreground ? overlays.last : overlays.elementAt(1);
         return (boundary.child as CustomPaint).painter;
@@ -237,7 +237,9 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final box = (current.child as GestureDetector).child as SizedBox;
-        return (((box.child as Stack).children.first as RepaintBoundary).child
+        return ((((box.child as ClipPath).child as Stack).children.first
+                        as RepaintBoundary)
+                    .child
                 as CustomPaint)
             .painter;
       }

@@ -136,7 +136,9 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final box = (current.child as GestureDetector).child as SizedBox;
-        return (((box.child as Stack).children.first as RepaintBoundary).child
+        return ((((box.child as ClipPath).child as Stack).children.first
+                        as RepaintBoundary)
+                    .child
                 as CustomPaint)
             .painter;
       }
@@ -320,7 +322,7 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final box = (current.child as GestureDetector).child as SizedBox;
-        return (((box.child as Stack).children
+        return ((((box.child as ClipPath).child as Stack).children
                         .whereType<RepaintBoundary>()
                         .last)
                     .child

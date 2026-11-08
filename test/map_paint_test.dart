@@ -8,6 +8,7 @@ import 'package:kunitori/game.dart';
 import 'package:kunitori/national_atlas.dart';
 import 'package:kunitori/territory_map.dart';
 import 'package:kunitori/geography_tiles.dart';
+import 'package:kunitori/map_boundary.dart';
 
 import 'map_image_wait.dart';
 
@@ -72,13 +73,24 @@ void main() {
         find.byType(InteractiveViewer),
       );
       final box = (current.child as GestureDetector).child as SizedBox;
-      return (((box.child as Stack).children.whereType<RepaintBoundary>().last)
+      return ((((box.child as ClipPath).child as Stack).children
+                      .whereType<RepaintBoundary>()
+                      .last)
                   .child
               as CustomPaint)
           .painter;
     }
 
     final dynamic withRelief = painter();
+    final boundary = tester.widget<ClipPath>(
+      find.byWidgetPredicate(
+        (widget) => widget is ClipPath && widget.clipper is MapBoundaryClipper,
+      ),
+    );
+    expect(
+      boundary.clipper!.getClip(const Size(1100, 1500)),
+      same(withRelief.reliefClip),
+    );
     // Sakurai's merged census geometry contains many tiny internal gaps.
     // Display outlines must suppress them without changing fill/hit geometry.
     final city = atlas.cities.entries.firstWhere((e) => e.value == '桜井市').key;
@@ -169,7 +181,9 @@ void main() {
     );
     final box = (viewer.child as GestureDetector).child as SizedBox;
     final dynamic painter =
-        (((box.child as Stack).children[2] as RepaintBoundary).child
+        ((((box.child as ClipPath).child as Stack).children[2]
+                        as RepaintBoundary)
+                    .child
                 as CustomPaint)
             .painter;
     final outer = Path()..addRect(const Rect.fromLTWH(0, 0, 200, 100));
@@ -266,7 +280,7 @@ void main() {
       final detector = viewer.child as GestureDetector;
       final canvasWidget = detector.child as SizedBox;
       final dynamic painter =
-          (((canvasWidget.child as Stack).children
+          ((((canvasWidget.child as ClipPath).child as Stack).children
                           .whereType<RepaintBoundary>()
                           .last)
                       .child

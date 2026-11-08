@@ -14,6 +14,7 @@ import 'map_compass.dart';
 import 'border_tiles.dart';
 import 'map_paint_snapshot.dart';
 import 'map_controls.dart';
+import 'map_boundary.dart';
 
 class TerritoryMap extends StatefulWidget {
   const TerritoryMap({
@@ -546,124 +547,138 @@ class _TerritoryMapState extends State<TerritoryMap> {
                 child: SizedBox(
                   width: mapSize.width,
                   height: mapSize.height,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      RepaintBoundary(
-                        child: CustomPaint(
-                          isComplex: true,
-                          painter: _MapPainter(
-                            widget.cityId == null ? cityPaths : paths,
-                            widget.cityId == null ? cityOutlines : townOutlines,
-                            widget.cityId == null ? cityBounds : bounds,
-                            widget.atlas,
-                            widget.game,
-                            widget.selected,
-                            controller,
-                            widget.cityId,
-                            officePoints,
-                            _selectOffice,
-                            showGeography ? water : null,
-                            showGeography ? mountains : null,
-                            widget.cityId == null
-                                ? prefecturePath
-                                : cityPaths[widget.cityId]!,
-                            size,
-                            paths,
-                            foreground: false,
+                  child: ClipPath(
+                    clipper: MapBoundaryClipper(
+                      widget.cityId == null
+                          ? prefecturePath
+                          : cityPaths[widget.cityId]!,
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        RepaintBoundary(
+                          child: CustomPaint(
+                            isComplex: true,
+                            painter: _MapPainter(
+                              widget.cityId == null ? cityPaths : paths,
+                              widget.cityId == null
+                                  ? cityOutlines
+                                  : townOutlines,
+                              widget.cityId == null ? cityBounds : bounds,
+                              widget.atlas,
+                              widget.game,
+                              widget.selected,
+                              controller,
+                              widget.cityId,
+                              officePoints,
+                              _selectOffice,
+                              showGeography ? water : null,
+                              showGeography ? mountains : null,
+                              widget.cityId == null
+                                  ? prefecturePath
+                                  : cityPaths[widget.cityId]!,
+                              size,
+                              paths,
+                              foreground: false,
+                            ),
                           ),
                         ),
-                      ),
-                      GeographyTiles(
-                        onBusyChanged: (busy) => _imageBusy('background', busy),
-                        prefectureId: widget.prefectureId,
-                        transform: controller,
-                        project: project,
-                        viewport: size,
-                        clip:
-                            widget.cityId == null
-                                ? prefecturePath
-                                : cityPaths[widget.cityId]!,
-                        enabled: showGeography,
-                      ),
-                      RepaintBoundary(
-                        child: CustomPaint(
-                          isComplex: true,
-                          painter: _MapPainter(
-                            widget.cityId == null ? cityPaths : paths,
-                            widget.cityId == null ? cityOutlines : townOutlines,
-                            widget.cityId == null ? cityBounds : bounds,
-                            widget.atlas,
-                            widget.game,
-                            widget.selected,
-                            controller,
-                            widget.cityId,
-                            officePoints,
-                            _selectOffice,
-                            showGeography ? water : null,
-                            showGeography ? mountains : null,
-                            widget.cityId == null
-                                ? prefecturePath
-                                : cityPaths[widget.cityId]!,
-                            size,
-                            paths,
-                            colors: true,
-                            separateProgress: true,
-                            colorOpacity: showGeography ? 0.55 : 1.0,
+                        GeographyTiles(
+                          onBusyChanged:
+                              (busy) => _imageBusy('background', busy),
+                          prefectureId: widget.prefectureId,
+                          transform: controller,
+                          project: project,
+                          viewport: size,
+                          clip:
+                              widget.cityId == null
+                                  ? prefecturePath
+                                  : cityPaths[widget.cityId]!,
+                          enabled: showGeography,
+                        ),
+                        RepaintBoundary(
+                          child: CustomPaint(
+                            isComplex: true,
+                            painter: _MapPainter(
+                              widget.cityId == null ? cityPaths : paths,
+                              widget.cityId == null
+                                  ? cityOutlines
+                                  : townOutlines,
+                              widget.cityId == null ? cityBounds : bounds,
+                              widget.atlas,
+                              widget.game,
+                              widget.selected,
+                              controller,
+                              widget.cityId,
+                              officePoints,
+                              _selectOffice,
+                              showGeography ? water : null,
+                              showGeography ? mountains : null,
+                              widget.cityId == null
+                                  ? prefecturePath
+                                  : cityPaths[widget.cityId]!,
+                              size,
+                              paths,
+                              colors: true,
+                              separateProgress: true,
+                              colorOpacity: showGeography ? 0.55 : 1.0,
+                            ),
                           ),
                         ),
-                      ),
-                      RepaintBoundary(
-                        child: CustomPaint(
-                          willChange: true,
-                          painter: TownProgressPainter(
-                            widget.game,
-                            paths,
-                            cityId: widget.cityId,
-                            opacity: showGeography ? .55 : 1,
+                        RepaintBoundary(
+                          child: CustomPaint(
+                            willChange: true,
+                            painter: TownProgressPainter(
+                              widget.game,
+                              paths,
+                              cityId: widget.cityId,
+                              opacity: showGeography ? .55 : 1,
+                            ),
                           ),
                         ),
-                      ),
-                      // Boundaries top territory colors; labels and attack highlights stay in front.
-                      BorderTiles(
-                        onBusyChanged: (busy) => _imageBusy('border', busy),
-                        transform: controller,
-                        project: project,
-                        viewport: size,
-                        clip:
-                            widget.cityId == null
-                                ? prefecturePath
-                                : cityPaths[widget.cityId]!,
-                        prefectureId: widget.prefectureId,
-                        layer: widget.cityId == null ? 'city' : 'town',
-                      ),
-                      RepaintBoundary(
-                        child: CustomPaint(
-                          willChange: true,
-                          painter: _MapPainter(
-                            widget.cityId == null ? cityPaths : paths,
-                            widget.cityId == null ? cityOutlines : townOutlines,
-                            widget.cityId == null ? cityBounds : bounds,
-                            widget.atlas,
-                            widget.game,
-                            widget.selected,
-                            controller,
-                            widget.cityId,
-                            officePoints,
-                            _selectOffice,
-                            showGeography ? water : null,
-                            showGeography ? mountains : null,
-                            widget.cityId == null
-                                ? prefecturePath
-                                : cityPaths[widget.cityId]!,
-                            size,
-                            paths,
-                            foreground: true,
-                            labelCache: labelCache,
+                        // Boundaries top territory colors; labels and attack highlights stay in front.
+                        BorderTiles(
+                          onBusyChanged: (busy) => _imageBusy('border', busy),
+                          transform: controller,
+                          project: project,
+                          viewport: size,
+                          clip:
+                              widget.cityId == null
+                                  ? prefecturePath
+                                  : cityPaths[widget.cityId]!,
+                          prefectureId: widget.prefectureId,
+                          layer: widget.cityId == null ? 'city' : 'town',
+                        ),
+                        RepaintBoundary(
+                          child: CustomPaint(
+                            willChange: true,
+                            painter: _MapPainter(
+                              widget.cityId == null ? cityPaths : paths,
+                              widget.cityId == null
+                                  ? cityOutlines
+                                  : townOutlines,
+                              widget.cityId == null ? cityBounds : bounds,
+                              widget.atlas,
+                              widget.game,
+                              widget.selected,
+                              controller,
+                              widget.cityId,
+                              officePoints,
+                              _selectOffice,
+                              showGeography ? water : null,
+                              showGeography ? mountains : null,
+                              widget.cityId == null
+                                  ? prefecturePath
+                                  : cityPaths[widget.cityId]!,
+                              size,
+                              paths,
+                              foreground: true,
+                              labelCache: labelCache,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

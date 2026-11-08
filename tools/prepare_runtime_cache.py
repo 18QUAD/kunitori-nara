@@ -55,7 +55,7 @@ def prepare(root):
             (root/entry['path']).unlink()
     worker = root/'map-cache-worker.js'
     index = root/'index.html'
-    match = re.search(r'diagnostics\.js\?v=([a-zA-Z0-9-]+)', index.read_text()) if index.exists() else None
+    match = re.search(r'flutter_bootstrap\.js\?v=([a-zA-Z0-9-]+)', index.read_text()) if index.exists() else None
     build = match.group(1) if match else ''
     worker.write_text(worker.read_text().replace('__RUNTIME_DATA_REVISION__',revision).replace('__APP_BUILD__',build))
     print(f'Runtime local store: {len(files)} files, {len(chunks)} chunks, {manifest["bytes"]:,} compressed bytes; revision {revision[:12]}')

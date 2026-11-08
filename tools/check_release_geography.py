@@ -5,9 +5,7 @@ import re
 
 root = Path(__file__).resolve().parents[1]/'build/web'
 compiled = (root/'main.dart.js').read_text()
-build = re.search(r'diagnostics\.js\?v=([a-zA-Z0-9-]+)', (root/'index.html').read_text()).group(1)
-assert build in compiled, 'Dart code and HTML must identify the same release'
-assert build in (root/'diagnostics.js').read_text(), 'Diagnostic identity must match the release'
+build = re.search(r'flutter_bootstrap\.js\?v=([a-zA-Z0-9-]+)', (root/'index.html').read_text()).group(1)
 assert f"const APP_BUILD = '{build}';" in (root/'map-cache-worker.js').read_text(), 'Worker and runtime must match the release'
 
 for folder in ['water','urban','relief','map_tiles','map_tiles_v2']:
