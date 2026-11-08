@@ -72,7 +72,7 @@ jobs:
           cache: true
       - run: flutter pub get --enforce-lockfile
       - name: Test progress transfer and native display
-        run: flutter test --no-pub test/save_transfer_test.dart test/game_test.dart test/attack_button_test.dart test/native_display_test.dart test/action_choices_test.dart test/app_typography_test.dart test/tip_appearance_test.dart test/tip_character_test.dart
+        run: flutter test --no-pub test/map_boundary_test.dart test/save_transfer_test.dart test/game_test.dart test/attack_button_test.dart test/native_display_test.dart test/action_choices_test.dart test/app_typography_test.dart test/tip_appearance_test.dart test/tip_character_test.dart
       - name: Fetch signing certificate and profile
         env:
           APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.ASC_KEY_ID }}

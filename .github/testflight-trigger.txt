@@ -1,1 +1,1 @@
-TestFlight: use regular-weight character speech in the native app.
+TestFlight: clip every map layer to the selected prefecture or municipality boundary.
