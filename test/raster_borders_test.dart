@@ -191,9 +191,11 @@ void main() {
         reason: 'The attack outline must remain above the boundary images',
       );
       final mapStack =
-          (((viewer.child as GestureDetector).child as SizedBox).child
+          ((((viewer.child as GestureDetector).child as SizedBox).child
+                      as ClipPath)
+                  .child
               as Stack);
-      expect(mapStack.children[3], isA<BorderTiles>());
+      expect(mapStack.children[4], isA<BorderTiles>());
       expect(mapStack.children[2], isA<RepaintBoundary>());
       expect(mapStack.children.last, isA<RepaintBoundary>());
       final dynamic colors = (mapStack.children[2] as RepaintBoundary).child;

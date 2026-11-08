@@ -293,7 +293,9 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final dynamic painter =
-            ((((((viewer.child as GestureDetector).child as SizedBox).child
+            (((((((viewer.child as GestureDetector).child as SizedBox).child
+                                            as ClipPath)
+                                        .child
                                     as Stack)
                                 .children
                                 .last
@@ -446,7 +448,9 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final dynamic painter =
-            ((((((viewer.child as GestureDetector).child as SizedBox).child
+            (((((((viewer.child as GestureDetector).child as SizedBox).child
+                                            as ClipPath)
+                                        .child
                                     as Stack)
                                 .children
                                 .last

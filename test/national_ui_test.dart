@@ -136,9 +136,7 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final box = (current.child as GestureDetector).child as SizedBox;
-        return ((((box.child as ClipPath).child as Stack).children.first
-                        as RepaintBoundary)
-                    .child
+        return (((box.child as Stack).children.first as RepaintBoundary).child
                 as CustomPaint)
             .painter;
       }
@@ -312,9 +310,12 @@ void main() {
         find.byType(InteractiveViewer),
       );
       final prefectureStack =
-          (((prefectureViewer.child as GestureDetector).child as SizedBox).child
+          ((((prefectureViewer.child as GestureDetector).child as SizedBox)
+                          .child
+                      as ClipPath)
+                  .child
               as Stack);
-      expect(prefectureStack.children[3], isA<BorderTiles>());
+      expect(prefectureStack.children[4], isA<BorderTiles>());
       expect(prefectureStack.children.last, isA<RepaintBoundary>());
       final camera = prefectureViewer.transformationController!.value.clone();
       dynamic detailPainter() {
