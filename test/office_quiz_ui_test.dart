@@ -1,3 +1,4 @@
+import 'package:kunitori/map_boundary.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -292,16 +293,10 @@ void main() {
         final viewer = tester.widget<InteractiveViewer>(
           find.byType(InteractiveViewer),
         );
+        final box = (viewer.child as GestureDetector).child as SizedBox;
+        final scene = box.child as MapBoundaryScene;
         final dynamic painter =
-            (((((((viewer.child as GestureDetector).child as SizedBox).child
-                                            as ClipPath)
-                                        .child
-                                    as Stack)
-                                .children
-                                .last
-                            as RepaintBoundary)
-                        .child)
-                    as CustomPaint)
+            ((scene.children.last as RepaintBoundary).child as CustomPaint)
                 .painter;
         final Offset point = painter.officePoints['29205'];
         final screen = MatrixUtils.transformPoint(
@@ -447,16 +442,10 @@ void main() {
         final viewer = tester.widget<InteractiveViewer>(
           find.byType(InteractiveViewer),
         );
+        final box = (viewer.child as GestureDetector).child as SizedBox;
+        final scene = box.child as MapBoundaryScene;
         final dynamic painter =
-            (((((((viewer.child as GestureDetector).child as SizedBox).child
-                                            as ClipPath)
-                                        .child
-                                    as Stack)
-                                .children
-                                .last
-                            as RepaintBoundary)
-                        .child)
-                    as CustomPaint)
+            ((scene.children.last as RepaintBoundary).child as CustomPaint)
                 .painter;
         final Offset point = painter.officePoints['29205'];
         final screen = MatrixUtils.transformPoint(

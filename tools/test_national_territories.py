@@ -77,7 +77,10 @@ class NationalTerritoryTest(unittest.TestCase):
             parent = json.loads((DATA / 'nara_outlines.json').read_bytes()) if pref == '29' else source
             for row in parent['cities']:
                 self.assertEqual(actual[row['id']], row['polygons'])
-            self.assertEqual(actual['pref'], parent['polygons'])
+            expected_mask = joined([
+                polygon for city in parent['cities'] for polygon in city['polygons']
+            ])
+            self.assertTrue(joined(actual['pref']).equals(expected_mask), pref)
             print('Verified', pref, len(groups), 'town regions', flush=True)
 
     def test_holes_islands_and_full_float64_precision(self):

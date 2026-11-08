@@ -1,3 +1,4 @@
+import 'package:kunitori/map_boundary.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -67,7 +68,7 @@ void main() {
       find.byType(InteractiveViewer),
     );
     final box = (viewer.child as GestureDetector).child as SizedBox;
-    return ((((box.child as ClipPath).child as Stack).children
+    return (((box.child as MapBoundaryScene).children
                     .whereType<RepaintBoundary>()
                     .last)
                 .child

@@ -1,3 +1,4 @@
+import 'package:kunitori/map_boundary.dart';
 import 'prepared_map_assets.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -191,10 +192,8 @@ void main() {
         reason: 'The attack outline must remain above the boundary images',
       );
       final mapStack =
-          ((((viewer.child as GestureDetector).child as SizedBox).child
-                      as ClipPath)
-                  .child
-              as Stack);
+          (((viewer.child as GestureDetector).child as SizedBox).child
+              as MapBoundaryScene);
       expect(mapStack.children[4], isA<BorderTiles>());
       expect(mapStack.children[2], isA<RepaintBoundary>());
       expect(mapStack.children.last, isA<RepaintBoundary>());
@@ -205,7 +204,7 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final box = (current.child as GestureDetector).child as SizedBox;
-        final stack = (box.child as ClipPath).child as Stack;
+        final stack = box.child as MapBoundaryScene;
         final overlays = stack.children.whereType<RepaintBoundary>();
         final boundary = foreground ? overlays.last : overlays.elementAt(1);
         return (boundary.child as CustomPaint).painter;
@@ -239,7 +238,7 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final box = (current.child as GestureDetector).child as SizedBox;
-        return ((((box.child as ClipPath).child as Stack).children.first
+        return (((box.child as MapBoundaryScene).children.first
                         as RepaintBoundary)
                     .child
                 as CustomPaint)

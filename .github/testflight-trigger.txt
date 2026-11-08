@@ -1,1 +1,1 @@
-TestFlight: clip every map layer to the selected prefecture or municipality boundary.
+TestFlight: replace coarse prefecture masks with detailed municipal unions; preserve coastal office symbols and labels.

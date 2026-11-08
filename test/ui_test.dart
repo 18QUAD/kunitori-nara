@@ -1,3 +1,4 @@
+import 'package:kunitori/map_boundary.dart';
 import 'dart:convert';
 import 'map_image_wait.dart';
 import 'package:flutter/material.dart';
@@ -49,8 +50,7 @@ void expectCenteredOn(WidgetTester tester, String id) {
   final detector = viewer.child as GestureDetector;
   final canvas = detector.child as SizedBox;
   final dynamic painter =
-      ((((canvas.child as ClipPath).child as Stack).children.first
-                      as RepaintBoundary)
+      (((canvas.child as MapBoundaryScene).children.first as RepaintBoundary)
                   .child
               as CustomPaint)
           .painter;

@@ -65,7 +65,11 @@ def prepare(data, mapping, nara_outlines=None):
     parent = nara_outlines or data
     for city in parent['cities']:
         shapes[city['id']] = city['polygons']
-    shapes['pref'] = parent['polygons']
+    # The coarse national outline can cross inland borders. The prefecture
+    # display mask must match its detailed municipalities exactly.
+    shapes['pref'] = coordinates(joined([
+        polygon for city in parent['cities'] for polygon in city['polygons']
+    ]))
     return shapes
 
 

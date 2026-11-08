@@ -1,3 +1,4 @@
+import 'package:kunitori/map_boundary.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -310,11 +311,8 @@ void main() {
         find.byType(InteractiveViewer),
       );
       final prefectureStack =
-          ((((prefectureViewer.child as GestureDetector).child as SizedBox)
-                          .child
-                      as ClipPath)
-                  .child
-              as Stack);
+          (((prefectureViewer.child as GestureDetector).child as SizedBox).child
+              as MapBoundaryScene);
       expect(prefectureStack.children[4], isA<BorderTiles>());
       expect(prefectureStack.children.last, isA<RepaintBoundary>());
       final camera = prefectureViewer.transformationController!.value.clone();
@@ -323,7 +321,7 @@ void main() {
           find.byType(InteractiveViewer),
         );
         final box = (current.child as GestureDetector).child as SizedBox;
-        return ((((box.child as ClipPath).child as Stack).children
+        return (((box.child as MapBoundaryScene).children
                         .whereType<RepaintBoundary>()
                         .last)
                     .child

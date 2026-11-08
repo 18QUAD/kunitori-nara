@@ -1,44 +1,38 @@
 import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kunitori/map_boundary.dart';
+import 'package:kunitori/office_symbols.dart';
+import 'package:kunitori/prepared_territory.dart';
 
 void main() {
-  testWidgets('all map layers stay inside the administrative outline', (
+  test('Mie mask excludes the inland overhang in the coarse outline', () async {
+    final prepared = await PreparedTerritory.load('24');
+    final mask = prepared.path('pref', (p) => Offset(p.x, p.y));
+    // Outside both the detailed municipalities and MLIT N03 Mie boundaries.
+    // The old coarse prefecture outline incorrectly included this location.
+    expect(mask.contains(const Offset(136.05192309050943, 34.657852)), isFalse);
+    expect(mask.contains(const Offset(136.13, 34.768)), isTrue);
+  });
+
+  testWidgets('terrain is clipped while a coastal office symbol stays whole', (
     tester,
   ) async {
-    final outline =
-        Path()
-          ..moveTo(0, 0)
-          ..lineTo(100, 0)
-          ..lineTo(0, 100)
-          ..close();
     final key = GlobalKey();
     await tester.pumpWidget(
       Center(
         child: RepaintBoundary(
           key: key,
           child: SizedBox(
-            width: 100,
+            width: 120,
             height: 100,
-            child: ClipPath(
-              clipper: MapBoundaryClipper(outline),
-              child: Stack(
-                alignment: Alignment.topLeft,
-                children: [
-                  const Positioned.fill(
-                    child: ColoredBox(color: Color(0xff123456)),
-                  ),
-                  Positioned(
-                    left: 80,
-                    top: 80,
-                    width: 20,
-                    height: 20,
-                    child: const ColoredBox(color: Color(0xffffffff)),
-                  ),
-                ],
-              ),
+            child: MapBoundaryScene(
+              boundary: Path()..addRect(const Rect.fromLTWH(0, 0, 90, 100)),
+              children: const [
+                Positioned.fill(child: ColoredBox(color: Color(0xff123456))),
+                Positioned.fill(child: CustomPaint(painter: _CoastalOffice())),
+              ],
             ),
           ),
         ),
@@ -46,14 +40,47 @@ void main() {
     );
     final render =
         key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    expect(tester.takeException(), isNull);
     await tester.runAsync(() async {
       final image = await render.toImage();
       final bytes =
           (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
-      expect(bytes.getUint8((10 * 100 + 10) * 4 + 3), 255);
-      // Inside the bounding rectangle, but outside the actual prefecture.
-      expect(bytes.getUint8((90 * 100 + 90) * 4 + 3), 0);
+      final recorder = ui.PictureRecorder();
+      const _CoastalOffice().paint(Canvas(recorder), const Size(120, 100));
+      final picture = recorder.endRecording();
+      final reference = await picture.toImage(120, 100);
+      final expected =
+          (await reference.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      expect(bytes.getUint8((10 * 120 + 10) * 4 + 3), 255);
+      expect(bytes.getUint8((80 * 120 + 110) * 4 + 3), 0);
+      var symbolPixels = 0;
+      for (var y = 40; y < 60; y++) {
+        for (var x = 91; x < 100; x++) {
+          final offset = (y * 120 + x) * 4;
+          if (expected.getUint8(offset + 3) == 0) continue;
+          symbolPixels++;
+          for (var c = 0; c < 4; c++) {
+            expect(
+              bytes.getUint8(offset + c),
+              expected.getUint8(offset + c),
+              reason: 'Office symbol must remain intact outside the coastline',
+            );
+          }
+        }
+      }
+      expect(symbolPixels, greaterThan(10));
       image.dispose();
+      reference.dispose();
+      picture.dispose();
     });
   });
+}
+
+class _CoastalOffice extends CustomPainter {
+  const _CoastalOffice();
+  @override
+  void paint(Canvas canvas, Size size) =>
+      paintOfficeSymbol(canvas, const Offset(88, 50), 1, isCity: true);
+  @override
+  bool shouldRepaint(_CoastalOffice old) => false;
 }
