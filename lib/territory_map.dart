@@ -720,6 +720,10 @@ class _MapPainter extends CustomPainter {
   final Size viewportSize;
   @override
   void paint(Canvas canvas, Size size) {
+    // Apply the administrative boundary to every layer, including town fills,
+    // borders and symbols, rather than only the relief image.
+    canvas.save();
+    canvas.clipPath(reliefClip);
     final zoom = transform.value.getMaxScaleOnAxis();
     final overview = cityId == null;
     final stroke =
@@ -902,6 +906,7 @@ class _MapPainter extends CustomPainter {
         mastered: game.mastered.contains(office.cityId),
       );
     }
+    canvas.restore();
   }
 
   @override

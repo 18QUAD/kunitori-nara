@@ -124,6 +124,9 @@ void main() {
     final box = (viewer.child as GestureDetector).child as SizedBox;
     final dynamic painter = (box.child as CustomPaint).painter;
     final outer = Path()..addRect(const Rect.fromLTWH(0, 0, 200, 100));
+    (painter.reliefClip as Path)
+      ..reset()
+      ..addPath(outer, Offset.zero);
     (painter.paths as Map<String, Path>)
       ..clear()
       ..[city] = outer;
@@ -137,19 +140,21 @@ void main() {
       ..clear()
       ..[towns[0].id] = (Path()..addRect(const Rect.fromLTWH(0, 0, 100, 100)))
       ..[towns[1].id] =
-          (Path()..addRect(const Rect.fromLTWH(100, 0, 100, 100)));
+          (Path()..addRect(const Rect.fromLTWH(100, 0, 200, 100)));
     viewer.transformationController!.value = Matrix4.identity();
     Future<void> checkPixels({required bool fullyOwned}) async {
       final recorder = ui.PictureRecorder();
-      painter.paint(Canvas(recorder), const Size(200, 100));
+      painter.paint(Canvas(recorder), const Size(300, 100));
       final picture = recorder.endRecording();
       await tester.runAsync(() async {
-        final image = await picture.toImage(200, 100);
+        final image = await picture.toImage(300, 100);
         final bytes =
             (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
         List<int> pixel(int x) => [
-          for (var c = 0; c < 3; c++) bytes.getUint8((20 * 200 + x) * 4 + c),
+          for (var c = 0; c < 3; c++) bytes.getUint8((20 * 300 + x) * 4 + c),
         ];
+        // Town geometry beyond the prefecture boundary must remain transparent.
+        expect(bytes.getUint8((20 * 300 + 250) * 4 + 3), 0);
         expect(pixel(50), [0x7a, 0xe1, 0xbb]);
         if (fullyOwned) {
           expect(pixel(150), [0x7a, 0xe1, 0xbb]);
