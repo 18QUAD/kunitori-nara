@@ -31,3 +31,9 @@ AndroidにはJava17とAndroid SDK、iOSにはmacOS・Xcode・CocoaPodsが必要�
 ## TestFlight配布
 
 Macなしでの署名・アップロードは [TESTFLIGHT.md](TESTFLIGHT.md) を参照してください。
+
+## iOSの地図描画
+
+Flutter 3.29.3のImpellerは塗り・クリップ用の頂点番号に16ビット整数を使い、三重県の輪郭（66,479頂点）などで上限を超えます。iOSでは `ios/Runner/Info.plist` の `FLTEnableImpeller=false` によりSkiaを使用します。地形・領土・境界線の表示だけを行政境界で切り抜き、役所記号・文字はその外側にも描画します。
+
+TestFlightでは同じ描画方式で三重県北部の実データを画像検証し、送信する署名済みIPAのInfo.plistも検査します。Impellerを再び有効にする場合は、エンジン側の頂点数上限が解消され、6万頂点を超える地図をiOS実機で検証できてから変更してください。

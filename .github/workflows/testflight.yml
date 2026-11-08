@@ -22,6 +22,7 @@ jobs:
           sparse-checkout: |
             /.github/scripts/
             /test/testflight_pipeline_test.py
+            /ios/Runner/Info.plist
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -72,7 +73,7 @@ jobs:
           cache: true
       - run: flutter pub get --enforce-lockfile
       - name: Test progress transfer and native display
-        run: flutter test --no-pub test/map_boundary_test.dart test/save_transfer_test.dart test/game_test.dart test/attack_button_test.dart test/native_display_test.dart test/action_choices_test.dart test/app_typography_test.dart test/tip_appearance_test.dart test/tip_character_test.dart
+        run: flutter test --no-pub --no-enable-impeller test/map_boundary_test.dart test/save_transfer_test.dart test/game_test.dart test/attack_button_test.dart test/native_display_test.dart test/action_choices_test.dart test/app_typography_test.dart test/tip_appearance_test.dart test/tip_character_test.dart
       - name: Fetch signing certificate and profile
         env:
           APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.ASC_KEY_ID }}
@@ -99,6 +100,8 @@ jobs:
         env:
           BUILD_NUMBER: ${{ steps.version.outputs.number }}
         run: flutter build ipa --release --no-pub --build-number "$BUILD_NUMBER" --export-options-plist "$RUNNER_TEMP/ExportOptions.plist"
+      - name: Verify renderer in the signed IPA
+        run: python .github/scripts/verify_ios_renderer.py 'build/ios/ipa/*.ipa'
       - name: Upload to App Store Connect for internal TestFlight testing
         env:
           APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.ASC_KEY_ID }}

@@ -47,5 +47,9 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- Flutter 3.29 Impeller uses 16-bit fill/clip indices. Detailed census
+	     paths exceed this limit, so use Skia for native iOS rendering. -->
+	<key>FLTEnableImpeller</key>
+	<false/>
 </dict>
 </plist>

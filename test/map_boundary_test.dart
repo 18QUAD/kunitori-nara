@@ -16,6 +16,78 @@ void main() {
     expect(mask.contains(const Offset(136.13, 34.768)), isTrue);
   });
 
+  testWidgets('dense Mie mask matches its geometry at northern inland zoom', (
+    tester,
+  ) async {
+    final prepared = await PreparedTerritory.load('24');
+    final rings = prepared.polygons('pref');
+    final vertices = rings
+        .expand((p) => p)
+        .fold<int>(0, (n, r) => n + r.length);
+    expect(vertices, greaterThan(65535));
+    final mask = prepared.path(
+      'pref',
+      (p) => Offset((p.x - 136.0) * 1600, (35.15 - p.y) * 1600),
+    );
+    final key = GlobalKey();
+    await tester.pumpWidget(
+      Center(
+        child: RepaintBoundary(
+          key: key,
+          child: SizedBox(
+            width: 640,
+            height: 640,
+            child: MapBoundaryScene(
+              boundary: mask,
+              children: const [
+                Positioned.fill(child: ColoredBox(color: Colors.white)),
+                SizedBox.expand(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    final render =
+        key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    await tester.runAsync(() async {
+      final image = await render.toImage();
+      expect(image.width, 640);
+      final pixels =
+          (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      var inside = 0, outside = 0;
+      for (var y = 8; y < image.height - 8; y += 32) {
+        for (var x = 8; x < image.width - 8; x += 32) {
+          final point = Offset(x + .5, y + .5);
+          final expected = mask.contains(point);
+          // Skip antialiased edge pixels; compare unequivocal land/outside.
+          if ([
+            const Offset(-2, -2),
+            const Offset(2, -2),
+            const Offset(-2, 2),
+            const Offset(2, 2),
+          ].any((d) => mask.contains(point + d) != expected)) {
+            continue;
+          }
+          if (expected) {
+            inside++;
+          } else {
+            outside++;
+          }
+          expect(
+            pixels.getUint8((y * image.width + x) * 4 + 3),
+            expected ? 255 : 0,
+            reason: 'Dense northern Mie clip differs at scene point $point',
+          );
+        }
+      }
+      expect(inside, greaterThan(20));
+      expect(outside, greaterThan(20));
+      image.dispose();
+    });
+  });
+
   testWidgets('terrain is clipped while a coastal office symbol stays whole', (
     tester,
   ) async {

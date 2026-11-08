@@ -1,1 +1,1 @@
-TestFlight: replace coarse prefecture masks with detailed municipal unions; preserve coastal office symbols and labels.
+TestFlight: use Skia for dense iOS census paths; verify the renderer setting inside the signed IPA before upload.

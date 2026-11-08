@@ -1,12 +1,49 @@
 import importlib.util
 import subprocess
 import unittest
+import plistlib
+import tempfile
+import zipfile
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / '.github/scripts/testflight_config.py'
 spec = importlib.util.spec_from_file_location('testflight_config', SCRIPT)
 config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(config)
+
+renderer_spec = importlib.util.spec_from_file_location(
+    'verify_ios_renderer', SCRIPT.with_name('verify_ios_renderer.py'))
+renderer = importlib.util.module_from_spec(renderer_spec)
+renderer_spec.loader.exec_module(renderer)
+
+
+class IOSRendererTest(unittest.TestCase):
+    def test_source_explicitly_uses_skia(self):
+        path = SCRIPT.parents[2] / 'ios/Runner/Info.plist'
+        renderer.validate_info(plistlib.loads(path.read_bytes()))
+
+    def test_default_or_enabled_impeller_is_rejected(self):
+        for info in ({}, {'FLTEnableImpeller': True}):
+            with self.assertRaises(ValueError):
+                renderer.validate_info(info)
+
+    def test_archive_checks_main_app_instead_of_framework_metadata(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'app.ipa'
+            with zipfile.ZipFile(path, 'w') as archive:
+                archive.writestr('Payload/Runner.app/Frameworks/App.framework/Info.plist',
+                                 plistlib.dumps({'FLTEnableImpeller': False}))
+                archive.writestr('Payload/Runner.app/Info.plist', plistlib.dumps({}))
+            with self.assertRaises(ValueError):
+                renderer.verify_ipa(path)
+
+    def test_signed_app_renderer_setting_is_read(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'app.ipa'
+            with zipfile.ZipFile(path, 'w') as archive:
+                archive.writestr('Payload/Runner.app/Info.plist', plistlib.dumps({
+                    'FLTEnableImpeller': False, 'CFBundleVersion': '11.1'}))
+            self.assertEqual(renderer.verify_ipa(path)['CFBundleVersion'], '11.1')
 
 
 class TestFlightConfigurationTest(unittest.TestCase):
