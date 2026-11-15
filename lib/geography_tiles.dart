@@ -645,7 +645,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
                               : [],
                           widget.clip,
                           visible.topLeft,
-                          boundedMask: widget.prefectureId == null ? null : _boundedMask,
+                          boundedMask: widget.clipRings == null ? null : _boundedMask,
                         ),
                       ),
                     ),

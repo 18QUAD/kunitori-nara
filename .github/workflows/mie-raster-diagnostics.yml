@@ -43,6 +43,7 @@ jobs:
           persist-credentials: false
           sparse-checkout-cone-mode: false
           sparse-checkout: |
+            /.github/scripts/
             /lib/
             /test/
             /assets/
@@ -67,6 +68,11 @@ jobs:
           else
             flutter test --no-pub --no-enable-impeller --timeout 60s --reporter expanded test/map_boundary_test.dart 2>&1 | tee raster.log
           fi
+      - name: Test app regressions and TestFlight configuration
+        if: matrix.renderer == 'software'
+        run: |
+          python3 test/testflight_pipeline_test.py
+          flutter test --no-pub test/save_transfer_test.dart test/game_test.dart test/attack_button_test.dart test/native_display_test.dart test/action_choices_test.dart test/app_typography_test.dart test/tip_appearance_test.dart test/tip_character_test.dart
       - uses: actions/upload-artifact@v4
         if: always()
         with:
