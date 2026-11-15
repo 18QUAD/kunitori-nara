@@ -1,3 +1,4 @@
+import 'bounded_map_clip.dart';
 import 'map_image_budget.dart';
 import 'prepared_map_bytes.dart';
 import 'packed_tile_keys.dart';
@@ -296,6 +297,18 @@ class _GeographyTilesState extends State<GeographyTiles> {
   double? refreshedZoom;
   bool failed = false, loading = true;
   List<_Tile> tiles = [];
+  BoundedMapClip? _boundaryMask;
+
+  BoundedMapClip get _boundedMask {
+    final a = widget.project(const math.Point(120.0, 48.0));
+    final b = widget.project(const math.Point(121.0, 47.0));
+    final size = Size((b.dx - a.dx).abs() / 16, (b.dy - a.dy).abs() / 16);
+    final current = _boundaryMask;
+    if (current != null && identical(current.boundary, widget.clip) && current.cellSize == size) {
+      return current;
+    }
+    return _boundaryMask = BoundedMapClip(widget.clip, size);
+  }
   Set<String> _pinned = {};
 
   @override
@@ -630,6 +643,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
                               : [],
                           widget.clip,
                           visible.topLeft,
+                          boundedMask: widget.prefectureId == null ? null : _boundedMask,
                         ),
                       ),
                     ),
@@ -655,7 +669,8 @@ class _Tile {
 }
 
 class _GeographyPainter extends CustomPainter {
-  _GeographyPainter(this.tiles, this.clip, this.origin);
+  _GeographyPainter(this.tiles, this.clip, this.origin, {this.boundedMask});
+  final BoundedMapClip? boundedMask;
   final Offset origin;
   final List<_Tile> tiles;
   final Path clip;
@@ -664,8 +679,16 @@ class _GeographyPainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.translate(-origin.dx, -origin.dy);
-    canvas.clipPath(clip);
+    if (boundedMask == null) canvas.clipPath(clip);
     for (final tile in tiles) {
+      if (boundedMask != null) {
+        paintBoundedMapImage(
+          canvas, tile.image,
+          destination: tile.rect, target: tile.target,
+          visibleBounds: origin & size, clip: boundedMask!,
+        );
+        continue;
+      }
       canvas.save();
       canvas.clipRect(tile.target);
       canvas.drawImageRect(
@@ -688,5 +711,5 @@ class _GeographyPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GeographyPainter old) =>
-      old.tiles != tiles || old.clip != clip || old.origin != origin;
+      old.tiles != tiles || old.clip != clip || old.origin != origin || old.boundedMask != boundedMask;
 }

@@ -551,6 +551,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                   width: mapSize.width,
                   height: mapSize.height,
                   child: MapBoundaryScene(
+                    geographyIsClipped: true,
                     boundary:
                         widget.cityId == null
                             ? prefecturePath

@@ -1,3 +1,4 @@
+import 'package:kunitori/bounded_map_clip.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -29,6 +30,12 @@ void main() {
       'pref',
       (p) => Offset((p.x - 136.0) * 1600, (35.15 - p.y) * 1600),
     );
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 8, 8), Paint()..color = Colors.white);
+    final whitePicture = recorder.endRecording();
+    final white = await tester.runAsync(() => whitePicture.toImage(8, 8));
+    if (white == null) throw StateError('White fixture image unavailable');
+    final maskTiles = BoundedMapClip(mask, const Size(80, 80));
     final key = GlobalKey();
     await tester.pumpWidget(
       Center(
@@ -39,9 +46,10 @@ void main() {
             height: 640,
             child: MapBoundaryScene(
               boundary: mask,
-              children: const [
-                Positioned.fill(child: ColoredBox(color: Colors.white)),
-                SizedBox.expand(),
+              geographyIsClipped: true,
+              children: [
+                Positioned.fill(child: CustomPaint(painter: _BoundedImage(white, maskTiles))),
+                const SizedBox.expand(),
               ],
             ),
           ),
@@ -86,6 +94,9 @@ void main() {
       expect(outside, greaterThan(20));
       image.dispose();
     });
+    await tester.pumpWidget(const SizedBox());
+    white.dispose();
+    whitePicture.dispose();
   });
 
   testWidgets('dense Mie mask matches its geometry at Owase southern coast zoom', (
@@ -101,6 +112,12 @@ void main() {
       'pref',
       (p) => Offset((p.x - 135.85) * 1000, (34.4 - p.y) * 1000),
     );
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 8, 8), Paint()..color = Colors.white);
+    final whitePicture = recorder.endRecording();
+    final white = await tester.runAsync(() => whitePicture.toImage(8, 8));
+    if (white == null) throw StateError('White fixture image unavailable');
+    final maskTiles = BoundedMapClip(mask, const Size(80, 80));
     final key = GlobalKey();
     await tester.pumpWidget(
       Center(
@@ -111,9 +128,10 @@ void main() {
             height: 640,
             child: MapBoundaryScene(
               boundary: mask,
-              children: const [
-                Positioned.fill(child: ColoredBox(color: Colors.white)),
-                SizedBox.expand(),
+              geographyIsClipped: true,
+              children: [
+                Positioned.fill(child: CustomPaint(painter: _BoundedImage(white, maskTiles))),
+                const SizedBox.expand(),
               ],
             ),
           ),
@@ -158,6 +176,9 @@ void main() {
       expect(outside, greaterThan(20));
       image.dispose();
     });
+    await tester.pumpWidget(const SizedBox());
+    white.dispose();
+    whitePicture.dispose();
   });
 
   testWidgets('terrain is clipped while a coastal office symbol stays whole', (
@@ -227,4 +248,17 @@ class _CoastalOffice extends CustomPainter {
       paintOfficeSymbol(canvas, const Offset(88, 50), 1, isCity: true);
   @override
   bool shouldRepaint(_CoastalOffice old) => false;
+}
+
+class _BoundedImage extends CustomPainter {
+  _BoundedImage(this.image, this.clip);
+  final ui.Image image;
+  final BoundedMapClip clip;
+  @override
+  void paint(Canvas canvas, Size size) => paintBoundedMapImage(
+    canvas, image, destination: Offset.zero & size, target: Offset.zero & size,
+    visibleBounds: Offset.zero & size, clip: clip,
+  );
+  @override
+  bool shouldRepaint(_BoundedImage old) => old.image != image || old.clip != clip;
 }

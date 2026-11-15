@@ -6,9 +6,11 @@ class MapBoundaryScene extends StatelessWidget {
     super.key,
     required this.boundary,
     required this.children,
+    this.geographyIsClipped = false,
   }) : assert(children.length >= 2);
 
   final Path boundary;
+  final bool geographyIsClipped;
   // Terrain, ownership and borders precede the final label/office layer.
   final List<Widget> children;
 
@@ -19,6 +21,7 @@ class MapBoundaryScene extends StatelessWidget {
     clipBehavior: Clip.none,
     children: [
       ClipPath(
+        clipBehavior: geographyIsClipped ? Clip.none : Clip.antiAlias,
         clipper: MapBoundaryClipper(boundary),
         child: Stack(
           alignment: Alignment.topLeft,
