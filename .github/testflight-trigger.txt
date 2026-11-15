@@ -1,1 +1,1 @@
-TestFlight: use Skia for dense iOS census paths; verify the renderer setting inside the signed IPA before upload.
+TestFlight: bound GPU clip geometry per map cell; verify northern Mie and Owase with Impeller on Metal before upload.

@@ -8,6 +8,35 @@ import 'package:kunitori/office_symbols.dart';
 import 'package:kunitori/prepared_territory.dart';
 
 void main() {
+
+  test('cell boundaries do not leave seams under fractional transforms', () async {
+    final whiteRecorder = ui.PictureRecorder();
+    Canvas(whiteRecorder).drawRect(const Rect.fromLTWH(0, 0, 8, 8), Paint()..color = Colors.white);
+    final whitePicture = whiteRecorder.endRecording();
+    final white = await whitePicture.toImage(8, 8);
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder)..translate(.37, .63)..scale(1.27);
+    final clip = BoundedMapClip(
+      Path()..addRect(const Rect.fromLTWH(-100, -100, 500, 500)),
+      const Size(17.3, 23.7),
+    );
+    paintBoundedMapImage(canvas, white,
+      destination: const Rect.fromLTWH(0, 0, 120, 100),
+      target: const Rect.fromLTWH(0, 0, 120, 100),
+      visibleBounds: const Rect.fromLTWH(0, 0, 120, 100), clip: clip,
+    );
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(80, 80);
+    final pixels = (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+    for (var y = 2; y < 78; y++) {
+      for (var x = 2; x < 78; x++) {
+        expect(pixels.getUint8((y * 80 + x) * 4 + 3), 255,
+            reason: 'Gap on an internal map cell edge at ($x, $y)');
+      }
+    }
+    image.dispose(); picture.dispose(); white.dispose(); whitePicture.dispose();
+  });
+
   test('Mie mask excludes the inland overhang in the coarse outline', () async {
     final prepared = await PreparedTerritory.load('24');
     final mask = prepared.path('pref', (p) => Offset(p.x, p.y));
