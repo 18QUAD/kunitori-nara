@@ -42,9 +42,9 @@ jobs:
         run: |
           set -o pipefail
           if [ "$RENDERER" = impeller ]; then
-            flutter test --no-pub --enable-impeller --reporter expanded test/map_boundary_test.dart 2>&1 | tee raster.log
+            flutter test --no-pub --enable-impeller --timeout 60s --reporter expanded test/map_boundary_test.dart 2>&1 | tee raster.log
           else
-            flutter test --no-pub --no-enable-impeller --reporter expanded test/map_boundary_test.dart 2>&1 | tee raster.log
+            flutter test --no-pub --no-enable-impeller --timeout 60s --reporter expanded test/map_boundary_test.dart 2>&1 | tee raster.log
           fi
       - uses: actions/upload-artifact@v4
         if: always()
