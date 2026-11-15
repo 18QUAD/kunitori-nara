@@ -1,0 +1,55 @@
+name: Diagnose Mie raster gaps
+on:
+  push:
+    branches: [fix/owase-map-gaps]
+    paths:
+      - '.github/workflows/mie-raster-diagnostics.yml'
+      - 'test/map_boundary_test.dart'
+      - 'lib/**'
+permissions:
+  contents: read
+jobs:
+  raster:
+    strategy:
+      fail-fast: false
+      matrix:
+        renderer: [software, impeller]
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /lib/
+            /test/
+            /assets/
+            /data/prepared_maps/map-image-manifest.json
+            /pubspec.yaml
+            /pubspec.lock
+            /analysis_options.yaml
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - name: Render northern Mie and Owase with the selected backend
+        env:
+          RENDERER: ${{ matrix.renderer }}
+        shell: bash
+        run: |
+          set -o pipefail
+          if [ "$RENDERER" = impeller ]; then
+            flutter test --no-pub --enable-impeller --reporter expanded test/map_boundary_test.dart 2>&1 | tee raster.log
+          else
+            flutter test --no-pub --no-enable-impeller --reporter expanded test/map_boundary_test.dart 2>&1 | tee raster.log
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mie-raster-${{ matrix.renderer }}
+          path: raster.log
+          if-no-files-found: ignore
+          retention-days: 7
