@@ -271,6 +271,7 @@ class GeographyTiles extends StatefulWidget {
     required this.clip,
     required this.enabled,
     this.prefectureId,
+    this.clipRings,
     this.nationalOverview = false,
     this.boundaryLayer,
     this.onBusyChanged,
@@ -279,6 +280,7 @@ class GeographyTiles extends StatefulWidget {
   final Offset Function(math.Point<double>) project;
   final Size viewport;
   final Path clip;
+  final List<List<Offset>>? clipRings;
   final bool enabled;
   final ValueChanged<bool>? onBusyChanged;
   final String? prefectureId;
@@ -307,7 +309,7 @@ class _GeographyTilesState extends State<GeographyTiles> {
     if (current != null && identical(current.boundary, widget.clip) && current.cellSize == size) {
       return current;
     }
-    return _boundaryMask = BoundedMapClip(widget.clip, size);
+    return _boundaryMask = BoundedMapClip(widget.clip, size, rings: widget.clipRings);
   }
   Set<String> _pinned = {};
 

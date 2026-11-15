@@ -63,7 +63,7 @@ void main() {
     Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 8, 8), Paint()..color = Colors.white);
     final whitePicture = recorder.endRecording();
     final white = whitePicture.toImageSync(8, 8);
-    final maskTiles = BoundedMapClip(mask, const Size(80, 80));
+    final maskTiles = BoundedMapClip(mask, const Size(80, 80), rings: [for (final polygon in rings) for (final ring in polygon) ring.map((p) => Offset((p.x - 136.0) * 1600, (35.15 - p.y) * 1600)).toList()]);
     final key = GlobalKey();
     await tester.pumpWidget(
       Center(
@@ -144,7 +144,7 @@ void main() {
     Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 8, 8), Paint()..color = Colors.white);
     final whitePicture = recorder.endRecording();
     final white = whitePicture.toImageSync(8, 8);
-    final maskTiles = BoundedMapClip(mask, const Size(80, 80));
+    final maskTiles = BoundedMapClip(mask, const Size(80, 80), rings: [for (final polygon in rings) for (final ring in polygon) ring.map((p) => Offset((p.x - 135.85) * 1000, (34.4 - p.y) * 1000)).toList()]);
     final key = GlobalKey();
     await tester.pumpWidget(
       Center(

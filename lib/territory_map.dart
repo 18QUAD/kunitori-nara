@@ -116,6 +116,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
 
   late Offset Function(math.Point<double>) project;
   late Path prefecturePath;
+  final boundaryRings = <String, List<List<Offset>>>{};
 
   static const mapSize = Size(1100, 1500);
   @override
@@ -265,6 +266,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
   }
 
   void _buildCities() {
+    boundaryRings.clear();
     cityPaths = {};
     cityOutlines = {};
     cityBounds = {};
@@ -276,11 +278,17 @@ class _TerritoryMapState extends State<TerritoryMap> {
           prebuilt == null
               ? _union(city.value.map((t) => paths[t.id]!).toList())
               : _polygonPath(prebuilt);
+      if (prebuilt != null) {
+        boundaryRings[city.key] = [for (final polygon in prebuilt) for (final ring in polygon) ring.map(project).toList()];
+      }
       cityPaths[city.key] = outline;
       cityOutlines[city.key] = exteriorOutline(outline);
       cityBounds[city.key] = outline.getBounds();
     }
     final prebuilt = widget.atlas.prefecturePolygons[widget.prefectureId];
+    if (prebuilt != null && widget.atlas.preparedGeometryPrefectures.contains(widget.prefectureId)) {
+      boundaryRings['pref'] = [for (final polygon in prebuilt) for (final ring in polygon) ring.map(project).toList()];
+    }
     prefecturePath =
         prebuilt == null ||
                 !widget.atlas.preparedGeometryPrefectures.contains(
@@ -588,6 +596,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         transform: controller,
                         project: project,
                         viewport: size,
+                        clipRings: boundaryRings[widget.cityId ?? 'pref'],
                         clip:
                             widget.cityId == null
                                 ? prefecturePath
@@ -638,6 +647,7 @@ class _TerritoryMapState extends State<TerritoryMap> {
                         transform: controller,
                         project: project,
                         viewport: size,
+                        clipRings: boundaryRings[widget.cityId ?? 'pref'],
                         clip:
                             widget.cityId == null
                                 ? prefecturePath
