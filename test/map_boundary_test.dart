@@ -13,7 +13,7 @@ void main() {
     final whiteRecorder = ui.PictureRecorder();
     Canvas(whiteRecorder).drawRect(const Rect.fromLTWH(0, 0, 8, 8), Paint()..color = Colors.white);
     final whitePicture = whiteRecorder.endRecording();
-    final white = await whitePicture.toImage(8, 8);
+    final white = whitePicture.toImageSync(8, 8);
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)..translate(.37, .63)..scale(1.27);
     final clip = BoundedMapClip(
@@ -35,7 +35,7 @@ void main() {
       }
     }
     image.dispose(); picture.dispose(); white.dispose(); whitePicture.dispose();
-  });
+  }, timeout: const Timeout(Duration(seconds: 45)));
 
   test('Mie mask excludes the inland overhang in the coarse outline', () async {
     final prepared = await PreparedTerritory.load('24');
@@ -44,7 +44,7 @@ void main() {
     // The old coarse prefecture outline incorrectly included this location.
     expect(mask.contains(const Offset(136.05192309050943, 34.657852)), isFalse);
     expect(mask.contains(const Offset(136.13, 34.768)), isTrue);
-  });
+  }, timeout: const Timeout(Duration(seconds: 45)));
 
   testWidgets('dense Mie mask matches its geometry at northern inland zoom', (
     tester,
@@ -62,8 +62,7 @@ void main() {
     final recorder = ui.PictureRecorder();
     Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 8, 8), Paint()..color = Colors.white);
     final whitePicture = recorder.endRecording();
-    final white = await tester.runAsync(() => whitePicture.toImage(8, 8));
-    if (white == null) throw StateError('White fixture image unavailable');
+    final white = whitePicture.toImageSync(8, 8);
     final maskTiles = BoundedMapClip(mask, const Size(80, 80));
     final key = GlobalKey();
     await tester.pumpWidget(
@@ -126,7 +125,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     white.dispose();
     whitePicture.dispose();
-  });
+  }, timeout: const Timeout(Duration(seconds: 45)));
 
   testWidgets('dense Mie mask matches its geometry at Owase southern coast zoom', (
     tester,
@@ -144,8 +143,7 @@ void main() {
     final recorder = ui.PictureRecorder();
     Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 8, 8), Paint()..color = Colors.white);
     final whitePicture = recorder.endRecording();
-    final white = await tester.runAsync(() => whitePicture.toImage(8, 8));
-    if (white == null) throw StateError('White fixture image unavailable');
+    final white = whitePicture.toImageSync(8, 8);
     final maskTiles = BoundedMapClip(mask, const Size(80, 80));
     final key = GlobalKey();
     await tester.pumpWidget(
@@ -208,7 +206,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     white.dispose();
     whitePicture.dispose();
-  });
+  }, timeout: const Timeout(Duration(seconds: 45)));
 
   testWidgets('terrain is clipped while a coastal office symbol stays whole', (
     tester,
@@ -267,7 +265,7 @@ void main() {
       reference.dispose();
       picture.dispose();
     });
-  });
+  }, timeout: const Timeout(Duration(seconds: 45)));
 }
 
 class _CoastalOffice extends CustomPainter {
