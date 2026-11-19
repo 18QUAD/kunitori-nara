@@ -52,6 +52,7 @@ class PracticeQuiz extends StatefulWidget {
     this.controller,
     this.inline = false,
     this.onClose,
+    this.answerLabel,
   });
   final String cityName;
   final TipAppearance appearance;
@@ -59,6 +60,7 @@ class PracticeQuiz extends StatefulWidget {
   final PracticeQuizController? controller;
   final bool inline;
   final VoidCallback? onClose;
+  final String Function(QuizQuestion, String)? answerLabel;
 
   @override
   State<PracticeQuiz> createState() => _PracticeQuizState();
@@ -142,6 +144,13 @@ class _PracticeQuizState extends State<PracticeQuiz> {
                   correct: controller.correct,
                   streak: controller.streak,
                   onAnswer: controller.answer,
+                  answerLabel:
+                      (answer) =>
+                          widget.answerLabel?.call(
+                            controller.question,
+                            answer,
+                          ) ??
+                          answer,
                 ),
   );
 

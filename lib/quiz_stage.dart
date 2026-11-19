@@ -17,6 +17,7 @@ class QuizStage extends StatelessWidget {
     this.correct,
     this.streak = 0,
     this.nextSpeechAt,
+    this.answerLabel,
   });
 
   final String title;
@@ -28,6 +29,8 @@ class QuizStage extends StatelessWidget {
   final bool? correct;
   final int streak;
   final DateTime? nextSpeechAt;
+  final String Function(String)? answerLabel;
+  String label(String answer) => answerLabel?.call(answer) ?? answer;
 
   @override
   Widget build(BuildContext context) => ClipRRect(
@@ -106,7 +109,7 @@ class QuizStage extends StatelessWidget {
                                           ),
                                 ),
                                 const SizedBox(width: 8),
-                                Expanded(child: Text(answer)),
+                                Expanded(child: Text(label(answer))),
                               ],
                             ),
                           ),
@@ -146,8 +149,8 @@ class QuizStage extends StatelessWidget {
                       : correct == null
                       ? question.question
                       : correct!
-                      ? correctAnswerSpeech(question.answer, streak)
-                      : '惜しい、今回は不正解！正解は「${question.answer}」だよ。',
+                      ? correctAnswerSpeech(label(question.answer), streak)
+                      : '惜しい、今回は不正解！正解は「${label(question.answer)}」だよ。',
               appearance: appearance,
               expression:
                   correct == null

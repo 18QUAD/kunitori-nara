@@ -73,6 +73,7 @@ void enableNationalConquest(
         if (largestDecoys.length == 3) break;
       }
       final location = atlas.towns[hub]!.name;
+      final locationLabel = atlas.towns[hub]!.displayName;
       final locationDecoys = <String>{};
       for (final name in [
         ...towns.map((t) => t.name),
@@ -107,7 +108,7 @@ void enableNationalConquest(
           '${city.key}:conquest:largest',
           city.key,
           '地域',
-          '${city.value}で収録人口が最も多い町${maxNames.length > 1 ? 'の一つ' : ''}は${largest.name}（${number(largest.population)}人）です。',
+          '${city.value}で収録人口が最も多い町${maxNames.length > 1 ? 'の一つ' : ''}は${largest.displayName}（${number(largest.population)}人）です。',
           '${city.value}で収録人口が最も多い町${maxNames.length > 1 ? 'の一つ' : ''}は？',
           largest.name,
           largestDecoys.toList(),
@@ -128,8 +129,8 @@ void enableNationalConquest(
           city.key,
           '制圧クイズ',
           marker.townId == null
-              ? '${marker.name}は区域外にあるため、$locationを制圧拠点にします。'
-              : '${marker.name}がある町は$location。全領土獲得後、ここから制圧クイズに挑戦できます。',
+              ? '${marker.name}は区域外にあるため、$locationLabelを制圧拠点にします。'
+              : '${marker.name}がある町は$locationLabel。全領土獲得後、ここから制圧クイズに挑戦できます。',
           '${city.value}の制圧クイズに挑戦する町は？',
           location,
           locationDecoys.toList(),

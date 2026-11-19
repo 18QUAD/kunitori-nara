@@ -5,6 +5,7 @@ import 'regional_tips.dart';
 import 'municipal_offices.dart';
 import 'municipal_office.dart';
 import 'office_marker.dart';
+import 'town_display_names.dart';
 
 enum Difficulty {
   casual('旅人', 25),
@@ -44,6 +45,8 @@ class Town {
               )
               .toList();
   final String id, name, cityId;
+  // Keep name as the original/merge name. Presentation never changes identity.
+  String get displayName => townDisplayName(id, name);
   final int population;
   final double area;
   final Set<String> neighbors;
@@ -230,7 +233,7 @@ class Atlas {
           '${city.key}:largest',
           city.key,
           '地域',
-          '${city.value}で収録人口が最も多い町は${largest.first.name}（${number(largest.first.population)}人）です。',
+          '${city.value}で収録人口が最も多い町は${largest.first.displayName}（${number(largest.first.population)}人）です。',
           '${city.value}で収録人口が最も多い町は？',
           largest.first.name,
           [...largest.skip(1)].reversed
@@ -301,8 +304,26 @@ class Atlas {
   String conquestPlaceName(String city) {
     final office = offices[city]!;
     return office.usesConquestHub
-        ? '${towns[officeTownIds[city]]!.name}の制圧拠点'
+        ? '${towns[officeTownIds[city]]!.displayName}の制圧拠点'
         : office.name;
+  }
+
+  /// Translate town choices only at presentation time. Stored answers and
+  /// callbacks retain their canonical strings, including an ongoing old quiz.
+  String quizChoiceLabel(String city, String factId, String choice) {
+    if (!factId.endsWith(':largest') && !factId.endsWith(':office')) {
+      return choice;
+    }
+    final matches = byCity[city]?.where((t) => t.name == choice).toList();
+    if (matches == null || matches.length != 1) return choice;
+    final town = matches.single;
+    // Preserve distinguishable choices if a future review creates a homonym.
+    if (byCity[city]!.any(
+      (other) => other.id != town.id && other.displayName == town.displayName,
+    )) {
+      return choice;
+    }
+    return town.displayName;
   }
 
   MunicipalOffice? officeForTown(String id) {
@@ -650,7 +671,7 @@ class Game {
     owned.add(id);
     everOwned.add(id);
     titles.add('大和への第一歩');
-    message = '${atlas.towns[id]!.name}を本拠地にしました。隣接する地域へ進軍しましょう。';
+    message = '${atlas.towns[id]!.displayName}を本拠地にしました。隣接する地域へ進軍しましょう。';
   }
 
   bool tap(String id, DateTime now) {
@@ -670,7 +691,7 @@ class Game {
     _resumePendingTarget();
     if (everOwned.length >= 10) titles.add('十郷の領主');
     if (everOwned.length >= 100) titles.add('大和の開拓者');
-    message = '${town.name}を獲得しました！';
+    message = '${town.displayName}を獲得しました！';
     if (cityOwned(town.cityId) && !atlas.offices.containsKey(town.cityId)) {
       message = '${atlas.cities[town.cityId]}の全領土を獲得しました！ 制圧クイズは準備中です。';
     }
@@ -798,7 +819,7 @@ class Game {
       progress.remove(officeTown);
       mastered.remove(q.cityId);
       message =
-          '${choice == null ? '時間切れになっちゃったね' : '今回は不正解だったね'}。正解は「${q.answer}」だよ。${atlas.offices[q.cityId]!.usesConquestHub ? atlas.conquestPlaceName(q.cityId) : '${atlas.offices[q.cityId]!.name}所在地の${atlas.towns[officeTown]!.name}'}の支配を失ったけれど、再攻略すればまた挑戦できるよ！';
+          '${choice == null ? '時間切れになっちゃったね' : '今回は不正解だったね'}。正解は「${atlas.quizChoiceLabel(q.cityId, q.factId, q.answer)}」だよ。${atlas.offices[q.cityId]!.usesConquestHub ? atlas.conquestPlaceName(q.cityId) : '${atlas.offices[q.cityId]!.name}所在地の${atlas.towns[officeTown]!.displayName}'}の支配を失ったけれど、再攻略すればまた挑戦できるよ！';
     }
     if (attackTarget != null && !isReachable(attackTarget!)) {
       _resumePendingTarget();

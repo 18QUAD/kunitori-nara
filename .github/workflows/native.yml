@@ -49,7 +49,7 @@ jobs:
           cache: true
       - run: flutter pub get --enforce-lockfile
       - name: Test portable saves
-        run: flutter test --no-pub test/save_transfer_test.dart test/game_test.dart
+        run: flutter test --no-pub test/save_transfer_test.dart test/game_test.dart test/town_display_names_test.dart test/compact_atlas_test.dart
       - name: Build Android APK
         if: matrix.target == 'android'
         run: flutter build apk --release --no-pub --target-platform android-arm,android-arm64,android-x64

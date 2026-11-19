@@ -965,7 +965,7 @@ class _MapPainter extends CustomPainter {
           if (!overview && atlas.towns[e.key]!.cityId != cityId) return false;
           final box = bounds[e.key]!;
           final name =
-              overview ? atlas.cities[e.key]! : atlas.towns[e.key]!.name;
+              overview ? atlas.cities[e.key]! : atlas.towns[e.key]!.displayName;
           if (!Rect.fromCenter(
             center: box.center,
             width: (name.length * 12 + 16) / zoom,
@@ -977,13 +977,15 @@ class _MapPainter extends CustomPainter {
         }).toList();
     labelCache!.beginFrame(
       candidates.map(
-        (e) => overview ? atlas.cities[e.key]! : atlas.towns[e.key]!.name,
+        (e) =>
+            overview ? atlas.cities[e.key]! : atlas.towns[e.key]!.displayName,
       ),
       zoom,
     );
     for (final e in candidates) {
       final box = bounds[e.key]!;
-      final name = overview ? atlas.cities[e.key]! : atlas.towns[e.key]!.name;
+      final name =
+          overview ? atlas.cities[e.key]! : atlas.towns[e.key]!.displayName;
       final label = labelCache!.obtain(name, zoom);
       try {
         if (overview ||
@@ -1117,7 +1119,7 @@ class _MapPainter extends CustomPainter {
           rect: rect,
           properties: SemanticsProperties(
             label:
-                '${office.name}${office.townId == null ? '' : '（${atlas.towns[office.townId]!.name}）'}',
+                '${office.name}${office.townId == null ? '' : '（${atlas.towns[office.townId]!.displayName}）'}',
             button: true,
             onTap: () => onOfficeSelected(office.id),
             textDirection: TextDirection.ltr,

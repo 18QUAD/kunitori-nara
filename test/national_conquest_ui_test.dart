@@ -109,6 +109,50 @@ void main() {
   }
 
   testWidgets(
+    'Kyotanabe map selection, old-name search and quiz use the reviewed display',
+    (tester) async {
+      final game = await launch(tester, '26211', seenGuide: true);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('current-location'))).data,
+        '田辺',
+      );
+      expect(game.atlas.towns['26211010001']!.name, '田辺田辺');
+      await tester.tap(find.byTooltip('設定'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('地名から探す'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '田辺田辺');
+      await tester.pump();
+      expect(find.widgetWithText(ListTile, '田辺'), findsOneWidget);
+      expect(find.widgetWithText(ListTile, '田辺田辺'), findsNothing);
+      Navigator.of(tester.element(find.byType(TextField))).pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('制圧クイズに挑戦'));
+      await tester.pump();
+      var correctedAnswerSeen = false;
+      for (var i = 0; i < 5; i++) {
+        final q = game.quiz!;
+        final label = game.atlas.quizChoiceLabel(q.cityId, q.factId, q.answer);
+        if (q.answer == '田辺田辺') {
+          correctedAnswerSeen = true;
+          expect(label, '田辺');
+        }
+        expect(find.textContaining('田辺田辺'), findsNothing);
+        await tester.tap(find.widgetWithText(OutlinedButton, label));
+        await tester.pump();
+        expect(find.textContaining('田辺田辺'), findsNothing);
+        await tester.pump(answerFeedbackDisplayDuration);
+        await tester.pump();
+      }
+      expect(correctedAnswerSeen, isTrue);
+      expect(game.mastered, contains('26211'));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    },
+  );
+
+  testWidgets(
     'landscape has one central map, two working attacks, and survives rotation',
     (tester) async {
       final game = await launch(tester, '24216', attack: true);

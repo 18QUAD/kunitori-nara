@@ -1,1 +1,1 @@
-TestFlight: bound GPU clip geometry per map cell; verify northern Mie and Owase with Impeller on Metal before upload.
+TestFlight: show reviewed 26211010001 as 田辺; preserve census/merge names, graph and ongoing quiz saves. Other repeated-name candidates remain unchanged pending evidence.

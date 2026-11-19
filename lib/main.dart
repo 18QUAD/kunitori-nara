@@ -572,7 +572,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       TipAppearance.fromJson(
                         jsonDecode(appearance) as Map<String, dynamic>,
                       );
-                    return '本拠地：${atlas!.towns[restored.home]?.name ?? "未設定"}\n領土：${restored.owned.length}町\n累計タップ：${number(restored.totalTaps)}';
+                    return '本拠地：${atlas!.towns[restored.home]?.displayName ?? "未設定"}\n領土：${restored.owned.length}町\n累計タップ：${number(restored.totalTaps)}';
                   } finally {
                     national?.releaseLegacySave();
                   }
@@ -826,7 +826,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         (g.progress[selected!] ?? 0) * 10 ~/ math.max(1, tappedTown.population);
     if (won || oldTarget != g.attackTarget || oldBand != newBand) {
       setState(() {
-        if (won) _celebrateConquest(tappedTown.name, selected!);
+        if (won) _celebrateConquest(tappedTown.displayName, selected!);
         if (oldCity != newCity) factIndex = 0;
         if (won || oldCity != newCity) _rememberVisibleFact();
       });
@@ -900,7 +900,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           ? '全国'
           : national?.prefectures[prefectureFilter]?.name ?? '奈良県',
       if (city != null) atlas!.cities[city]!,
-      if (town != null) town.name,
+      if (town != null) town.displayName,
     ].join(' ');
     final header = AppBar(
       backgroundColor: ink,
@@ -917,7 +917,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   child: Tooltip(
                     message: location,
                     child: Text(
-                      town?.name ??
+                      town?.displayName ??
                           (city == null
                               ? (nationalView
                                   ? '全国'
@@ -1140,6 +1140,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           questions: _practice!.questions,
           appearance: tipAppearance,
           controller: _practice,
+          answerLabel:
+              (q, answer) => atlas!.quizChoiceLabel(
+                q.factId.substring(0, 5),
+                q.factId,
+                answer,
+              ),
           inline: true,
           onClose: _closePractice,
         ),
@@ -1199,7 +1205,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                           ),
                         ] else ...[
                           Text(
-                            town?.name ??
+                            town?.displayName ??
                                 (city == null ? '町を選択' : atlas!.cities[city]!),
                             key: const Key('current-location'),
                             style: const TextStyle(
@@ -1920,6 +1926,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       correct: _feedbackQuiz == null ? null : _feedbackCorrect,
       streak: _feedbackCorrect ? q.correctCount + 1 : 0,
       onAnswer: (answer) => _answerQuiz(q, answer),
+      answerLabel:
+          (answer) => atlas!.quizChoiceLabel(q.cityId, q.factId, answer),
     );
   }
 
@@ -2261,7 +2269,8 @@ class _SearchSheetState extends State<_SearchSheet> {
                 .where(
                   (t) =>
                       (!attackableOnly || widget.game.canAttack(t.id)) &&
-                      (t.name.contains(query) ||
+                      (t.displayName.contains(query) ||
+                          t.name.contains(query) ||
                           a.cities[t.cityId]!.contains(query)),
                 )
                 .toList();
@@ -2357,7 +2366,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 4,
                             ),
-                            title: Text(t.name),
+                            title: Text(t.displayName),
                             subtitle: Text(
                               '${a.cities[t.cityId]} · ${number(t.population)}人${a.landingTowns.contains(t.id) ? ' · 航路のある町' : ''}${a.nearbyNeighbors.containsKey(t.id) ? ' · 近隣地域との接続' : ''}',
                             ),
