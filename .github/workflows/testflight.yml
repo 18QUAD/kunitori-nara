@@ -71,6 +71,8 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get --enforce-lockfile
+      - name: Analyze native app (existing lints are nonfatal)
+        run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
       - name: Test progress transfer and native display
         run: flutter test --no-pub test/map_boundary_test.dart test/save_transfer_test.dart test/game_test.dart test/attack_button_test.dart test/native_display_test.dart test/action_choices_test.dart test/app_typography_test.dart test/tip_appearance_test.dart test/tip_character_test.dart test/town_display_names_test.dart test/compact_atlas_test.dart test/national_conquest_ui_test.dart
       - name: Test GPU map clipping on Metal

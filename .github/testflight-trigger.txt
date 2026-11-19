@@ -1,1 +1,1 @@
-TestFlight: show reviewed 26211010001 as 田辺; preserve census/merge names, graph and ongoing quiz saves. Other repeated-name candidates remain unchanged pending evidence.
+TestFlight: select unique display names from 2020 census upper/lower fields for 141900 game regions; keep 117 unnamed regions, original names, merging, IDs, boundaries and saved quiz answers intact.

@@ -1,9 +1,9 @@
-/// Reviewed presentation names, keyed by census region ID. Never use these
-/// names for merging towns, graph construction, quiz answers, or save keys.
-/// Evidence and unresolved candidates: docs/town-name-audit/README.txt.
-const townDisplayNames = <String, ({String sourceName, String displayName})>{
-  '26211010001': (sourceName: '田辺田辺', displayName: '田辺'),
-};
+/// Presentation names selected from the 2020 census upper/lower name fields.
+/// Never use these names for merging, graph construction, answers or save keys.
+/// Rules and reproduction: docs/town-name-audit/naming-rules/README.txt.
+library;
+
+part 'generated/town_display_names.g.dart';
 
 String townDisplayName(String id, String name) {
   final reviewed = townDisplayNames[id];

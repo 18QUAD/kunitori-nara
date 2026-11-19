@@ -1,0 +1,16 @@
+{
+  "region_count": 141900,
+  "changed_display_names": 46272,
+  "unchanged_unnamed_regions": 117,
+  "final_same_city_collisions": 0,
+  "decision_counts": {
+    "blank_lower_group_full_name": 6187,
+    "both_fields_blank": 117,
+    "collision_use_full_merged_name": 6636,
+    "merged_lower_keep_upper": 169,
+    "preserve_existing_merged_name": 764,
+    "single_lower": 34586,
+    "unique_upper": 93441
+  },
+  "source_fields_sha256": "bdd7516ac6df2abe0920efab02f63d39f06e562eeae001a871015ece8986f887"
+}

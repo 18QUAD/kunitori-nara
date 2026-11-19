@@ -36,8 +36,71 @@ void main() {
     expect(after.name, before.name);
     expect(after.neighbors, before.neighbors);
     expect(after.area, before.area);
-    expect(atlas.towns['26211012001']!.displayName, '河原河原');
+    expect(atlas.towns['26211012001']!.displayName, '河原');
   });
+
+  test(
+    'agreed hierarchy rules cover collisions, blank and merged lower names',
+    () {
+      const examples = {
+        '26211010001': '田辺',
+        '26211010002': '一休ケ丘',
+        '26211010003': '新田辺西住宅',
+        '26211012001': '河原',
+        '012070322': '稲田町',
+        '01207022252': '稲田町東二線',
+        '01209010001': '山手町',
+        '01209010002': '鹿の谷',
+        '01209010005': '東丘町',
+        '022010760': '大字古館',
+        '022011350': '古館',
+        '03461017101': '吉里吉里',
+      };
+      for (final entry in examples.entries) {
+        expect(
+          atlas.towns[entry.key]!.displayName,
+          entry.value,
+          reason: entry.key,
+        );
+      }
+      for (final t in atlas.byCity['01104']!) {
+        if (['本通一丁目南', '平和通一丁目南', '南郷通一丁目南'].contains(t.name)) {
+          expect(t.displayName, t.name);
+        }
+      }
+    },
+  );
+
+  test(
+    'national display names are unique and all unnamed regions stay intact',
+    () {
+      expect(townDisplayNames.length, 46272);
+      var unknown = 0;
+      var changed = 0;
+      for (final city in atlas.byCity.entries) {
+        final seen = <String>{};
+        for (final t in city.value) {
+          expect(
+            seen.add(t.displayName),
+            isTrue,
+            reason: '${city.key}/${t.id}/${t.displayName}',
+          );
+          if (t.name == '名称未設定') {
+            unknown++;
+            expect(t.displayName, t.name);
+            expect(townDisplayNames.containsKey(t.id), isFalse);
+          }
+          if (t.displayName != t.name) changed++;
+        }
+      }
+      expect(unknown, 117);
+      expect(changed, 46272);
+      for (final entry in townDisplayNames.entries) {
+        expect(atlas.towns[entry.key]!.name, entry.value.sourceName);
+        expect(townDisplayName(entry.key, '異なる原本名'), '異なる原本名');
+      }
+    },
+  );
 
   test(
     'source merge preserves every town ID, canonical name and population',
@@ -59,6 +122,7 @@ void main() {
       for (final t in merged.towns.values) {
         final prepared = atlas.towns[t.id]!;
         expect(t.name, prepared.name, reason: t.id);
+        expect(t.displayName, prepared.displayName, reason: t.id);
         expect(t.population, prepared.population, reason: t.id);
         expect(t.area, closeTo(prepared.area, 1e-9), reason: t.id);
         // Prepared data also contains the existing cross-prefecture connections.
@@ -169,7 +233,7 @@ void main() {
     );
     expect(find.text('田辺田辺'), findsNothing);
     expect(find.widgetWithText(OutlinedButton, '田辺'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, '河原河原'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, '河原'), findsOneWidget);
     await tester.tap(find.widgetWithText(OutlinedButton, '田辺'));
     expect(selected, '田辺田辺');
 

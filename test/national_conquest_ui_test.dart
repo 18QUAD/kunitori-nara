@@ -213,8 +213,12 @@ void main() {
       for (var i = 0; i < 5; i++) {
         expect(game.quiz, isNotNull);
         expect(find.byType(OutlinedButton), findsNWidgets(4));
+        final q = game.quiz!;
         await tester.tap(
-          find.widgetWithText(OutlinedButton, game.quiz!.answer),
+          find.widgetWithText(
+            OutlinedButton,
+            game.atlas.quizChoiceLabel(q.cityId, q.factId, q.answer),
+          ),
         );
         await tester.pump();
         await tester.pump(answerFeedbackDisplayDuration);
@@ -245,7 +249,11 @@ void main() {
       await tester.tap(
         find.widgetWithText(
           OutlinedButton,
-          q.choices.firstWhere((a) => a != q.answer),
+          game.atlas.quizChoiceLabel(
+            q.cityId,
+            q.factId,
+            q.choices.firstWhere((a) => a != q.answer),
+          ),
         ),
       );
       await tester.pump();

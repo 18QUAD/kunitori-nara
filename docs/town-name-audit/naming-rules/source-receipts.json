@@ -1,0 +1,476 @@
+{
+  "checked_date_jst": "2026-11-19",
+  "sources": [
+    {
+      "prefecture_code": "01",
+      "prefecture": "北海道",
+      "stat_inf_id": "000032163094",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159874&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163094&fileKind=1",
+      "file": "sources/pref-01-table2.csv",
+      "size_bytes": 2332558,
+      "sha256": "bb36bd3645a0772d388cd33810e1df1231f647428f8e660ed23875e4fa0a3d36"
+    },
+    {
+      "prefecture_code": "02",
+      "prefecture": "青森県",
+      "stat_inf_id": "000032163109",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159875&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163109&fileKind=1",
+      "file": "sources/pref-02-table2.csv",
+      "size_bytes": 456616,
+      "sha256": "03511a6f9d9787349315828191667f60c0d31bf6fca7fcc0d05a9d29d473a02f"
+    },
+    {
+      "prefecture_code": "03",
+      "prefecture": "岩手県",
+      "stat_inf_id": "000032163124",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159876&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163124&fileKind=1",
+      "file": "sources/pref-03-table2.csv",
+      "size_bytes": 386041,
+      "sha256": "b969890f522d1ce8d6d2a0a641a5eb834a8e1e4053f8de7aa312a4cae03a546a"
+    },
+    {
+      "prefecture_code": "04",
+      "prefecture": "宮城県",
+      "stat_inf_id": "000032163139",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159877&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163139&fileKind=1",
+      "file": "sources/pref-04-table2.csv",
+      "size_bytes": 528819,
+      "sha256": "6a41361d347e547c7b4afa9ef25717626df9853cde1eb044425cfc3de6ef612c"
+    },
+    {
+      "prefecture_code": "05",
+      "prefecture": "秋田県",
+      "stat_inf_id": "000032163154",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159878&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163154&fileKind=1",
+      "file": "sources/pref-05-table2.csv",
+      "size_bytes": 429245,
+      "sha256": "299efb6927e6422c6d920e4cff38eeee033a68602f2e4f25e5916739434fe3b7"
+    },
+    {
+      "prefecture_code": "06",
+      "prefecture": "山形県",
+      "stat_inf_id": "000032163169",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159879&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163169&fileKind=1",
+      "file": "sources/pref-06-table2.csv",
+      "size_bytes": 438474,
+      "sha256": "c9295081fc55aa751d14493986a19f93d694ba8cf71ca82d55d7f7bf828d08cc"
+    },
+    {
+      "prefecture_code": "07",
+      "prefecture": "福島県",
+      "stat_inf_id": "000032163184",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159880&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163184&fileKind=1",
+      "file": "sources/pref-07-table2.csv",
+      "size_bytes": 657677,
+      "sha256": "989b5e377476ca9fd8e3370b9d936e0def62fb01e82ad96c0741f80920324a18"
+    },
+    {
+      "prefecture_code": "08",
+      "prefecture": "茨城県",
+      "stat_inf_id": "000032163199",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159881&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163199&fileKind=1",
+      "file": "sources/pref-08-table2.csv",
+      "size_bytes": 424167,
+      "sha256": "8129549f8e7e3a4d6e1d7a39657a0e9b759c0e9c04f428dacb49ade87eb645ee"
+    },
+    {
+      "prefecture_code": "09",
+      "prefecture": "栃木県",
+      "stat_inf_id": "000032163214",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159882&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163214&fileKind=1",
+      "file": "sources/pref-09-table2.csv",
+      "size_bytes": 249209,
+      "sha256": "9a6ad8697bb3b1ec3552b638f8be6ebc8639e1a1d01e2a9c43014e7d46b1cb8d"
+    },
+    {
+      "prefecture_code": "10",
+      "prefecture": "群馬県",
+      "stat_inf_id": "000032163229",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159883&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163229&fileKind=1",
+      "file": "sources/pref-10-table2.csv",
+      "size_bytes": 230257,
+      "sha256": "6eca086f72e470c567f4b5b6fb8a35efea5058e25887b9d1f80aaba54ef12e99"
+    },
+    {
+      "prefecture_code": "11",
+      "prefecture": "埼玉県",
+      "stat_inf_id": "000032163244",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159884&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163244&fileKind=1",
+      "file": "sources/pref-11-table2.csv",
+      "size_bytes": 629451,
+      "sha256": "f5c2f44260c9237689ad3a67f5219b625aa64a48846d583b40fedf056050be30"
+    },
+    {
+      "prefecture_code": "12",
+      "prefecture": "千葉県",
+      "stat_inf_id": "000032163259",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159885&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163259&fileKind=1",
+      "file": "sources/pref-12-table2.csv",
+      "size_bytes": 585853,
+      "sha256": "354b9276a674a166f2d80fe698173ff264d734a1bb3c4d0a462c012a0cf2ff29"
+    },
+    {
+      "prefecture_code": "13",
+      "prefecture": "東京都",
+      "stat_inf_id": "000032163274",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159886&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163274&fileKind=1",
+      "file": "sources/pref-13-table2.csv",
+      "size_bytes": 629362,
+      "sha256": "2c6f521e9486001c33c2a0e8c7a5e979307abb697e02577a0f49ab70cc1ee7f4"
+    },
+    {
+      "prefecture_code": "14",
+      "prefecture": "神奈川県",
+      "stat_inf_id": "000032163289",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159887&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163289&fileKind=1",
+      "file": "sources/pref-14-table2.csv",
+      "size_bytes": 579707,
+      "sha256": "f479c8159e558ec6456a7a7772688e168070ce15eb6d738568d977aabff98628"
+    },
+    {
+      "prefecture_code": "15",
+      "prefecture": "新潟県",
+      "stat_inf_id": "000032163304",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159888&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163304&fileKind=1",
+      "file": "sources/pref-15-table2.csv",
+      "size_bytes": 739356,
+      "sha256": "4bf93c8f1e8c1cdcd3b52200c0a4c575fa5a4ab874a1f77ec5874a3a10461e3f"
+    },
+    {
+      "prefecture_code": "16",
+      "prefecture": "富山県",
+      "stat_inf_id": "000032163319",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159889&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163319&fileKind=1",
+      "file": "sources/pref-16-table2.csv",
+      "size_bytes": 332059,
+      "sha256": "db1a6a7211927eb219282f778ad0e49850af507d3578404fb99b653a34e3d5b3"
+    },
+    {
+      "prefecture_code": "17",
+      "prefecture": "石川県",
+      "stat_inf_id": "000032163334",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159890&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163334&fileKind=1",
+      "file": "sources/pref-17-table2.csv",
+      "size_bytes": 317619,
+      "sha256": "3bebeb3930e6941b668e3f3d894905a2ca25a0dcf1da8b44b68306ff5ea98d17"
+    },
+    {
+      "prefecture_code": "18",
+      "prefecture": "福井県",
+      "stat_inf_id": "000032163349",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159891&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163349&fileKind=1",
+      "file": "sources/pref-18-table2.csv",
+      "size_bytes": 266187,
+      "sha256": "979b915afd75a3507523cad09d729e6a27f5588b8693017ae640ee908e5e501e"
+    },
+    {
+      "prefecture_code": "19",
+      "prefecture": "山梨県",
+      "stat_inf_id": "000032163364",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159892&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163364&fileKind=1",
+      "file": "sources/pref-19-table2.csv",
+      "size_bytes": 127830,
+      "sha256": "3e5285c093ac9eca93d949c8b35c975431a3d68da47b3443b4873c1039190da2"
+    },
+    {
+      "prefecture_code": "20",
+      "prefecture": "長野県",
+      "stat_inf_id": "000032163379",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159893&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163379&fileKind=1",
+      "file": "sources/pref-20-table2.csv",
+      "size_bytes": 356013,
+      "sha256": "b45b5e6536a333b72545acb9de40ce5ff9f264f84f7d7ee22173a3e6818416d3"
+    },
+    {
+      "prefecture_code": "21",
+      "prefecture": "岐阜県",
+      "stat_inf_id": "000032163394",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159894&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163394&fileKind=1",
+      "file": "sources/pref-21-table2.csv",
+      "size_bytes": 766086,
+      "sha256": "5c07ed02fde11b1f58a7d265128913d198c85f95dec786b4c33bee3eb0060d3c"
+    },
+    {
+      "prefecture_code": "22",
+      "prefecture": "静岡県",
+      "stat_inf_id": "000032163409",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159895&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163409&fileKind=1",
+      "file": "sources/pref-22-table2.csv",
+      "size_bytes": 468649,
+      "sha256": "a980078c2f47c5758afd6d7e3b1ed388bd2bdfdf4f49bcc6d5afb14b8a818716"
+    },
+    {
+      "prefecture_code": "23",
+      "prefecture": "愛知県",
+      "stat_inf_id": "000032163424",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159896&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163424&fileKind=1",
+      "file": "sources/pref-23-table2.csv",
+      "size_bytes": 1510420,
+      "sha256": "7c036f80626cd56aff25f42ba3f287b8e6d4c6e688318d1322fac3252de5da70"
+    },
+    {
+      "prefecture_code": "24",
+      "prefecture": "三重県",
+      "stat_inf_id": "000032163439",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159897&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163439&fileKind=1",
+      "file": "sources/pref-24-table2.csv",
+      "size_bytes": 307276,
+      "sha256": "5142647bb0ff96c9a79f2649bf2c41c98e7890397c6f7d4941267f38427aec65"
+    },
+    {
+      "prefecture_code": "25",
+      "prefecture": "滋賀県",
+      "stat_inf_id": "000032163454",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159898&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163454&fileKind=1",
+      "file": "sources/pref-25-table2.csv",
+      "size_bytes": 262284,
+      "sha256": "1d151434d18d6e84507da4dfbfc94b315b9090418aa113645f4d00f04f944fae"
+    },
+    {
+      "prefecture_code": "26",
+      "prefecture": "京都府",
+      "stat_inf_id": "000032163469",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159899&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163469&fileKind=1",
+      "file": "sources/pref-26-table2.csv",
+      "size_bytes": 915201,
+      "sha256": "d90bad5e6b91574cce91d91a364577dae940fca7c6b416a8846390a0b4b3cb8b"
+    },
+    {
+      "prefecture_code": "27",
+      "prefecture": "大阪府",
+      "stat_inf_id": "000032163484",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159900&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163484&fileKind=1",
+      "file": "sources/pref-27-table2.csv",
+      "size_bytes": 964181,
+      "sha256": "200d1d617c846d884538a7e941b2f28a5e5728e15b95154a53d4b325b69f719a"
+    },
+    {
+      "prefecture_code": "28",
+      "prefecture": "兵庫県",
+      "stat_inf_id": "000032163499",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159901&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163499&fileKind=1",
+      "file": "sources/pref-28-table2.csv",
+      "size_bytes": 985150,
+      "sha256": "e435124378a1da720e1f1a824ada78a701a76f5f326263c97eb6728c8b1b6de2"
+    },
+    {
+      "prefecture_code": "29",
+      "prefecture": "奈良県",
+      "stat_inf_id": "000032163514",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159902&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163514&fileKind=1",
+      "file": "sources/pref-29-table2.csv",
+      "size_bytes": 298950,
+      "sha256": "e9cd84e62d577fa6300fb63942c5fccc71f23c6c7febdd2e0ea69b6679a2268e"
+    },
+    {
+      "prefecture_code": "30",
+      "prefecture": "和歌山県",
+      "stat_inf_id": "000032163529",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159903&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163529&fileKind=1",
+      "file": "sources/pref-30-table2.csv",
+      "size_bytes": 230424,
+      "sha256": "a2984ea3734ce0cd2d924702238ebae1b1000cf14073422fbde668be41a2158a"
+    },
+    {
+      "prefecture_code": "31",
+      "prefecture": "鳥取県",
+      "stat_inf_id": "000032163544",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159904&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163544&fileKind=1",
+      "file": "sources/pref-31-table2.csv",
+      "size_bytes": 241907,
+      "sha256": "4e0c8aec25e66e42870f4a789932f58b115c90237a7b053951be705871f765ba"
+    },
+    {
+      "prefecture_code": "32",
+      "prefecture": "島根県",
+      "stat_inf_id": "000032163559",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159905&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163559&fileKind=1",
+      "file": "sources/pref-32-table2.csv",
+      "size_bytes": 120847,
+      "sha256": "5be29dfb782280c312548115b164f08c2b577c275740e12c627f56fe93ea0531"
+    },
+    {
+      "prefecture_code": "33",
+      "prefecture": "岡山県",
+      "stat_inf_id": "000032163574",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159906&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163574&fileKind=1",
+      "file": "sources/pref-33-table2.csv",
+      "size_bytes": 530782,
+      "sha256": "829e1bd83ea56f86af805b6748c590e826766b36f39aa786ad58ddaf57d1384e"
+    },
+    {
+      "prefecture_code": "34",
+      "prefecture": "広島県",
+      "stat_inf_id": "000032163589",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159907&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163589&fileKind=1",
+      "file": "sources/pref-34-table2.csv",
+      "size_bytes": 442574,
+      "sha256": "c7f858d41713e7fa0e54cc994083ed3e6c4991b85cadf1386000abfa68dd93ff"
+    },
+    {
+      "prefecture_code": "35",
+      "prefecture": "山口県",
+      "stat_inf_id": "000032163604",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159908&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163604&fileKind=1",
+      "file": "sources/pref-35-table2.csv",
+      "size_bytes": 414433,
+      "sha256": "fe62e7eac2a90aa8c0c6bac5e53742dbfc94ed2fbcbe5dd7880fd46648ec8816"
+    },
+    {
+      "prefecture_code": "36",
+      "prefecture": "徳島県",
+      "stat_inf_id": "000032163619",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159909&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163619&fileKind=1",
+      "file": "sources/pref-36-table2.csv",
+      "size_bytes": 151634,
+      "sha256": "ae410949fff78c5be4653aec2dc5774462c9fe4e9fd182854231565e6c6a65cd"
+    },
+    {
+      "prefecture_code": "37",
+      "prefecture": "香川県",
+      "stat_inf_id": "000032163634",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159910&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163634&fileKind=1",
+      "file": "sources/pref-37-table2.csv",
+      "size_bytes": 87948,
+      "sha256": "423bb2fbecf2c7719ea166e812efe6de5dde12d108f3cb650711be6556ade99d"
+    },
+    {
+      "prefecture_code": "38",
+      "prefecture": "愛媛県",
+      "stat_inf_id": "000032163649",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159911&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163649&fileKind=1",
+      "file": "sources/pref-38-table2.csv",
+      "size_bytes": 283956,
+      "sha256": "0e50db4fbb02763c7e1ff8ca2e03a3af2dd25aa2cbaac258e2a51fccb9098c3a"
+    },
+    {
+      "prefecture_code": "39",
+      "prefecture": "高知県",
+      "stat_inf_id": "000032163664",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159912&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163664&fileKind=1",
+      "file": "sources/pref-39-table2.csv",
+      "size_bytes": 204269,
+      "sha256": "e50ae4dc4af7439e569bb733c90187b3796e80d73926519c4d248f83e06390d9"
+    },
+    {
+      "prefecture_code": "40",
+      "prefecture": "福岡県",
+      "stat_inf_id": "000032163679",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159913&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163679&fileKind=1",
+      "file": "sources/pref-40-table2.csv",
+      "size_bytes": 821550,
+      "sha256": "77f03fcc5c3f3c7e898de9ea3911fa4b69eeeb2533a933e9d37ee916614e6ba8"
+    },
+    {
+      "prefecture_code": "41",
+      "prefecture": "佐賀県",
+      "stat_inf_id": "000032163694",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159914&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163694&fileKind=1",
+      "file": "sources/pref-41-table2.csv",
+      "size_bytes": 229272,
+      "sha256": "fbd971c9039cdc81e6c937fb885f0d6cc47f3b15582b23cb109c6269697307a6"
+    },
+    {
+      "prefecture_code": "42",
+      "prefecture": "長崎県",
+      "stat_inf_id": "000032163709",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159915&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163709&fileKind=1",
+      "file": "sources/pref-42-table2.csv",
+      "size_bytes": 347449,
+      "sha256": "1f94f257c8d6a7fdbd08eb2a248c85ef7547e61c117da91acf287b88e690bea6"
+    },
+    {
+      "prefecture_code": "43",
+      "prefecture": "熊本県",
+      "stat_inf_id": "000032163724",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159916&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163724&fileKind=1",
+      "file": "sources/pref-43-table2.csv",
+      "size_bytes": 279168,
+      "sha256": "ea3c4cf09a1f4c91ae4bd39403408a93284a24f02fa7be6245ead81767268241"
+    },
+    {
+      "prefecture_code": "44",
+      "prefecture": "大分県",
+      "stat_inf_id": "000032163739",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159917&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163739&fileKind=1",
+      "file": "sources/pref-44-table2.csv",
+      "size_bytes": 219441,
+      "sha256": "94dfc47993f3efbdca361a2dd49a4734c6e0e366db8e3befa384e94649a5d60e"
+    },
+    {
+      "prefecture_code": "45",
+      "prefecture": "宮崎県",
+      "stat_inf_id": "000032163754",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159918&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163754&fileKind=1",
+      "file": "sources/pref-45-table2.csv",
+      "size_bytes": 247346,
+      "sha256": "8d2e457e6d850379c9fa6836d4949100f728b4bc70f56828a1855c8d5ce545bd"
+    },
+    {
+      "prefecture_code": "46",
+      "prefecture": "鹿児島県",
+      "stat_inf_id": "000032163769",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159919&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163769&fileKind=1",
+      "file": "sources/pref-46-table2.csv",
+      "size_bytes": 169789,
+      "sha256": "df27893d884d71b0dc24df54105c0e76013718b073f75d798fff3202a4cea2d6"
+    },
+    {
+      "prefecture_code": "47",
+      "prefecture": "沖縄県",
+      "stat_inf_id": "000032163784",
+      "index_url": "https://www.e-stat.go.jp/stat-search/files?cycle=0&layout=datalist&page=1&tclass1=000001136472&tclass2=000001159920&tclass3val=0&toukei=00200521&tstat=000001136464",
+      "download_url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032163784&fileKind=1",
+      "file": "sources/pref-47-table2.csv",
+      "size_bytes": 129498,
+      "sha256": "39c6c575282c2124de0599015cc5c40810d895c5416073cffa2df1a9c71cf9d2"
+    }
+  ],
+  "failures": []
+}
