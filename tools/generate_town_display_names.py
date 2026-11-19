@@ -64,6 +64,7 @@ def select_names(fields):
     assert seen == fields.keys()
     assert len(regions) == 141900
     groups = collections.defaultdict(list)
+    upper_owners = collections.defaultdict(set)
     full_names = set()
     for tid, r in regions.items():
         assert r['uppers'] and r['lowers']
@@ -73,14 +74,17 @@ def select_names(fields):
         full_names.add(full_key)
         r['upper'] = next(iter(r['uppers'])) if len(r['uppers']) == 1 else ''
         r['lower'] = next(iter(r['lowers'])) if len(r['lowers']) == 1 else ''
+        for upper in r['uppers'] - {''}:
+            upper_owners[tid[:5], upper].add(tid)
         if r['upper']:
             groups[tid[:5], r['upper']].append(tid)
     labels, reasons, forced = {}, {}, set()
-    for ids in groups.values():
-        blank_group = any('' in regions[tid]['lowers'] for tid in ids)
+    for key, ids in groups.items():
+        owners = upper_owners[key]
+        blank_group = any('' in regions[tid]['lowers'] for tid in owners)
         for tid in ids:
             r = regions[tid]
-            if len(ids) == 1:
+            if len(owners) == 1:
                 labels[tid], reasons[tid] = r['upper'], 'unique_upper'
             elif blank_group:
                 labels[tid], reasons[tid] = r['full'], 'blank_lower_group_full_name'
@@ -103,7 +107,12 @@ def select_names(fields):
             break
         changed = 0
         for ids in clashes:
-            for tid in ids:
+            # Keep a unique upper label when a lower label from another
+            # region collides with it. Expand the lower-label side first.
+            candidates = [tid for tid in ids if tid not in forced and reasons[tid] != 'unique_upper']
+            if not candidates:
+                candidates = [tid for tid in ids if tid not in forced]
+            for tid in candidates:
                 if tid not in forced:
                     changed += 1
                     forced.add(tid)
@@ -112,6 +121,8 @@ def select_names(fields):
     for tid, r in regions.items():
         if not r['has_text']:
             assert labels[tid] == r['canonical'] == '名称未設定'
+        if r['upper'] and len(upper_owners[tid[:5], r['upper']]) == 1:
+            assert labels[tid] == r['upper'], 'A unique upper name must remain unchanged'
     return regions, labels, reasons
 
 

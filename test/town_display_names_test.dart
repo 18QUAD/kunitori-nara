@@ -55,6 +55,11 @@ void main() {
         '022010760': '大字古館',
         '022011350': '古館',
         '03461017101': '吉里吉里',
+      '40216017001': '松崎',
+      '40216016003': '上岩田松崎',
+      '40216019002': '下岩田松崎',
+      '045810040': '石浜',
+      '04581026003': '石浜字高森',
       };
       for (final entry in examples.entries) {
         expect(
@@ -74,7 +79,7 @@ void main() {
   test(
     'national display names are unique and all unnamed regions stay intact',
     () {
-      expect(townDisplayNames.length, 46272);
+    expect(townDisplayNames.length, 46273);
       var unknown = 0;
       var changed = 0;
       for (final city in atlas.byCity.entries) {
@@ -94,7 +99,7 @@ void main() {
         }
       }
       expect(unknown, 117);
-      expect(changed, 46272);
+    expect(changed, 46273);
       for (final entry in townDisplayNames.entries) {
         expect(atlas.towns[entry.key]!.name, entry.value.sourceName);
         expect(townDisplayName(entry.key, '異なる原本名'), '異なる原本名');

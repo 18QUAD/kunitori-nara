@@ -1,1 +1,1 @@
-TestFlight: select unique display names from 2020 census upper/lower fields for 141900 game regions; keep 117 unnamed regions, original names, merging, IDs, boundaries and saved quiz answers intact.
+TestFlight: apply 46273 display changes from 2020 census upper/lower fields, prioritizing unique upper names; keep 117 unnamed regions, original names, merging, IDs, boundaries and saved quiz answers intact.

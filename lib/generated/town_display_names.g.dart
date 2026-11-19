@@ -40828,6 +40828,7 @@ const townDisplayNames = <String, ({String sourceName, String displayName})>{
   "40216013003": (sourceName: "干潟下鶴", displayName: "下鶴"),
   "40216014001": (sourceName: "吹上吹上", displayName: "吹上"),
   "40216014002": (sourceName: "吹上立石", displayName: "立石"),
+  "40216017001": (sourceName: "松崎松崎", displayName: "松崎"),
   "40216018001": (sourceName: "山隈今隈", displayName: "今隈"),
   "40216018002": (sourceName: "山隈花立", displayName: "花立"),
   "40216019001": (sourceName: "下岩田下岩田", displayName: "下岩田"),
