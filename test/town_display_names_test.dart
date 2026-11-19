@@ -55,11 +55,11 @@ void main() {
         '022010760': '大字古館',
         '022011350': '古館',
         '03461017101': '吉里吉里',
-      '40216017001': '松崎',
-      '40216016003': '上岩田松崎',
-      '40216019002': '下岩田松崎',
-      '045810040': '石浜',
-      '04581026003': '石浜字高森',
+        '40216017001': '松崎',
+        '40216016003': '上岩田松崎',
+        '40216019002': '下岩田松崎',
+        '045810040': '石浜',
+        '04581026003': '石浜字高森',
       };
       for (final entry in examples.entries) {
         expect(
@@ -79,7 +79,7 @@ void main() {
   test(
     'national display names are unique and all unnamed regions stay intact',
     () {
-    expect(townDisplayNames.length, 46273);
+      expect(townDisplayNames.length, 46273);
       var unknown = 0;
       var changed = 0;
       for (final city in atlas.byCity.entries) {
@@ -99,7 +99,7 @@ void main() {
         }
       }
       expect(unknown, 117);
-    expect(changed, 46273);
+      expect(changed, 46273);
       for (final entry in townDisplayNames.entries) {
         expect(atlas.towns[entry.key]!.name, entry.value.sourceName);
         expect(townDisplayName(entry.key, '異なる原本名'), '異なる原本名');
@@ -146,6 +146,33 @@ void main() {
     g.everOwned.addAll(g.owned);
     return g;
   }
+
+  test('homonymous canonical quiz answers show the actual answer town', () {
+    for (final city in ['40349', '40621']) {
+      final largest = [...atlas.byCity[city]!]..sort((a, b) {
+        final population = b.population.compareTo(a.population);
+        return population != 0 ? population : a.id.compareTo(b.id);
+      });
+      final t = largest.first;
+      expect(t.displayName, startsWith('大字'));
+      final fact = atlas.facts[city]!.singleWhere(
+        (f) => f.id.endsWith(':largest'),
+      );
+      expect(fact.answer, t.name);
+      expect(atlas.quizChoiceLabel(city, fact.id, fact.answer), t.displayName);
+      expect(fact.text, contains(t.displayName));
+    }
+    for (final city in atlas.byCity.keys) {
+      final hub = atlas.towns[atlas.officeTownIds[city]];
+      if (hub != null) {
+        expect(
+          atlas.quizChoiceLabel(city, '$city:conquest:office', hub.name),
+          hub.displayName,
+          reason: city,
+        );
+      }
+    }
+  });
 
   test(
     'ongoing canonical quiz, remaining questions and campaign round trip exactly',

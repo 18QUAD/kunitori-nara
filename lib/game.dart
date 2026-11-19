@@ -315,8 +315,37 @@ class Atlas {
       return choice;
     }
     final matches = byCity[city]?.where((t) => t.name == choice).toList();
-    if (matches == null || matches.length != 1) return choice;
-    final town = matches.single;
+    if (matches == null || matches.isEmpty) return choice;
+    var town = matches.first;
+    if (matches.length > 1) {
+      // Existing merge names can be homonyms (e.g. 仲原 / 大字仲原).
+      // The fact identifies its answer town even though an old saved answer
+      // contains only the canonical string. Keep that string for grading.
+      Town? target;
+      if (factId.endsWith(':office')) {
+        target = towns[officeTownIds[city]];
+      } else {
+        for (final candidate in byCity[city]!) {
+          if (target == null ||
+              candidate.population > target.population ||
+              (candidate.population == target.population &&
+                  candidate.id.compareTo(target.id) < 0)) {
+            target = candidate;
+          }
+        }
+      }
+      if (target?.name == choice) {
+        town = target!;
+      } else {
+        // A decoy string can also identify several towns. Prefer the one
+        // whose final display already equals it, otherwise use a stable ID.
+        matches.sort((a, b) => a.id.compareTo(b.id));
+        town = matches.firstWhere(
+          (t) => t.displayName == choice,
+          orElse: () => matches.first,
+        );
+      }
+    }
     // Preserve distinguishable choices if a future review creates a homonym.
     if (byCity[city]!.any(
       (other) => other.id != town.id && other.displayName == town.displayName,
