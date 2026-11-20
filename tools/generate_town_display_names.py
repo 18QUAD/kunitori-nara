@@ -49,7 +49,7 @@ def select_names(fields):
         for tid, name, population, _area, _neighbors in json.loads((compact / filename).read_text()):
             assert tid not in regions
             regions[tid] = dict(canonical=name, population=population, uppers=set(), lowers=set(),
-                                has_text=False, all_oaza_prefix=True)
+                                has_text=False)
     seen = set()
     for path in sorted((compact / 'legacy').glob('*.json')):
         for source, tid, _population in json.loads(path.read_text()):
@@ -57,21 +57,17 @@ def select_names(fields):
             seen.add(source)
             upper, lower = fields[source]
             r = regions[tid]
-            r['uppers'].add(upper)
-            r['lowers'].add(lower)
+            # 大字 is omitted before grouping, not just after label selection.
+            r['uppers'].add(upper.removeprefix('大字'))
+            r['lowers'].add(lower.removeprefix('大字'))
             r['has_text'] |= bool(upper or lower)
-            r['all_oaza_prefix'] &= (upper + lower).startswith('大字')
     assert seen == fields.keys()
     assert len(regions) == 141900
     groups = collections.defaultdict(list)
     upper_owners = collections.defaultdict(set)
-    full_names = set()
     for tid, r in regions.items():
         assert r['uppers'] and r['lowers']
-        r['full'] = ('大字' if r['all_oaza_prefix'] else '') + r['canonical']
-        full_key = (tid[:5], r['full'])
-        assert full_key not in full_names, full_key
-        full_names.add(full_key)
+        r['full'] = r['canonical'].removeprefix('大字')
         r['upper'] = next(iter(r['uppers'])) if len(r['uppers']) == 1 else ''
         r['lower'] = next(iter(r['lowers'])) if len(r['lowers']) == 1 else ''
         for upper in r['uppers'] - {''}:
@@ -117,7 +113,9 @@ def select_names(fields):
                     changed += 1
                     forced.add(tid)
                     labels[tid], reasons[tid] = regions[tid]['full'], 'collision_use_full_merged_name'
-        assert changed, 'Cannot resolve collisions using existing full names'
+        if not changed:
+            # No new naming exception: report remaining identical names.
+            break
     for tid, r in regions.items():
         if not r['has_text']:
             assert labels[tid] == r['canonical'] == '名称未設定'
@@ -146,12 +144,20 @@ def outputs(regions, labels, reasons):
                          json.dumps(sorted(r['lowers']), ensure_ascii=False)])
     summary = dict(region_count=len(regions), changed_display_names=len(changed),
                    unchanged_unnamed_regions=sum(not r['has_text'] for r in regions.values()),
-                   final_same_city_collisions=0, decision_counts=dict(sorted(collections.Counter(reasons.values()).items())),
+                   decision_counts=dict(sorted(collections.Counter(reasons.values()).items())),
                    source_fields_sha256=hashlib.sha256((AUDIT / 'source-fields.csv.gz').read_bytes()).hexdigest())
+    buckets = collections.defaultdict(list)
+    for tid, label in labels.items():
+        buckets[tid[:5], label].append(tid)
+    unresolved = [dict(city_id=city, display_name=label, ids=sorted(ids))
+                  for (city, label), ids in sorted(buckets.items()) if len(ids) > 1]
+    summary['final_same_city_collisions'] = len(unresolved)
+    summary['unresolved_regions'] = sum(len(row['ids']) for row in unresolved)
     return {
         ROOT / 'lib/generated/town_display_names.g.dart': '\n'.join(lines).encode(),
         AUDIT / 'selected-names.csv.gz': gzip.compress(audit.getvalue().encode(), mtime=0),
         AUDIT / 'summary.json': (json.dumps(summary, ensure_ascii=False, indent=2) + '\n').encode(),
+        AUDIT / 'unresolved-names.json': (json.dumps(unresolved, ensure_ascii=False, indent=2) + '\n').encode(),
     }
 
 

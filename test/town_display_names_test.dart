@@ -52,7 +52,7 @@ void main() {
         '01209010001': '山手町',
         '01209010002': '鹿の谷',
         '01209010005': '東丘町',
-        '022010760': '大字古館',
+        '022010760': '古館',
         '022011350': '古館',
         '03461017101': '吉里吉里',
         '40216017001': '松崎',
@@ -60,6 +60,8 @@ void main() {
         '40216019002': '下岩田松崎',
         '045810040': '石浜',
         '04581026003': '石浜字高森',
+        '02201015003': '字忍',
+        '02201119001': '新田',
       };
       for (final entry in examples.entries) {
         expect(
@@ -76,36 +78,49 @@ void main() {
     },
   );
 
-  test(
-    'national display names are unique and all unnamed regions stay intact',
-    () {
-      expect(townDisplayNames.length, 46273);
-      var unknown = 0;
-      var changed = 0;
-      for (final city in atlas.byCity.entries) {
-        final seen = <String>{};
-        for (final t in city.value) {
-          expect(
-            seen.add(t.displayName),
-            isTrue,
-            reason: '${city.key}/${t.id}/${t.displayName}',
-          );
-          if (t.name == '名称未設定') {
-            unknown++;
-            expect(t.displayName, t.name);
-            expect(townDisplayNames.containsKey(t.id), isFalse);
-          }
-          if (t.displayName != t.name) changed++;
+  test('no 大字 is restored and only documented existing homonyms remain', () {
+    expect(townDisplayNames.length, 34777);
+    final collisions = <String, List<String>>{};
+    var unknown = 0;
+    var changed = 0;
+    for (final city in atlas.byCity.entries) {
+      final seen = <String, List<String>>{};
+      for (final t in city.value) {
+        expect(t.displayName.startsWith('大字'), isFalse, reason: t.id);
+        seen.putIfAbsent(t.displayName, () => []).add(t.id);
+        if (t.name == '名称未設定') {
+          unknown++;
+          expect(t.displayName, t.name);
+          expect(townDisplayNames.containsKey(t.id), isFalse);
         }
+        if (t.displayName != t.name) changed++;
       }
-      expect(unknown, 117);
-      expect(changed, 46273);
-      for (final entry in townDisplayNames.entries) {
-        expect(atlas.towns[entry.key]!.name, entry.value.sourceName);
-        expect(townDisplayName(entry.key, '異なる原本名'), '異なる原本名');
+      for (final entry in seen.entries.where((e) => e.value.length > 1)) {
+        final ids = entry.value..sort();
+        collisions['${city.key}/${entry.key}'] = ids;
+        // These are existing canonical homonyms, never a new collision.
+        expect(ids.map((id) => atlas.towns[id]!.name).toSet(), hasLength(1));
       }
-    },
-  );
+    }
+    final documented =
+        jsonDecode(
+              File(
+                'docs/town-name-audit/naming-rules/unresolved-names.json',
+              ).readAsStringSync(),
+            )
+            as List;
+    expect(collisions, {
+      for (final row in documented)
+        '${row['city_id']}/${row['display_name']}': row['ids'],
+    });
+    expect(collisions.length, 376);
+    expect(unknown, 117);
+    expect(changed, 34777);
+    for (final entry in townDisplayNames.entries) {
+      expect(atlas.towns[entry.key]!.name, entry.value.sourceName);
+      expect(townDisplayName(entry.key, '異なる原本名'), '異なる原本名');
+    }
+  });
 
   test(
     'source merge preserves every town ID, canonical name and population',
@@ -154,7 +169,7 @@ void main() {
         return population != 0 ? population : a.id.compareTo(b.id);
       });
       final t = largest.first;
-      expect(t.displayName, startsWith('大字'));
+      expect(t.displayName, isNot(startsWith('大字')));
       final fact = atlas.facts[city]!.singleWhere(
         (f) => f.id.endsWith(':largest'),
       );

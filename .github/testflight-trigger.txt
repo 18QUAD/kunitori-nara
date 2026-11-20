@@ -1,1 +1,1 @@
-TestFlight: apply 46273 hierarchy display changes and resolve homonymous quiz labels by the answer town; keep 117 unnamed regions, original names, merging, IDs, boundaries and saved quiz answers intact.
+TestFlight: omit 大字 before hierarchy grouping; never restore the prefix to force uniqueness. Preserve 117 unnamed regions, documented existing homonyms, census names, IDs, geography and saves.

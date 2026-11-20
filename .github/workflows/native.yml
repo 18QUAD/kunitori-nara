@@ -29,6 +29,7 @@ jobs:
           sparse-checkout: |
             /lib/
             /test/
+            /docs/town-name-audit/naming-rules/unresolved-names.json
             /assets/
             /android/
             /ios/
