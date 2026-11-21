@@ -222,6 +222,7 @@ void main() {
       final quizGame = Game(nara)..setHome(nara.officeTownIds[city]!);
       quizGame.owned.addAll(nara.byCity[city]!.map((t) => t.id));
       quizGame.everOwned.addAll(quizGame.owned);
+      quizGame.mastered.add(city);
       quizGame.startQuizAt(quizGame.home!, DateTime.utc(2026));
       expect(
         Game.restore(atlas, quizGame.toJson()).toJson(),

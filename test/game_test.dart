@@ -407,134 +407,68 @@ void main() {
       isNull,
       reason: 'Capturing the final town must not start a quiz',
     );
-    expect(g.canStartQuizAt(atlas.officeTownIds[city.key]!), isTrue);
-    g.startQuizAt(atlas.officeTownIds[city.key]!, now);
-    expect(g.quiz, isNotNull);
+    expect(g.mastered, contains(city.key));
+    expect(g.canStartQuizAt(atlas.officeTownIds[city.key]!), isFalse);
     return g;
   }
 
-  test(
-    'five distinct four-choice questions certify control only on the fifth answer',
-    () {
-      final g = completeCity();
-      final q = g.quiz!;
-      expect([q, ...q.remaining].map((q) => q.factId).toSet(), hasLength(5));
-      expect(
-        [q, ...q.remaining].every((q) => q.choices.toSet().length == 4),
-        isTrue,
-      );
-      expect(g.canAttack(atlas.towns.keys.first), false);
-      for (var i = 0; i < 5; i++) {
-        expect(g.quiz!.correctCount, i);
-        expect(
-          g.answer(g.quiz!.answer, now.add(Duration(seconds: i + 1))),
-          true,
-        );
-        expect(g.mastered.contains(q.cityId), i == 4);
-        expect(g.wins, i == 4 ? 1 : 0);
-      }
-      expect(g.mastered, contains(q.cityId));
-      expect(g.wins, 1);
-      expect(g.answer(q.answer, now), null);
-      expect(g.wins, 1);
-    },
-  );
-  test(
-    'failure removes exactly the office territory and preserves lifetime progress',
-    () {
-      final g = completeCity();
-      final before = {...g.owned};
-      final officeTown = atlas.officeTownIds[g.quiz!.cityId]!;
-      final ever = g.everOwned.length;
-      g.totalTaps = 1000;
-      g.titles.add('千里の旅人');
-      expect(g.answer('wrong', now), false);
-      expect(before.difference(g.owned), {officeTown});
-      expect(g.canAttack(officeTown), isTrue);
-      expect(g.everOwned.length, ever);
-      expect(g.totalTaps, 1000);
-      expect(g.titles, contains('千里の旅人'));
-    },
-  );
-  test(
-    'legacy district quiz updates to towns without extending its deadline',
-    () {
-      final g = completeCity();
-      final old =
-          g.toJson()
-            ..remove('territoryUnit')
-            ..remove('quizRule');
-      final ids =
-          g.owned
-              .expand((id) => atlas.membersByTown[id]!.map((t) => t.id))
-              .toList();
-      old['owned'] = ids;
-      old['everOwned'] = ids;
-      final q = old['quiz'] as Map<String, dynamic>;
-      q.remove('remaining');
-      q.remove('correctCount');
-      q['factId'] = '${g.quiz!.cityId}:count';
-      old['seen'] = [q['factId']];
-      final count =
-          atlas.sourceTowns.values
-              .where((t) => t.cityId == g.quiz!.cityId)
-              .length;
-      q['question'] = '旧町丁字の問題';
-      q['answer'] = '$count町丁字';
-      q['choices'] = [
-        '$count町丁字',
-        '${count + 1}町丁字',
-        '${count + 2}町丁字',
-        '${count + 3}町丁字',
-      ];
-      final migrated = Game.restore(atlas, old);
-      expect(migrated.quiz!.deadline, g.quiz!.deadline);
-      expect(migrated.quiz!.question, isNot('旧町丁字の問題'));
-      expect(migrated.answer(migrated.quiz!.answer, now), true);
-    },
-  );
-  test('saved quiz with old oaza names loads with the same deadline', () {
-    final g = Game(atlas);
-    final towns = atlas.byCity['29453']!;
-    g.setHome(towns.first.id);
-    g.owned.addAll(towns.map((t) => t.id));
-    g.everOwned.addAll(g.owned);
-    g.seen.add('29453:largest');
-    g.startQuizAt(atlas.officeTownIds['29453']!, now);
-    final fact = atlas.facts['29453']!.firstWhere(
-      (f) => f.id.endsWith(':largest'),
-    );
-    g.quiz = Quiz(
-      cityId: '29453',
-      factId: fact.id,
-      question: fact.question,
-      answer: fact.answer,
-      choices: [fact.answer, ...fact.decoys.take(3)],
-      deadline: g.quiz!.deadline,
-    );
-    final saved = g.toJson()..remove('quizRule');
-    final q = saved['quiz'] as Map<String, dynamic>;
-    q['answer'] = '大字${g.quiz!.answer}';
-    q['choices'] = g.quiz!.choices.map((name) => '大字$name').toList();
-    final restored = Game.restore(atlas, saved);
-    expect(restored.quiz!.answer, g.quiz!.answer);
-    expect(restored.quiz!.deadline, g.quiz!.deadline);
-  });
-  test('saved quiz retains deadline; reopening expires it exactly once', () {
+  test('final capture completes control without an office visit or a quiz', () {
     final g = completeCity();
-    final q = g.quiz!;
-    final restored = Game.restore(atlas, jsonDecode(jsonEncode(g.toJson())));
-    expect(restored.quiz!.deadline, q.deadline);
-    expect(restored.expire(q.deadline), true);
-    expect(restored.losses, 1);
-    expect(restored.expire(q.deadline.add(const Duration(days: 1))), false);
-    expect(restored.losses, 1);
+    final owned = {...g.owned};
+    final mastered = {...g.mastered};
+    g.startQuizAt(g.home!, now);
+    expect(g.quiz, isNull);
+    expect(g.answer('wrong', now), isNull);
+    expect(g.expire(now.add(const Duration(days: 10))), isFalse);
+    expect(g.owned, owned);
+    expect(g.mastered, mastered);
+    expect(g.message, contains('完全制圧'));
   });
-  test('answer at the deadline fails even if correct', () {
+
+  for (final rule in [null, 'office-five-v1']) {
+    test('retired $rule quizzes are cleared without territory loss', () {
+      final g = completeCity();
+      final save = g.toJson();
+      save['quizRule'] = rule;
+      save['mastered'] = <String>[];
+      save['quiz'] = {
+        'cityId': atlas.towns[g.home]!.cityId,
+        'deadline': now.subtract(const Duration(days: 1)).toIso8601String(),
+        'pausedRemainingMs': 7000,
+        'correctCount': 2,
+      };
+      save['wins'] = 3;
+      save['losses'] = 4;
+      final loaded = Game.restore(atlas, jsonDecode(jsonEncode(save)));
+      expect(loaded.quiz, isNull);
+      expect(loaded.owned, g.owned);
+      expect(loaded.everOwned, g.everOwned);
+      expect(loaded.mastered, g.mastered);
+      expect(loaded.totalTaps, g.totalTaps);
+      expect(loaded.wins, 3);
+      expect(loaded.losses, 4);
+      expect(loaded.expire(now), isFalse);
+      expect(Game.restore(atlas, loaded.toJson()).toJson(), loaded.toJson());
+    });
+  }
+
+  test('an old quiz loss does not grant the missing office territory', () {
     final g = completeCity();
-    final q = g.quiz!;
-    expect(g.answer(q.answer, q.deadline), false);
+    final city = atlas.towns[g.home]!.cityId;
+    final office = atlas.officeTownIds[city]!;
+    g.home = office;
+    g.owned.remove(office);
+    g.mastered.remove(city);
+    final saved = g.toJson()..['quizRule'] = 'office-five-v1';
+    final loaded = Game.restore(atlas, saved);
+    expect(loaded.owned, g.owned);
+    expect(loaded.mastered.contains(city), isFalse);
+    expect(loaded.canAttack(office), isTrue);
+    loaded.progress[office] = loaded.requiredTaps(atlas.towns[office]!) - 1;
+    expect(loaded.tap(office, now), isTrue);
+    expect(loaded.mastered, contains(city));
   });
+
   test(
     'save restores partial taps and latest rapid write; corrupt data stays intact',
     () async {

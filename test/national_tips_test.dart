@@ -127,7 +127,7 @@ void main() {
     },
   );
 
-  test('a running Nara quiz retains questions and absolute deadline', () async {
+  test('regional tip loading preserves migrated tap conquest', () async {
     const city = '29362';
     final game = Game(atlas)..setHome(atlas.officeTownIds[city]!);
     game.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
@@ -137,7 +137,8 @@ void main() {
     await tips.ensure('24');
     await tips.ensure(null);
     final restored = Game.restore(atlas, save);
-    expect(restored.toJson(), save);
-    expect(restored.quiz!.deadline, game.quiz!.deadline);
+    expect(restored.owned, game.owned);
+    expect(restored.mastered, contains(city));
+    expect(restored.quiz, isNull);
   });
 }

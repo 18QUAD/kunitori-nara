@@ -88,7 +88,7 @@ void enableNationalConquest(
           '${city.key}:conquest:count',
           city.key,
           '地理',
-          '${city.value}の攻略対象は${towns.length}町です。全領土を獲得すると制圧クイズに挑戦できます。',
+          '${city.value}の攻略対象は${towns.length}町です。全領土を獲得すると完全制圧になります。',
           '${city.value}の攻略対象は何町？',
           '${towns.length}町',
           _numericDecoys(towns.length, '町'),
@@ -127,11 +127,11 @@ void enableNationalConquest(
         LocalFact(
           '${city.key}:conquest:office',
           city.key,
-          '制圧クイズ',
+          '役所所在地',
           marker.townId == null
               ? '${marker.name}は区域外にあるため、$locationLabelを制圧拠点にします。'
-              : '${marker.name}がある町は$locationLabel。全領土獲得後、ここから制圧クイズに挑戦できます。',
-          '${city.value}の制圧クイズに挑戦する町は？',
+              : '${marker.name}がある町は$locationLabel。全領土獲得で完全制圧になります。',
+          '${city.value}の役所所在地に対応する町は？',
           location,
           locationDecoys.toList(),
           nationalOfficeSource,

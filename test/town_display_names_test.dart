@@ -190,64 +190,19 @@ void main() {
   });
 
   test(
-    'ongoing canonical quiz, remaining questions and campaign round trip exactly',
+    'old quiz migration preserves canonical names, territory and displayed names',
     () {
-      final facts = atlas.facts[city]!.where((f) => f.quizEligible).toList();
-      final office = facts.singleWhere((f) => f.id.endsWith(':office'));
-      expect(office.answer, '田辺田辺');
-      expect(office.text, contains('町は田辺。'));
-      final now = DateTime.utc(2026, 11, 19);
-      final questions =
-          [office, ...facts.where((f) => f != office)]
-              .map(
-                (f) => QuizQuestion(
-                  factId: f.id,
-                  question: f.question,
-                  answer: f.answer,
-                  choices: [f.answer, ...f.decoys.take(3)],
-                ),
-              )
-              .toList();
-      final g =
-          ready()
-            ..quiz = Quiz(
-              cityId: city,
-              factId: questions.first.factId,
-              question: questions.first.question,
-              answer: questions.first.answer,
-              choices: questions.first.choices,
-              deadline: now.add(const Duration(seconds: 15)),
-              remaining: questions.skip(1).toList(),
-            );
-      final save = jsonDecode(jsonEncode(g.toJson())) as Map<String, dynamic>;
-      final restored = Game.restore(atlas, save);
-      expect(restored.toJson(), save);
-      expect(
-        atlas.quizChoiceLabel(
-          city,
-          restored.quiz!.factId,
-          restored.quiz!.answer,
-        ),
-        '田辺',
-      );
-      expect(atlas.quizChoiceLabel('29201', office.id, office.answer), '田辺田辺');
-      expect(
-        atlas.quizChoiceLabel(city, '$city:conquest:population', office.answer),
-        '田辺田辺',
-      );
-      final owned = {...restored.owned};
-      for (var i = 0; i < 5; i++) {
-        expect(restored.answer(restored.quiz!.answer, now), isTrue);
-        if (restored.quiz != null) {
-          final next = Game.restore(
-            atlas,
-            jsonDecode(jsonEncode(restored.toJson())),
-          );
-          expect(next.quiz!.toJson(), restored.quiz!.toJson());
-        }
-      }
-      expect(restored.owned, owned);
+      final g = ready();
+      final saved =
+          g.toJson()
+            ..['quizRule'] = 'office-five-v1'
+            ..['quiz'] = {'cityId': city, 'answer': '田辺田辺'};
+      final restored = Game.restore(atlas, saved);
+      expect(restored.quiz, isNull);
+      expect(restored.owned, g.owned);
       expect(restored.mastered, contains(city));
+      expect(restored.atlas.towns[id]!.name, '田辺田辺');
+      expect(restored.atlas.towns[id]!.displayName, '田辺');
     },
   );
 

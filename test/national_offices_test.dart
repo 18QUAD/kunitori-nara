@@ -54,7 +54,7 @@ void main() {
       final game = Game(atlas)..setHome(town);
       game.owned.addAll(atlas.byCity['27127']!.map((t) => t.id));
       expect(game.cityOwned('27127'), isTrue);
-      expect(game.canStartQuizAt(town), isTrue);
+      expect(game.canStartQuizAt(town), isFalse);
       expect(game.canPracticeAt(town), isTrue);
       expect(
         game.tipsFor(selectedCity: '27127').where((f) => f.quizEligible).length,

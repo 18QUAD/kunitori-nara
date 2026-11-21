@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kunitori/answer_feedback.dart';
 import 'package:kunitori/game.dart';
 import 'package:kunitori/main.dart';
 import 'package:kunitori/map_view.dart';
@@ -27,6 +26,8 @@ void main() {
     String city, {
     bool seenGuide = false,
     bool attack = false,
+    bool finishCity = false,
+    bool legacyQuiz = false,
   }) async {
     final atlas = data.atlas, hub = data.atlas.officeTownIds[city]!;
     final game = Game(atlas)..setHome(hub);
@@ -37,10 +38,26 @@ void main() {
                 .id
             : hub;
     if (!attack) game.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
+    if (finishCity) {
+      game.owned.addAll(
+        atlas.byCity[city]!.where((t) => t.id != target).map((t) => t.id),
+      );
+      game.progress[target] = game.requiredTaps(atlas.towns[target]!) - 1;
+    }
     game.everOwned.addAll(game.owned);
+    final saved = game.toJson();
+    if (legacyQuiz) {
+      saved['quizRule'] = 'office-five-v1';
+      saved['quiz'] = {
+        'cityId': city,
+        'correctCount': 2,
+        'deadline': DateTime.utc(2000).toIso8601String(),
+        'pausedRemainingMs': 7000,
+      };
+    }
     if (seenGuide) game.conquestGuideSeen.add(city);
     SharedPreferences.setMockInitialValues({
-      'flutter.${SaveStore.key}': jsonEncode(game.toJson()),
+      'flutter.${SaveStore.key}': jsonEncode(saved),
       'flutter.${SaveStore.mapViewKey}': jsonEncode(
         MapViewState(
           center: const Offset(550, 750),
@@ -52,7 +69,7 @@ void main() {
         ).toJson(),
       ),
     });
-    // Keep real town/office geometry and the real quiz UI. Tile pixels are not
+    // Keep real town/office geometry and the real capture UI. Tile pixels are not
     // under test: fill each encoded-image slot with a tiny decodable GIF.
     final gif = base64Decode(
       'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
@@ -109,14 +126,18 @@ void main() {
   }
 
   testWidgets(
-    'Kyotanabe map selection, old-name search and quiz use the reviewed display',
+    'map and old-name search use display names without conquest quiz actions',
     (tester) async {
-      final game = await launch(tester, '26211', seenGuide: true);
+      final game = await launch(tester, '26211');
       expect(
         tester.widget<Text>(find.byKey(const Key('current-location'))).data,
         '田辺',
       );
       expect(game.atlas.towns['26211010001']!.name, '田辺田辺');
+      expect(game.mastered, contains('26211'));
+      expect(game.quiz, isNull);
+      expect(find.text('制圧クイズに挑戦'), findsNothing);
+      expect(find.text('クイズを予習'), findsNothing);
       await tester.tap(find.byTooltip('設定'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('地名から探す'));
@@ -125,33 +146,64 @@ void main() {
       await tester.pump();
       expect(find.widgetWithText(ListTile, '田辺'), findsOneWidget);
       expect(find.widgetWithText(ListTile, '田辺田辺'), findsNothing);
-      Navigator.of(tester.element(find.byType(TextField))).pop();
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('制圧クイズに挑戦'));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    },
+  );
+
+  testWidgets(
+    'last attack completes and saves a municipality without further input',
+    (tester) async {
+      final game = await launch(
+        tester,
+        '24216',
+        attack: true,
+        finishCity: true,
+      );
+      expect(game.mastered.contains('24216'), isFalse);
+      final before = game.totalTaps;
+      final panel = find.byKey(const Key('action-region'));
+      await tester.tap(
+        find.descendant(of: panel, matching: find.byType(FilledButton)).first,
+      );
       await tester.pump();
-      var correctedAnswerSeen = false;
-      for (var i = 0; i < 5; i++) {
-        final q = game.quiz!;
-        final label = game.atlas.quizChoiceLabel(q.cityId, q.factId, q.answer);
-        if (q.answer == '田辺田辺') {
-          correctedAnswerSeen = true;
-          expect(label, '田辺');
-        }
-        expect(find.textContaining('田辺田辺'), findsNothing);
-        await tester.tap(find.widgetWithText(OutlinedButton, label));
-        await tester.pump();
-        expect(find.textContaining('田辺田辺'), findsNothing);
-        await tester.pump(answerFeedbackDisplayDuration);
-        await tester.pump();
-      }
-      expect(correctedAnswerSeen, isTrue);
-      expect(game.mastered, contains('26211'));
+      expect(game.totalTaps, before + 1);
+      expect(game.mastered, contains('24216'));
+      expect(game.quiz, isNull);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump();
+      expect(find.text('制圧クイズに挑戦'), findsNothing);
+      expect(find.byKey(const Key('conquest-next')), findsNothing);
+      expect(find.textContaining('完全制圧'), findsWidgets);
+      final prefs = await SharedPreferences.getInstance();
+      final restored = Game.restore(
+        data.atlas,
+        jsonDecode(prefs.getString(SaveStore.key)!),
+      );
+      expect(restored.mastered, contains('24216'));
+      expect(restored.owned, game.owned);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 1));
     },
   );
 
+  testWidgets(
+    'an old expired or paused conquest quiz resumes as complete control',
+    (tester) async {
+      final game = await launch(tester, '47381', legacyQuiz: true);
+      expect(game.cityOwned('47381'), isTrue);
+      expect(game.mastered, contains('47381'));
+      expect(game.quiz, isNull);
+      expect(game.losses, 0);
+      expect(find.text('制圧クイズに挑戦'), findsNothing);
+      expect(find.text('クイズを予習'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    },
+  );
   testWidgets(
     'landscape has one central map, two working attacks, and survives rotation',
     (tester) async {
@@ -189,80 +241,6 @@ void main() {
         same(game),
       );
       expect(game.totalTaps, before + 2);
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump(const Duration(seconds: 1));
-    },
-  );
-
-  testWidgets(
-    'Iga starts from an existing fully owned save, shows the guide, and completes five answers',
-    (tester) async {
-      final game = await launch(tester, '24216');
-      tester.view.physicalSize = const Size(844, 390);
-      await tester.pump();
-      await tester.tap(find.text('制圧クイズに挑戦'));
-      await tester.pump();
-      for (var page = 0; page < 7; page++) {
-        expect(find.byKey(const Key('conquest-next')), findsOneWidget);
-        await tester.tap(find.byKey(const Key('conquest-next')));
-        await tester.pump();
-      }
-      await tester.tap(find.text('役所へ移動して挑戦'));
-      await tester.pump();
-      for (var i = 0; i < 5; i++) {
-        expect(game.quiz, isNotNull);
-        expect(find.byType(OutlinedButton), findsNWidgets(4));
-        final q = game.quiz!;
-        await tester.tap(
-          find.widgetWithText(
-            OutlinedButton,
-            game.atlas.quizChoiceLabel(q.cityId, q.factId, q.answer),
-          ),
-        );
-        await tester.pump();
-        await tester.pump(answerFeedbackDisplayDuration);
-        await tester.pump();
-      }
-      expect(game.mastered, contains('24216'));
-      expect(game.cityOwned('24216'), isTrue);
-      final prefs = await SharedPreferences.getInstance();
-      final restored = Game.restore(
-        data.atlas,
-        jsonDecode(prefs.getString(SaveStore.key)!),
-      );
-      expect(restored.mastered, contains('24216'));
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump(const Duration(seconds: 1));
-    },
-  );
-
-  testWidgets(
-    'Taketomi uses its in-territory hub and a wrong answer leaves other towns owned',
-    (tester) async {
-      final game = await launch(tester, '47381', seenGuide: true);
-      final before = {...game.owned}, hub = data.atlas.officeTownIds['47381']!;
-      await tester.tap(find.text('制圧クイズに挑戦'));
-      await tester.pump();
-      final q = game.quiz!;
-      await tester.tap(
-        find.widgetWithText(
-          OutlinedButton,
-          game.atlas.quizChoiceLabel(
-            q.cityId,
-            q.factId,
-            q.choices.firstWhere((a) => a != q.answer),
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(answerFeedbackDisplayDuration);
-      await tester.pump();
-      expect(game.owned, before..remove(hub));
-      expect(game.isReachable(hub), isTrue);
-      expect(game.message, contains('制圧拠点'));
-      expect(data.atlas.mapOffices['47381']!.townId, isNull);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 1));

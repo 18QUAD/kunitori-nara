@@ -209,7 +209,7 @@ class Atlas {
           '${city.key}:count',
           city.key,
           '地理',
-          '${city.value}の攻略対象は$n町。すべての領土を獲得したら、役所・役場のある町をタップして制圧クイズに挑戦できます。',
+          '${city.value}の攻略対象は$n町。すべての領土を獲得すると完全制圧になります。',
           '${city.value}の攻略対象は何町？',
           '$n町',
           ['${max(1, n ~/ 2)}町', '${n * 2}町', '${n * 3}町'],
@@ -593,12 +593,10 @@ class Game {
                 (t) => t.id == id || owned.contains(t.id),
               )));
   bool canAttack(String id) =>
-      quiz == null &&
-      isReachable(id) &&
-      (attackTarget == null || attackTarget == id);
+      isReachable(id) && (attackTarget == null || attackTarget == id);
 
   bool selectAttackTarget(String id) {
-    if (!isReachable(id) || quiz != null) return false;
+    if (!isReachable(id)) return false;
     if (attackTarget != null &&
         attackTarget != id &&
         (progress[attackTarget] ?? 0) > 0) {
@@ -701,6 +699,7 @@ class Game {
     everOwned.add(id);
     titles.add('大和への第一歩');
     message = '${atlas.towns[id]!.displayName}を本拠地にしました。隣接する地域へ進軍しましょう。';
+    _completeCity(atlas.towns[id]!.cityId);
   }
 
   bool tap(String id, DateTime now) {
@@ -721,26 +720,18 @@ class Game {
     if (everOwned.length >= 10) titles.add('十郷の領主');
     if (everOwned.length >= 100) titles.add('大和の開拓者');
     message = '${town.displayName}を獲得しました！';
-    if (cityOwned(town.cityId) && !atlas.offices.containsKey(town.cityId)) {
-      message = '${atlas.cities[town.cityId]}の全領土を獲得しました！ 制圧クイズは準備中です。';
-    }
-    if (cityOwned(town.cityId) &&
-        !mastered.contains(town.cityId) &&
-        atlas.offices.containsKey(town.cityId)) {
-      message =
-          '${atlas.cities[town.cityId]}の全領土を獲得。${atlas.offices[town.cityId]!.usesConquestHub ? atlas.conquestPlaceName(town.cityId) : '${atlas.offices[town.cityId]!.name}のある町'}をタップして制圧クイズに挑戦できます。';
-    }
+    _completeCity(town.cityId);
     return true;
   }
 
-  bool canStartQuizAt(String townId) {
-    final town = atlas.towns[townId];
-    return town != null &&
-        quiz == null &&
-        atlas.officeTownIds[town.cityId] == townId &&
-        cityOwned(town.cityId) &&
-        !mastered.contains(town.cityId);
+  void _completeCity(String city) {
+    if (cityOwned(city) && mastered.add(city)) {
+      message = '${atlas.cities[city]}を完全制圧しました！';
+    }
   }
+
+  // Retained for old callers; conquest no longer opens a quiz.
+  bool canStartQuizAt(String townId) => false;
 
   QuizQuestion _makeQuestion(LocalFact fact) {
     final decoys =
@@ -793,82 +784,20 @@ class Game {
     return pool.take(5).map(_makeQuestion).toList();
   }
 
-  // Only the office territory can open a new challenge; taking the last town never starts it.
-  void startQuizAt(String townId, DateTime now) {
-    if (!canStartQuizAt(townId)) return;
-    final city = atlas.towns[townId]!.cityId;
-    final questions = _quizQuestions(city);
-    final first = questions.first;
-    quiz = Quiz(
-      cityId: city,
-      factId: first.factId,
-      question: first.question,
-      answer: first.answer,
-      choices: first.choices,
-      deadline: now.add(Duration(seconds: difficulty.seconds)),
-      remaining: questions.skip(1).toList(),
-    );
-    message = '${atlas.cities[city]}の制圧クイズ。4択5問すべてに正解するとクリア！';
-  }
+  // Legacy quiz APIs cannot block attacks, remove territory or change records.
+  void startQuizAt(String townId, DateTime now) {}
 
   bool? answer(
     String? choice,
     DateTime now, {
     Duration nextQuestionDelay = Duration.zero,
-  }) {
-    final q = quiz;
-    if (q == null || q.pausedRemaining != null) return null;
-    final correct = now.isBefore(q.deadline) && choice == q.answer;
-    if (correct && q.remaining.isNotEmpty) {
-      final next = q.remaining.first;
-      quiz = Quiz(
-        cityId: q.cityId,
-        factId: next.factId,
-        question: next.question,
-        answer: next.answer,
-        choices: next.choices,
-        correctCount: q.correctCount + 1,
-        remaining: q.remaining.skip(1).toList(),
-        deadline: now.add(
-          Duration(seconds: difficulty.seconds) + nextQuestionDelay,
-        ),
-      );
-      return true;
-    }
-    quiz = null;
-    if (correct) {
-      wins++;
-      mastered.add(q.cityId);
-      titles.add(q.cityId.startsWith('29') ? '大和の知恵者' : '全国の知恵者');
-      message = 'すごい、5問とも正解だよ！ ${atlas.cities[q.cityId]}を制圧できたね。おめでとう！';
-    } else {
-      losses++;
-      final officeTown = atlas.officeTownIds[q.cityId]!;
-      owned.remove(officeTown);
-      progress.remove(officeTown);
-      mastered.remove(q.cityId);
-      message =
-          '${choice == null ? '時間切れになっちゃったね' : '今回は不正解だったね'}。正解は「${atlas.quizChoiceLabel(q.cityId, q.factId, q.answer)}」だよ。${atlas.offices[q.cityId]!.usesConquestHub ? atlas.conquestPlaceName(q.cityId) : '${atlas.offices[q.cityId]!.name}所在地の${atlas.towns[officeTown]!.displayName}'}の支配を失ったけれど、再攻略すればまた挑戦できるよ！';
-    }
-    if (attackTarget != null && !isReachable(attackTarget!)) {
-      _resumePendingTarget();
-    }
-    return correct;
-  }
+  }) => null;
 
-  bool expire(DateTime now) {
-    if (quiz != null &&
-        quiz!.pausedRemaining == null &&
-        !now.isBefore(quiz!.deadline)) {
-      answer(null, now);
-      return true;
-    }
-    return false;
-  }
+  bool expire(DateTime now) => false;
 
   Map<String, dynamic> toJson() => {
     'version': 1,
-    'quizRule': 'office-five-v1',
+    'quizRule': 'tap-conquest-v1',
     'dataset': 'nara-2020-v1',
     'tapRule': 'population-v1',
     'territoryUnit': 'town-v1',
@@ -887,7 +816,7 @@ class Game {
     'cityTapsComplete': cityTapsComplete,
     'wins': wins,
     'losses': losses,
-    'quiz': quiz?.toJson(),
+    'quiz': null,
   };
 
   void _migrateTownUnits() {
@@ -938,7 +867,9 @@ class Game {
       throw const FormatException('対応していない保存データです。');
     }
     final legacyQuiz = j['quizRule'] == null;
-    if (!legacyQuiz && j['quizRule'] != 'office-five-v1') {
+    if (!legacyQuiz &&
+        j['quizRule'] != 'office-five-v1' &&
+        j['quizRule'] != 'tap-conquest-v1') {
       throw const FormatException('対応していないクイズ方式です。');
     }
     final g = Game(atlas);
@@ -993,40 +924,9 @@ class Game {
     }
     g.wins = j['wins'] as int;
     g.losses = j['losses'] as int;
-    if (j['quiz'] != null) {
-      final savedQuiz = Map<String, dynamic>.from(j['quiz']);
-      if ((savedQuiz['factId'] as String).endsWith(':largest')) {
-        savedQuiz['answer'] = (savedQuiz['answer'] as String).replaceFirst(
-          RegExp(r'^大字'),
-          '',
-        );
-        savedQuiz['choices'] =
-            List<String>.from(
-              savedQuiz['choices'],
-            ).map((name) => name.replaceFirst(RegExp(r'^大字'), '')).toList();
-      }
-      g.quiz = Quiz.fromJson(savedQuiz);
-    }
-    if (legacyUnits && g.quiz != null) {
-      final q = g.quiz!;
-      final fs = atlas.facts[q.cityId]?.where((f) => f.id == q.factId).toList();
-      if (fs != null &&
-          fs.length == 1 &&
-          q.choices.length == 4 &&
-          q.choices.toSet().length == 4 &&
-          q.choices.contains(q.answer)) {
-        final f = fs.single;
-        final updated = g._makeQuestion(f);
-        g.quiz = Quiz(
-          cityId: q.cityId,
-          factId: f.id,
-          question: f.question,
-          answer: f.answer,
-          choices: updated.choices,
-          deadline: q.deadline,
-        );
-      }
-    }
+    // Retired quizzes, including expired/paused ones, never cost territory.
+    // Census-unit migration and all campaign validation still run normally.
+    g.quiz = null;
     final validIds = atlas.towns.keys.toSet();
     final validFacts = {...atlas.knownFactIds, ...atlas.additionalFactIds};
     if (!validIds.containsAll(g.owned) ||
@@ -1061,61 +961,8 @@ class Game {
     if (g.attackTarget == null || !g.isReachable(g.attackTarget!)) {
       g._resumePendingTarget();
     }
-    final q = g.quiz;
-    if (q != null) {
-      final fs = atlas.facts[q.cityId];
-      final matching = fs?.where((f) => f.id == q.factId).toList();
-      if (matching == null ||
-          matching.length != 1 ||
-          (legacyQuiz && !g.seen.contains(q.factId)) ||
-          !g.cityOwned(q.cityId) ||
-          g.mastered.contains(q.cityId) ||
-          matching.single.answer != q.answer ||
-          matching.single.question != q.question ||
-          q.choices.length != 4 ||
-          q.choices.toSet().length != 4 ||
-          !q.choices.contains(q.answer)) {
-        throw const FormatException('クイズの保存データに不整合があります。');
-      }
-    }
-    if (g.quiz != null) {
-      final q = g.quiz!;
-      if (legacyQuiz) {
-        // Keep the current question and its original deadline; append four distinct questions.
-        final pool =
-            atlas.facts[q.cityId]!
-                .where((f) => f.quizEligible && f.id != q.factId)
-                .toList();
-        g.quiz = Quiz(
-          cityId: q.cityId,
-          factId: q.factId,
-          question: q.question,
-          answer: q.answer,
-          choices: q.choices,
-          deadline: q.deadline,
-          remaining: pool.take(4).map(g._makeQuestion).toList(),
-        );
-      }
-      final current = g.quiz!;
-      final questions = <QuizQuestion>[current, ...current.remaining];
-      if (current.correctCount < 0 ||
-          current.correctCount > 4 ||
-          current.correctCount + questions.length != 5 ||
-          questions.map((q) => q.factId).toSet().length != questions.length ||
-          questions.any((question) {
-            final matching =
-                atlas.facts[current.cityId]!
-                    .where((f) => f.id == question.factId && f.quizEligible)
-                    .toList();
-            return matching.length != 1 ||
-                matching.single.question != question.question ||
-                matching.single.answer != question.answer ||
-                question.choices.length != 4 ||
-                question.choices.toSet().length != 4 ||
-                !question.choices.contains(question.answer);
-          })) {
-        throw const FormatException('5問クイズの保存データに不整合があります。');
-      }
+    for (final city in atlas.byCity.keys) {
+      if (g.cityOwned(city)) g.mastered.add(city);
     }
     return g;
   }

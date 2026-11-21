@@ -1,1 +1,1 @@
-TestFlight: omit 大字 before hierarchy grouping; never restore the prefix to force uniqueness. Preserve 117 unnamed regions, documented existing homonyms, census names, IDs, geography and saves.
+TestFlight: complete municipalities on the final territory tap; retire conquest quizzes, timers, office challenges and practice UI. Migrate old full-control saves and clear old quizzes without territory loss. Preserve census IDs, maps, names and tap progress.

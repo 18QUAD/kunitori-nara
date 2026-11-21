@@ -10,11 +10,9 @@ import 'game.dart';
 import 'national_atlas.dart';
 import 'national_map.dart';
 import 'browser_insets.dart';
-import 'practice_quiz.dart';
 import 'answer_feedback.dart';
 import 'tip_appearance.dart';
 import 'tip_presenter.dart';
-import 'quiz_stage.dart';
 import 'tip_settings.dart';
 import 'map_cache_settings.dart';
 import 'map_cache_bridge.dart';
@@ -216,21 +214,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  Timer? timer, tipsTimer;
-  DateTime? _nextTipAt, _feedbackEndsAt;
+  Timer? tipsTimer;
+  DateTime? _nextTipAt;
   bool corrupt = false;
-  bool _answerFeedbackOpen = false;
-  Quiz? _feedbackQuiz;
-  bool _feedbackCorrect = false;
-  PracticeQuizController? _practice;
-  String? _practiceCityName;
   String? _conquestName, _conquestTownId;
   int _conquestSequence = 0;
   bool _conquestEffect = false;
   Timer? _conquestTimer;
   String? _completedCity;
   bool _allRegionsEffect = false;
-  int _conquestPage = 0;
   RegionalAdRepository? _adRepository;
   RegionalAdBatch? _adBatch;
   String? _adCity, _adRequestCity;
@@ -249,7 +241,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   RegionalAd? get _visibleAd {
     final batch = _adBatch;
     if (!tipAppearance.showTips ||
-        _quizActive ||
         _conquestName != null ||
         _completedCity != null ||
         factIndex % 4 != 3 ||
@@ -269,7 +260,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         repository == null ||
         repository.endpoint == null ||
         !tipAppearance.showTips ||
-        _quizActive ||
         _conquestName != null ||
         _adRequestCity == city ||
         (_adCity == city &&
@@ -292,37 +282,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  String get _conquestLocation =>
-      atlas!.offices[_completedCity]!.usesConquestHub ? '制圧拠点' : '役所所在地';
-
-  List<String> get _conquestPages => [
-    '${atlas!.cities[_completedCity]}の全地域制圧おめでとう！',
-    '完全制覇には、制圧クイズに全問正解する必要があるよ。',
-    'クイズは$_conquestLocationから挑戦する、4択5問だよ。',
-    '5問すべて正解で完全制覇！1問の制限時間は${game!.difficulty.seconds}秒だよ。',
-    '不正解や時間切れで、$_conquestLocationの支配を失うよ。',
-    '$_conquestLocationが本拠地の場合も対象だよ。気をつけてね。',
-    '開始前にキャンセルしても、領土は失わないよ。',
-    '${atlas!.conquestPlaceName(_completedCity!)}へ移動して、クイズを始める？',
-  ];
-
-  void _finishConquestGuide({required bool startQuiz}) {
-    final city = _completedCity!;
-    setState(() => _clearConquestFor(null));
-    _startTipsTimer();
-    if (startQuiz) {
-      final townId = atlas!.officeTownIds[city]!;
-      setState(() {
-        cityFilter = city;
-        selected = townId;
-        mapFocus++;
-        mapCenter++;
-        game!.startQuizAt(townId, DateTime.now());
-      });
-      _save();
-    }
-  }
-
   void _celebrateConquest(String name, String townId) {
     tipsTimer?.cancel();
     _nextTipAt = null;
@@ -332,16 +291,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _conquestSequence++;
     _conquestEffect = true;
     final city = atlas!.towns[townId]!.cityId;
-    _completedCity =
-        game!.cityOwned(city) &&
-                !game!.mastered.contains(city) &&
-                atlas!.offices.containsKey(city)
-            ? city
-            : null;
+    _completedCity = game!.mastered.contains(city) ? city : null;
     _allRegionsEffect = false;
-    final showGuide =
-        _completedCity != null && game!.conquestGuideSeen.add(city);
-    _conquestPage = 0;
     _conquestTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       setState(() {
@@ -353,9 +304,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           if (!mounted) return;
           setState(() {
             _allRegionsEffect = false;
-            if (!showGuide) _clearConquestFor(null);
+            _clearConquestFor(null);
           });
-          if (!showGuide) _startTipsTimer();
+          _startTipsTimer();
         });
       }
     });
@@ -370,8 +321,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _conquestEffect = false;
   }
 
-  bool get _quizActive =>
-      game?.quiz != null || _feedbackQuiz != null || _practice != null;
   @override
   void initState() {
     super.initState();
@@ -400,13 +349,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    timer?.cancel();
-
     _tapChanges.dispose();
     unawaited(store?.flush() ?? Future<void>.value());
     tipsTimer?.cancel();
     _conquestTimer?.cancel();
-    _practice?.dispose();
     _adRepository?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     if (store != null) store!.onChanged = null;
@@ -465,27 +411,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       nationalView =
           national != null && (_restoredMapView?.nationalView ?? false);
 
-      final expiredOnLoad = g.expire(DateTime.now());
       _rememberVisibleFact();
       setState(() {});
       _startTipsTimer();
-      if (expiredOnLoad) _showQuizOutcome();
       if (g.home != null) _save();
-      timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
-        if (!mounted ||
-            _transferActive ||
-            game!.quiz == null ||
-            game!.quiz!.pausedRemaining != null ||
-            _answerFeedbackOpen) {
-          return;
-        }
-        final q = game!.quiz!;
-        if (!DateTime.now().isBefore(q.deadline)) {
-          unawaited(_answerQuiz(q, null));
-        } else {
-          setState(() {});
-        }
-      });
     } catch (_) {
       if (mounted) {
         setState(
@@ -505,27 +434,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       unawaited(_mapViewSaves?.flush() ?? Future<void>.value());
     }
     if (game == null) return;
-    if (state == AppLifecycleState.resumed && !_answerFeedbackOpen) {
-      final q = game!.quiz;
-      if (q != null &&
-          q.pausedRemaining == null &&
-          !DateTime.now().isBefore(q.deadline)) {
-        unawaited(_answerQuiz(q, null));
-      } else {
-        setState(() {});
-      }
-    }
     _save();
-  }
-
-  void _showQuizOutcome() {
-    final message = game!.message;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), duration: const Duration(seconds: 7)),
-      );
-    });
   }
 
   void _save({bool deferred = false}) {
@@ -583,7 +492,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (values == null || !mounted) return;
       await SaveTransfer.install(prefs, values);
       // Detach all writers before loading the new save into a fresh screen.
-      timer?.cancel();
       tipsTimer?.cancel();
       _conquestTimer?.cancel();
       _mapViewSaves?.cancel();
@@ -679,7 +587,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       if (!mounted ||
           _transferActive ||
           !tipAppearance.showTips ||
-          _quizActive ||
           _conquestName != null ||
           visibleFact == null ||
           (lifecycle != null && lifecycle != AppLifecycleState.resumed)) {
@@ -709,7 +616,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _save();
   }
 
-  bool _select(String id, {bool startQuiz = true}) {
+  bool _select(String id) {
     if (_completedCity != null) return false;
     final g = game!;
     final isOffice = atlas!.mapOffices.values.any(
@@ -730,50 +637,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
     _startTipsTimer();
     _save();
-    if (startQuiz && g.canStartQuizAt(id)) unawaited(_confirmQuiz(id));
     return true;
-  }
-
-  Future<void> _confirmQuiz(String townId) async {
-    if (_completedCity != null || !game!.canStartQuizAt(townId)) return;
-    final town = atlas!.towns[townId]!;
-    if (game!.conquestGuideSeen.contains(town.cityId)) {
-      setState(() {
-        _clearConquestFor(null);
-        game!.startQuizAt(townId, DateTime.now());
-      });
-      _save();
-      return;
-    }
-    tipsTimer?.cancel();
-    _nextTipAt = null;
-    _conquestTimer?.cancel();
-    setState(() {
-      _completedCity = town.cityId;
-      _conquestName = atlas!.cities[town.cityId];
-      _conquestTownId = townId;
-      _conquestSequence++;
-      _conquestPage =
-          game!.conquestGuideSeen.add(town.cityId)
-              ? 0
-              : _conquestPages.length - 1;
-      _conquestEffect = false;
-      _allRegionsEffect = false;
-    });
-    _save();
-  }
-
-  void _focusOffice(String city) {
-    final townId = atlas!.officeTownIds[city]!;
-    setState(() {
-      cityFilter = city;
-      prefectureFilter = city.substring(0, 2);
-      nationalView = false;
-      selected = townId;
-      mapFocus++;
-      mapCenter++;
-    });
-    _select(townId, startQuiz: false);
   }
 
   Future<void> _focusCampaign() async {
@@ -1123,41 +987,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _playMap() => Stack(
-    fit: StackFit.expand,
-    children: [
-      IgnorePointer(
-        ignoring: _quizActive,
-        child: ExcludeSemantics(
-          excluding: _quizActive,
-          child: _map(showTips: !_quizActive, showControls: !_quizActive),
-        ),
-      ),
-      if (game!.quiz != null || _feedbackQuiz != null) _quiz(),
-      if (_practice != null)
-        PracticeQuiz(
-          cityName: _practiceCityName!,
-          questions: _practice!.questions,
-          appearance: tipAppearance,
-          controller: _practice,
-          answerLabel:
-              (q, answer) => atlas!.quizChoiceLabel(
-                q.factId.substring(0, 5),
-                q.factId,
-                answer,
-              ),
-          inline: true,
-          onClose: _closePractice,
-        ),
-    ],
-  );
+  Widget _playMap() => _map();
 
   Widget _landscapePlay(AppBar header) {
     final g = game!;
     final town = selected == null ? null : atlas!.towns[selected];
     final city = town?.cityId ?? cityFilter;
     final dualAttack =
-        !_quizActive &&
         _completedCity == null &&
         town != null &&
         g.home != null &&
@@ -1173,16 +1009,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         ],
       ),
     );
-    final splitChoices =
-        _practice != null ||
-        g.quiz?.pausedRemaining != null ||
-        (_completedCity != null &&
-            _conquestPage == _conquestPages.length - 1) ||
-        (!_quizActive &&
-            _completedCity == null &&
-            town != null &&
-            g.canPracticeAt(town.id) &&
-            g.canStartQuizAt(town.id));
     Widget side({required bool right}) => LayoutBuilder(
       builder:
           (context, bounds) => Column(
@@ -1258,7 +1084,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-              if (!right || dualAttack || splitChoices)
+              if (!right || dualAttack)
                 SizedBox(
                   height: math.min(104, bounds.maxHeight * .30),
                   child: KeyedSubtree(
@@ -1303,94 +1129,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: FilledButtonTheme(
         data: FilledButtonThemeData(style: actionButtonStyle()),
-        child:
-            _practice != null
-                ? PracticeQuizControls(
-                  controller: _practice!,
-                  onClose: _closePractice,
-                )
-                : game!.quiz != null || _answerFeedbackOpen
-                ? _quizControls()
-                : _completedCity != null
-                ? _conquestGuideControls()
-                : _actionPanel(),
+        child: _actionPanel(),
       ),
-    );
-  }
-
-  Widget _quizControls() {
-    final q = game!.quiz;
-    if (_answerFeedbackOpen || q == null) {
-      return const Center(child: Text('正解は吹き出しで確認できます'));
-    }
-    if (q.pausedRemaining != null) {
-      return ActionChoices(
-        children: [
-          FilledButton(
-            onPressed: () {
-              setState(() => game!.quiz = null);
-              _startTipsTimer();
-              _save();
-            },
-            child: const Text('はい'),
-          ),
-          FilledButton(
-            style: actionButtonStyle(),
-            onPressed: () {
-              setState(() {
-                q.deadline = DateTime.now().add(q.pausedRemaining!);
-                q.pausedRemaining = null;
-              });
-              _save();
-            },
-            child: const Text('いいえ'),
-          ),
-        ],
-      );
-    }
-    return SizedBox.expand(
-      child: FilledButton(
-        onPressed: () {
-          final remaining = q.deadline.difference(DateTime.now());
-          if (remaining <= Duration.zero) {
-            unawaited(_answerQuiz(q, null));
-            return;
-          }
-          setState(() => q.pausedRemaining = remaining);
-          _save();
-        },
-        child: const Text('中止する'),
-      ),
-    );
-  }
-
-  Widget _conquestGuideControls() {
-    final ready = !_conquestEffect && !_allRegionsEffect;
-    if (_conquestPage < _conquestPages.length - 1) {
-      return SizedBox.expand(
-        child: FilledButton(
-          key: const Key('conquest-next'),
-          onPressed: ready ? () => setState(() => _conquestPage++) : null,
-          child: const Text('次へ'),
-        ),
-      );
-    }
-    return ActionChoices(
-      children: [
-        FilledButton(
-          style: actionButtonStyle(),
-          onPressed: () => _finishConquestGuide(startQuiz: false),
-          child: const Text('あとで'),
-        ),
-        FilledButton(
-          onPressed: () => _finishConquestGuide(startQuiz: true),
-          child: Text(
-            atlas!.offices[_completedCity]!.usesConquestHub
-                ? '制圧拠点へ移動して挑戦'
-                : '役所へ移動して挑戦',
-          ),
-        ),
-      ],
     );
   }
 
@@ -1413,10 +1153,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         : const Color(0xFF382D20),
               ),
       text:
-          (_completedCity != null && !_conquestEffect && !_allRegionsEffect
-              ? _conquestPages[_conquestPage]
-              : null) ??
-          (_conquestName == null ? null : '$_conquestNameの制圧おめでとう！次の町を選んでね！') ??
+          (_completedCity != null
+              ? '${atlas!.cities[_completedCity]}を完全制圧！次の町を選んでね！'
+              : _conquestName == null
+              ? null
+              : '$_conquestNameの制圧おめでとう！次の町を選んでね！') ??
           visibleFact?.text ??
           (cityFilter == null
               ? '市区町村を選び、次に町から本拠地を選びましょう。'
@@ -1434,7 +1175,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ? '${visibleFact?.id}:$factIndex'
               : _completedCity == null
               ? 'conquest:$_conquestSequence'
-              : 'conquest:$_conquestSequence:$_conquestPage:$_conquestEffect:$_allRegionsEffect',
+              : 'conquest:$_conquestSequence:$_conquestEffect:$_allRegionsEffect',
       nextSpeechAt: _conquestName == null ? _nextTipAt : null,
       lipSyncDuration: const Duration(seconds: 3),
       expression:
@@ -1476,48 +1217,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         ),
   );
 
-  Widget _actionPanel() {
-    final g = game!;
-    final townId = selected;
-    if (townId == null || !g.canPracticeAt(townId)) {
-      return _territoryActionPanel();
-    }
-    // Captured offices have their own actions; an attack button never shares
-    // space with practice, and quiz/practice buttons have separate hit areas.
-    return ActionChoices(
-      children: [
-        if (g.canStartQuizAt(townId)) ...[
-          FilledButton.icon(
-            onPressed: () => _confirmQuiz(townId),
-            icon: const Icon(Icons.quiz_outlined),
-            label: const Text('制圧クイズに挑戦'),
-          ),
-        ],
-        FilledButton.icon(
-          style: actionButtonStyle(),
-          onPressed: () => _startPractice(townId),
-          icon: const Icon(Icons.school_outlined),
-          label: const Text('クイズを予習'),
-        ),
-      ],
-    );
-  }
-
-  void _startPractice(String townId) {
-    if (_quizActive) return;
-    final questions = game!.practiceQuestionsAt(townId);
-    if (questions.isEmpty) return;
-    setState(() {
-      _practice = PracticeQuizController(questions);
-      _practiceCityName = atlas!.cities[atlas!.towns[townId]!.cityId];
-    });
-  }
-
-  void _closePractice() {
-    final practice = _practice;
-    setState(() => _practice = null);
-    practice?.dispose();
-  }
+  Widget _actionPanel() => _territoryActionPanel();
 
   Widget _territoryActionPanel() {
     final g = game!;
@@ -1547,8 +1247,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _difficulty(),
-          const SizedBox(height: 8),
           Expanded(
             child: FilledButton.icon(
               onPressed: () {
@@ -1564,40 +1262,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       );
     }
     if (g.owned.contains(town.id)) {
-      final quizAvailable = g.canStartQuizAt(town.id);
-      final cityReady =
-          g.cityOwned(town.cityId) &&
-          !g.mastered.contains(town.cityId) &&
-          atlas!.offices.containsKey(town.cityId);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (quizAvailable || cityReady)
-            Expanded(
-              child: FilledButton.icon(
-                key: const Key('office-action'),
-                onPressed:
-                    quizAvailable
-                        ? () => _confirmQuiz(town.id)
-                        : () => _focusOffice(town.cityId),
-                icon: Icon(quizAvailable ? Icons.quiz_outlined : Icons.search),
-                label: Text(quizAvailable ? '制圧クイズに挑戦' : '役所所在地へ'),
-              ),
-            )
-          else
-            Expanded(
-              child: Center(
-                child: Text(
-                  g.cityOwned(town.cityId) &&
-                          !atlas!.offices.containsKey(town.cityId)
-                      ? '${atlas!.cities[town.cityId]}の全領土を獲得しました（制圧クイズ準備中）'
-                      : 'この地域はあなたの領土です',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: mint),
-                ),
-              ),
-            ),
-        ],
+      return Center(
+        child: Text(
+          g.mastered.contains(town.cityId)
+              ? '${atlas!.cities[town.cityId]}を完全制圧しました！'
+              : 'この地域はあなたの領土です',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: mint),
+        ),
       );
     }
     final can = g.canAttack(town.id);
@@ -1820,7 +1492,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                             ),
                             correct: true,
                             streak: 5,
-                            text: _allRegionsEffect ? '全地域制圧' : '制圧完了',
+                            text: _allRegionsEffect ? '完全制圧' : '制圧完了',
                           ),
                         ),
                       ),
@@ -1852,84 +1524,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       math.max(48, constraints.maxHeight * .35),
     ),
   );
-
-  Widget _difficulty() => DropdownButtonFormField<Difficulty>(
-    value: game!.difficulty,
-    decoration: const InputDecoration(labelText: '難易度'),
-    items:
-        Difficulty.values
-            .map(
-              (d) => DropdownMenuItem(
-                value: d,
-                child: Text('${d.label} · クイズ${d.seconds}秒'),
-              ),
-            )
-            .toList(),
-    onChanged: (d) {
-      if (d != null) setState(() => game!.difficulty = d);
-    },
-  );
-  Future<void> _answerQuiz(Quiz q, String? answer) async {
-    final g = game!;
-    if (_answerFeedbackOpen ||
-        q.pausedRemaining != null ||
-        !identical(g.quiz, q)) {
-      return;
-    }
-    _answerFeedbackOpen = true;
-    final correct = g.answer(
-      answer,
-      DateTime.now(),
-      nextQuestionDelay: answerFeedbackDisplayDuration,
-    );
-    setState(() {
-      _feedbackQuiz = q;
-      _feedbackEndsAt = DateTime.now().add(answerFeedbackDisplayDuration);
-      _feedbackCorrect = correct == true;
-    });
-    _save();
-    await Future<void>.delayed(answerFeedbackDisplayDuration);
-    if (!mounted) return;
-    setState(() {
-      _answerFeedbackOpen = false;
-      _feedbackQuiz = null;
-    });
-    if (game != g || g.quiz != null) return;
-    if (correct == true) {
-      setState(
-        () => _celebrateConquest(
-          atlas!.cities[q.cityId]!,
-          atlas!.officeTownIds[q.cityId]!,
-        ),
-      );
-    } else {
-      _showQuizOutcome();
-    }
-  }
-
-  Widget _quiz() {
-    final q = _feedbackQuiz ?? game!.quiz!;
-    final seconds = math.max(
-      0,
-      ((q.pausedRemaining ?? q.deadline.difference(DateTime.now()))
-                  .inMilliseconds /
-              1000)
-          .ceil(),
-    );
-    return QuizStage(
-      title: '${atlas!.cities[q.cityId]} · 制圧クイズ ${q.correctCount + 1} / 5問',
-      question: q,
-      paused: q.pausedRemaining != null,
-      appearance: tipAppearance,
-      seconds: seconds,
-      nextSpeechAt: _feedbackQuiz == null ? q.deadline : _feedbackEndsAt,
-      correct: _feedbackQuiz == null ? null : _feedbackCorrect,
-      streak: _feedbackCorrect ? q.correctCount + 1 : 0,
-      onAnswer: (answer) => _answerQuiz(q, answer),
-      answerLabel:
-          (answer) => atlas!.quizChoiceLabel(q.cityId, q.factId, answer),
-    );
-  }
 
   void _showRecords() => showModalBottomSheet<void>(
     context: context,
@@ -1996,9 +1590,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           children: [
             _record('累計タップ数', number(game!.totalTaps)),
             _record('訪れた領土', number(game!.everOwned.length)),
-            _record('クイズ正解', number(game!.wins)),
-            _record('クイズ失敗', number(game!.losses)),
-            _record('難易度', game!.difficulty.label),
           ],
         ),
       ),
@@ -2108,12 +1699,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1. 市区町村を選び、次に町から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略（境界は白、選択・攻略中の枠は赤）\n3. 地域tipsを読み、知識を蓄積（5秒ごとに切替）\n4. 市町村の全領土獲得後、役所・役場のある町をタップ。開始前はキャンセル可\n5. 4択5問すべて正解で市町村制圧。失敗・時間切れで役所所在地の支配を失う（本拠地も対象）',
+                    '1. 市区町村を選び、次に町から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略（境界は白、選択・攻略中の枠は赤）\n3. 地域tipsを読み、知識を蓄積（5秒ごとに切替）\n4. 市区町村の全地域を獲得した時点で完全制圧。次の地域へ進軍できます',
                     style: TextStyle(height: 2),
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。難易度はクイズに適用されます。点で接するだけの地域は隣接扱いにしません。航路で接続された町を領有すると、その接続先の町へ渡航できます。渡航先も人口と同じ回数のタップで攻略します。町との対応が未確定の航路は含みません。未接続の町群は、境界間の直線距離が最も近い町と接続します。接続先が別の市区町村の場合は、同じ市区町村内に別の町群があれば、そちらの最も近い町とも接続します。全国の市区町村で、全領土獲得後に4択5問の制圧クイズへ挑戦できます。役場が区域外にある自治体は、町内の制圧拠点から挑戦します。',
+                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。点で接するだけの地域は隣接扱いにしません。航路で接続された町を領有すると、その接続先の町へ渡航できます。渡航先も人口と同じ回数のタップで攻略します。町との対応が未確定の航路は含みません。未接続の町群は、境界間の直線距離が最も近い町と接続します。接続先が別の市区町村の場合は、同じ市区町村内に別の町群があれば、そちらの最も近い町とも接続します。全国の市区町村で、全地域を獲得すると完全制圧になります。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
@@ -2198,7 +1789,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const SelectableText(
-                    '役所・役場：全国の県・市区町村マップに市役所・区役所・町村役場を表示します。国土交通省「市町村役場等及び公的集会施設」（2022年）の本庁舎を基に、未収録・旧所在地は国土地理院ベクトルタイルの役所記号で補完。照合用の代表点にはCode for Fukui localgovjp（CC0）を使用しています。離島の町村などで役場が区域外にある場合も実位置に表示します。奈良は従来の公式所在地との照合済みデータを維持し、明日香村は橘の新庁舎に対応。全国の役所所在地で制圧クイズに挑戦できます。区域外の役場は実位置を保ち、町内の制圧拠点を使います。\nhttps://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P05-v3_0.html\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment\nhttps://github.com/codeforfukui/localgovjp',
+                    '役所・役場：全国の県・市区町村マップに市役所・区役所・町村役場を表示します。国土交通省「市町村役場等及び公的集会施設」（2022年）の本庁舎を基に、未収録・旧所在地は国土地理院ベクトルタイルの役所記号で補完。照合用の代表点にはCode for Fukui localgovjp（CC0）を使用しています。離島の町村などで役場が区域外にある場合も実位置に表示します。奈良は従来の公式所在地との照合済みデータを維持し、明日香村は橘の新庁舎に対応。区域外の役場も実位置を保って表示します。\nhttps://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P05-v3_0.html\nhttps://github.com/gsi-cyberjapan/gsimaps-vector-experiment\nhttps://github.com/codeforfukui/localgovjp',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.7,
@@ -2212,7 +1803,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    '市役所・区役所は二重丸、町村役場は丸の地図記号で表示します。県全域・市区町村への移動と町の選択に対応。主要道路ルート、対戦、ランキングは今後の拡張です。保存は端末内のみで、アンインストールやブラウザのデータ削除では失われます。クイズ中にアプリを閉じても締切時刻は変わりません。',
+                    '市役所・区役所は二重丸、町村役場は丸の地図記号で表示します。県全域・市区町村への移動と町の選択に対応。主要道路ルート、対戦、ランキングは今後の拡張です。保存は端末内のみで、アンインストールやブラウザのデータ削除では失われます。全地域獲得済みの旧セーブは完全制圧として引き継ぎます。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 24),
