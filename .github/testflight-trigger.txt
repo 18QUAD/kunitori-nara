@@ -1,1 +1,1 @@
-TestFlight: remove the battle-records menu and screen. Keep saved progress/history intact and preserve reset with confirmation in Settings.
+TestFlight: remove Start Over from Settings and delete its reset confirmation and handler. Keep saved campaign progress and history unchanged.

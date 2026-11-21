@@ -273,10 +273,9 @@ void main() {
     expect(tester.getRect(find.byKey(const Key('fixed-region'))), fixed);
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('最初からやり直す'));
-    await tester.pumpAndSettle();
+    expect(find.text('最初からやり直す'), findsNothing);
     expect(tester.getRect(find.byKey(const Key('attack'))), attackRect);
-    await tester.tap(find.text('キャンセル'));
+    Navigator.of(tester.element(find.text('地名から探す'))).pop();
     await tester.pumpAndSettle();
     expect(tester.getRect(find.byKey(const Key('fixed-region'))), fixed);
     await tester.tap(find.byTooltip('設定'));
@@ -350,33 +349,25 @@ void main() {
     expect(prefs.getString('kunitori.nara.v1'), contains('292010010'));
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('最初からやり直す'));
-    await tester.pumpAndSettle();
     expect(find.text('戦績'), findsNothing);
-    await tester.tap(find.text('キャンセル'));
+    expect(find.text('最初からやり直す'), findsNothing);
+    Navigator.of(tester.element(find.text('地名から探す'))).pop();
     await tester.pumpAndSettle();
-    expect(prefs.getString('kunitori.nara.v1'), contains('292010010'));
-    await tester.tap(find.byTooltip('設定'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('最初からやり直す'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('やり直す'));
-    await tester.pumpAndSettle();
-    expect(find.text('奈良県'), findsOneWidget);
-    expect(find.text('旅のはじまり'), findsOneWidget);
     final saved =
         jsonDecode(prefs.getString('kunitori.nara.v1')!)
             as Map<String, dynamic>;
-    expect(saved['home'], isNull);
-    expect(saved['owned'], isEmpty);
+    expect(saved['owned'], contains('292010010'));
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(const KunitoriApp());
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(seconds: 2));
     });
     await tester.pumpAndSettle();
-    expect(find.text('奈良県'), findsOneWidget);
-    expect(find.text('旅のはじまり'), findsOneWidget);
+    expect(find.text('旅のはじまり'), findsNothing);
+    expect(
+      jsonDecode(prefs.getString('kunitori.nara.v1')!)['owned'],
+      saved['owned'],
+    );
     final actionRect = tester.getRect(find.byKey(const Key('action-region')));
     for (final size in TipSize.values) {
       await tester.tap(find.byTooltip('設定'));

@@ -516,42 +516,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _restart() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('最初からやり直しますか？'),
-            content: const Text(
-              '領土・攻略状況・地域tipsの履歴をリセットします。元に戻せません。市区町村から最初の地域を選び直せます。',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('キャンセル'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('やり直す'),
-              ),
-            ],
-          ),
-    );
-    if (confirmed != true || !mounted) return;
-    _mapViewSaves?.cancel();
-    setState(() {
-      _clearConquestFor(null);
-      game = Game(atlas!);
-      _restoredMapView = null;
-      selected = null;
-      cityFilter = null;
-      factIndex = 0;
-      mapFocus = 0;
-    });
-    _startTipsTimer();
-    await store!.save(game!);
-  }
-
   LocalFact? get visibleFact {
     final city = game!.tipsCityFor(
       selectedTown: selected,
@@ -861,7 +825,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           icon: const Icon(Icons.settings_outlined),
           onSelected: (value) {
             if (value == 'search') _search();
-            if (value == 'restart') _restart();
             if (value == 'help') _about();
             if (value == 'tips') _tipSettings();
             if (value == 'map-cache') _mapCacheSettings();
@@ -888,13 +851,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   child: ListTile(
                     leading: Icon(Icons.swap_horiz),
                     title: Text('データ引き継ぎ'),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'restart',
-                  child: ListTile(
-                    leading: Icon(Icons.restart_alt),
-                    title: Text('最初からやり直す'),
                   ),
                 ),
                 if (kIsWeb)

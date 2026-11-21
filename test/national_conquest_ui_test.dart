@@ -228,7 +228,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('戦績'), findsNothing);
       expect(find.text('戦績と足跡'), findsNothing);
-      expect(find.text('最初からやり直す'), findsOneWidget);
+      expect(find.text('最初からやり直す'), findsNothing);
+      expect(find.text('やり直す'), findsNothing);
       expect(game.toJson(), beforeSettings);
       await tester.tap(find.text('地名から探す'));
       await tester.pumpAndSettle();
