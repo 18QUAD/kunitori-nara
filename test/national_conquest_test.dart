@@ -44,7 +44,7 @@ void main() {
       final atlas = data.atlas;
       for (final city in atlas.cities.keys) {
         final towns = atlas.byCity[city]!;
-        final game = Game(atlas, random: Random(42))..setHome(towns.first.id);
+        final game = Game(atlas, random: Random(42))..startAt(towns.first.id);
         if (towns.length == 1) {
           expect(game.mastered, contains(city));
           continue;

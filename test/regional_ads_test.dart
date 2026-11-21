@@ -161,7 +161,7 @@ void main() {
       });
       final game =
           Game(atlas)
-            ..setHome('29205043001')
+            ..startAt('29205043001')
             ..selectAttackTarget('29205041001');
       expect(advertisingCity(game, selectedCity: '24208'), '24208');
       expect(advertisingCity(game, selectedPrefecture: '24'), '24208');
@@ -250,7 +250,7 @@ void main() {
     final atlas = Atlas.fromJson(jsonDecode(source!) as Map<String, dynamic>);
     final game = Game(atlas);
     final home = atlas.byCity['29201']!.first;
-    game.setHome(home.id);
+    game.startAt(home.id);
     final target = home.neighbors.firstWhere(
       (id) => !game.owned.contains(id) && atlas.towns[id]!.population > 1,
     );

@@ -12,7 +12,7 @@ void main() {
     );
   });
   Game ready(String city) {
-    final game = Game(atlas)..setHome(atlas.byCity[city]!.first.id);
+    final game = Game(atlas)..startAt(atlas.byCity[city]!.first.id);
     game.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
     game.everOwned.addAll(game.owned);
     return game;
@@ -44,7 +44,7 @@ void main() {
     old.totalTaps = 10;
     final data = old.toJson()..remove('quizRule');
     final loaded = Game.restore(atlas, data);
-    expect(loaded.home, old.home);
+    expect(loaded.lastCapturedTownId, old.lastCapturedTownId);
     expect(loaded.owned, old.owned);
     expect(loaded.everOwned, old.everOwned);
     expect(loaded.mastered, old.mastered);

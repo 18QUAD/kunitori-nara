@@ -53,7 +53,7 @@ void main() {
         expect(consumed.towns[town.id]!.neighbors, town.neighbors);
         expect(consumed.towns[town.id]!.population, town.population);
       }
-      final game = Game(nara)..setHome('29205043001');
+      final game = Game(nara)..startAt('29205043001');
       game.selectAttackTarget('29205041001');
       game.tap('29205041001', DateTime.utc(2026));
       expect(Game.restore(consumed, game.toJson()).toJson(), game.toJson());
@@ -78,7 +78,7 @@ void main() {
       );
       final old =
           Game(nara)
-            ..setHome(home.id)
+            ..startAt(home.id)
             ..selectAttackTarget(target);
       old.tap(target, DateTime.utc(2026));
       old.observe(home.cityId);
@@ -92,10 +92,10 @@ void main() {
     'active Nara quiz keeps its questions, answers and absolute deadline',
     () {
       const city = '29362';
-      final old = Game(nara)..setHome(nara.officeTownIds[city]!);
+      final old = Game(nara)..startAt(nara.officeTownIds[city]!);
       old.owned.addAll(nara.byCity[city]!.map((t) => t.id));
       old.everOwned.addAll(old.owned);
-      old.startQuizAt(old.home!, DateTime.utc(2026));
+      old.startQuizAt(old.lastCapturedTownId!, DateTime.utc(2026));
       final saved = old.toJson();
       final restored = Game.restore(combined, saved);
       expect(restored.toJson(), saved);
@@ -111,7 +111,7 @@ void main() {
       final home = towns.firstWhere((t) => t.name == '西町');
       final target = towns.firstWhere((t) => t.name == '中央');
       expect(target.population, 5);
-      final g = Game(combined)..setHome(home.id);
+      final g = Game(combined)..startAt(home.id);
       for (var i = 0; i < 4; i++) {
         expect(g.tap(target.id, DateTime.utc(2026)), isFalse);
         expect(g.population, i + 1);
@@ -189,7 +189,7 @@ void main() {
     combined.enableSeaTravel([
       [departure.id, landing.id],
     ]);
-    final game = Game(combined)..setHome(home.id);
+    final game = Game(combined)..startAt(home.id);
     expect(game.isReachable(landing.id), isFalse);
     expect(game.canLand(landing.id), isFalse);
     game.owned.add(departure.id);
@@ -209,7 +209,7 @@ void main() {
     expect(game.message, contains('制圧クイズは準備中'));
     final restored = Game.restore(combined, game.toJson());
     expect(restored.toJson(), game.toJson());
-    final old = Game(combined)..setHome(home.id);
+    final old = Game(combined)..startAt(home.id);
     old.attackTarget = landing.id;
     old.progress[landing.id] = 2;
     old.totalTaps = 2;
@@ -221,7 +221,7 @@ void main() {
     expect(resumed.selectAttackTarget(landing.id), isTrue);
     expect(resumed.progress[landing.id], 2);
 
-    final islandHome = Game(combined)..setHome(inland.id);
+    final islandHome = Game(combined)..startAt(inland.id);
     expect(islandHome.isReachable(departure.id), isFalse);
     islandHome.owned.add(landing.id);
     islandHome.everOwned.add(landing.id);
@@ -239,14 +239,14 @@ void main() {
       combined.enableNearbyTravel([
         [departure.id, destination.id],
       ]);
-      final game = Game(combined)..setHome(home.id);
+      final game = Game(combined)..startAt(home.id);
       expect(game.isReachable(destination.id), isFalse);
       game.owned.add(departure.id);
       game.everOwned.add(departure.id);
       expect(game.isReachable(destination.id), isTrue);
       expect(game.canAttack(destination.id), isTrue);
       expect(game.canLand(destination.id), isFalse);
-      final reverse = Game(combined)..setHome(destination.id);
+      final reverse = Game(combined)..startAt(destination.id);
       expect(reverse.isReachable(departure.id), isTrue);
       expect(reverse.canLand(departure.id), isFalse);
       expect(
@@ -291,7 +291,7 @@ void main() {
     'prefecture-only selection shows placeholder tips during a Nara campaign',
     () {
       final home = nara.towns.values.firstWhere((t) => t.neighbors.isNotEmpty);
-      final game = Game(combined)..setHome(home.id);
+      final game = Game(combined)..startAt(home.id);
       game.selectAttackTarget(home.neighbors.first);
       final tips = game.tipsFor(selectedPrefecture: '26');
       expect(tips, isNotEmpty);
@@ -320,7 +320,7 @@ void main() {
         (t) => t.id != home.id && t.population > 3,
       );
       final other = combined.byCity['26201']!.firstWhere((t) => t.name == '中央');
-      final game = Game(combined)..setHome(home.id);
+      final game = Game(combined)..startAt(home.id);
       game.progress[target.id] = 3;
       game.owned.add(other.id);
       game.progress[other.id] = 99; // Owned towns must never be counted twice.

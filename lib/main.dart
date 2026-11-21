@@ -397,7 +397,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _restoredMapView = saver.loadMapView(data);
       selected =
           _restoredMapView == null
-              ? g.attackTarget ?? g.home
+              ? g.campaignFocusTownId
               : _restoredMapView!.selected;
       cityFilter =
           _restoredMapView == null
@@ -414,7 +414,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       _rememberVisibleFact();
       setState(() {});
       _startTipsTimer();
-      if (g.home != null) _save();
+      if (g.hasStarted) _save();
     } catch (_) {
       if (mounted) {
         setState(
@@ -481,7 +481,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       TipAppearance.fromJson(
                         jsonDecode(appearance) as Map<String, dynamic>,
                       );
-                    return '本拠地：${atlas!.towns[restored.home]?.displayName ?? "未設定"}\n領土：${restored.owned.length}町\n累計タップ：${number(restored.totalTaps)}';
+                    return '直前に攻略：${atlas!.towns[restored.lastCapturedTownId]?.displayName ?? "未設定"}\n領土：${restored.owned.length}町\n累計タップ：${number(restored.totalTaps)}';
                   } finally {
                     national?.releaseLegacySave();
                   }
@@ -523,7 +523,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           (context) => AlertDialog(
             title: const Text('最初からやり直しますか？'),
             content: const Text(
-              '本拠地・領土・戦績・称号・地域tipsの履歴をリセットします。元に戻せません。市区町村から新しい本拠地を選び直せます。',
+              '領土・攻略状況・戦績・称号・地域tipsの履歴をリセットします。元に戻せません。市区町村から最初の地域を選び直せます。',
             ),
             actions: [
               TextButton(
@@ -643,7 +643,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Future<void> _focusCampaign() async {
     if (_changingMap) return;
 
-    final target = game!.attackTarget ?? game!.home;
+    final target = game!.campaignFocusTownId;
     if (target == null) return;
     final destination = atlas!.towns[target]!.cityId.substring(0, 2);
     if (nationalView || destination != prefectureFilter) {
@@ -996,7 +996,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     final dualAttack =
         _completedCity == null &&
         town != null &&
-        g.home != null &&
+        g.hasStarted &&
         !g.owned.contains(town.id);
     Widget stats(String title, String value, Key key) => Padding(
       padding: const EdgeInsets.only(bottom: 20),
@@ -1159,9 +1159,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ? null
               : '$_conquestNameの制圧おめでとう！次の町を選んでね！') ??
           visibleFact?.text ??
-          (cityFilter == null
-              ? '市区町村を選び、次に町から本拠地を選びましょう。'
-              : '町を選んで本拠地を決めましょう。'),
+          (cityFilter == null ? '市区町村を選び、攻略を始める町を選びましょう。' : '攻略を始める町を選びましょう。'),
       appearance:
           _completedCity != null
               ? tipAppearance.copyWith(
@@ -1229,33 +1227,33 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           Expanded(
             child: Center(
               child: Text(
-                g.home == null ? '旅のはじまり' : '攻略する町を選んでください',
+                !g.hasStarted ? '旅のはじまり' : '攻略する町を選んでください',
                 style: const TextStyle(color: mint),
               ),
             ),
           ),
-          if (g.home == null)
+          if (!g.hasStarted)
             FilledButton.icon(
               onPressed: _search,
               icon: const Icon(Icons.search),
-              label: const Text('地名から本拠地を探す'),
+              label: const Text('地名から最初の地域を探す'),
             ),
         ],
       );
     }
-    if (g.home == null) {
+    if (!g.hasStarted) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
             child: FilledButton.icon(
               onPressed: () {
-                g.setHome(town.id);
+                g.startAt(town.id);
                 setState(() {});
                 _save();
               },
               icon: const Icon(Icons.flag),
-              label: const Text('ここを本拠地にする'),
+              label: const Text('ここから攻略を始める'),
             ),
           ),
         ],
@@ -1404,10 +1402,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 key: const Key('map-home'),
                                 tooltip:
                                     game!.attackTarget == null
-                                        ? '本拠地へ'
-                                        : '攻略中の町へ',
+                                        ? '直前に攻略した地域へ'
+                                        : '攻略中の地域へ',
                                 onPressed:
-                                    (game!.attackTarget ?? game!.home) == null
+                                    (game!.campaignFocusTownId) == null
                                         ? null
                                         : _focusCampaign,
                                 icon: const Icon(Icons.home_outlined),
@@ -1451,10 +1449,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                   key: const Key('map-home'),
                                   tooltip:
                                       game!.attackTarget == null
-                                          ? '本拠地へ'
-                                          : '攻略中の町へ',
+                                          ? '直前に攻略した地域へ'
+                                          : '攻略中の地域へ',
                                   onPressed:
-                                      (game!.attackTarget ?? game!.home) == null
+                                      (game!.campaignFocusTownId) == null
                                           ? null
                                           : _focusCampaign,
                                   icon: const Icon(Icons.home_outlined),
@@ -1599,7 +1597,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
       ),
       const SizedBox(height: 12),
-      if (game!.titles.isEmpty) const Text('最初の本拠地を選んで、旅を始めましょう。'),
+      if (game!.titles.isEmpty) const Text('最初の地域を選んで、旅を始めましょう。'),
       Wrap(
         spacing: 10,
         runSpacing: 10,
@@ -1699,12 +1697,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1. 市区町村を選び、次に町から本拠地を選択\n2. 金色の隣接地域を選び、タップで攻略（境界は白、選択・攻略中の枠は赤）\n3. 地域tipsを読み、知識を蓄積（5秒ごとに切替）\n4. 市区町村の全地域を獲得した時点で完全制圧。次の地域へ進軍できます',
+                    '1. 市区町村を選び、最初の町から攻略を開始\n2. 金色の隣接地域を選び、タップで攻略（境界は白、選択・攻略中の枠は赤）\n3. 地域tipsを読み、知識を蓄積（5秒ごとに切替）\n4. 市区町村の全地域を獲得した時点で完全制圧。次の地域へ進軍できます',
                     style: TextStyle(height: 2),
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。本拠地の人口は開始時に加算されます。点で接するだけの地域は隣接扱いにしません。航路で接続された町を領有すると、その接続先の町へ渡航できます。渡航先も人口と同じ回数のタップで攻略します。町との対応が未確定の航路は含みません。未接続の町群は、境界間の直線距離が最も近い町と接続します。接続先が別の市区町村の場合は、同じ市区町村内に別の町群があれば、そちらの最も近い町とも接続します。全国の市区町村で、全地域を獲得すると完全制圧になります。',
+                    '1タップで1人。人口と同じ回数のタップで町を獲得します。人口0の地域は1タップで獲得します。最初に選んだ地域の人口は開始時に加算されます。点で接するだけの地域は隣接扱いにしません。航路で接続された町を領有すると、その接続先の町へ渡航できます。渡航先も人口と同じ回数のタップで攻略します。町との対応が未確定の航路は含みません。未接続の町群は、境界間の直線距離が最も近い町と接続します。接続先が別の市区町村の場合は、同じ市区町村内に別の町群があれば、そちらの最も近い町とも接続します。全国の市区町村で、全地域を獲得すると完全制圧になります。',
                     style: TextStyle(height: 1.7, color: Colors.white70),
                   ),
                   const SizedBox(height: 20),

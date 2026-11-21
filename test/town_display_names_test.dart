@@ -156,7 +156,7 @@ void main() {
   );
 
   Game ready() {
-    final g = Game(atlas)..setHome(id);
+    final g = Game(atlas)..startAt(id);
     g.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
     g.everOwned.addAll(g.owned);
     return g;

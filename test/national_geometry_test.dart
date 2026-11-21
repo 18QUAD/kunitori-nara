@@ -35,7 +35,7 @@ void main() {
         ],
       });
       final data = NationalAtlas(atlas, {});
-      final game = Game(atlas)..setHome('29205043001');
+      final game = Game(atlas)..startAt('29205043001');
       game.selectAttackTarget('29205041001');
       game.tap('29205041001', DateTime.utc(2026));
       final saved = game.toJson();

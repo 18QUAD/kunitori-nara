@@ -211,7 +211,7 @@ void main() {
       );
       final old =
           Game(nara)
-            ..setHome(home.id)
+            ..startAt(home.id)
             ..selectAttackTarget(target);
       for (var i = 0; i < 7; i++) {
         old.tap(target, DateTime.utc(2026));
@@ -219,11 +219,11 @@ void main() {
       old.observe(home.cityId);
       expect(Game.restore(atlas, old.toJson()).toJson(), old.toJson());
       const city = '29362';
-      final quizGame = Game(nara)..setHome(nara.officeTownIds[city]!);
+      final quizGame = Game(nara)..startAt(nara.officeTownIds[city]!);
       quizGame.owned.addAll(nara.byCity[city]!.map((t) => t.id));
       quizGame.everOwned.addAll(quizGame.owned);
       quizGame.mastered.add(city);
-      quizGame.startQuizAt(quizGame.home!, DateTime.utc(2026));
+      quizGame.startQuizAt(quizGame.lastCapturedTownId!, DateTime.utc(2026));
       expect(
         Game.restore(atlas, quizGame.toJson()).toJson(),
         quizGame.toJson(),
@@ -235,7 +235,7 @@ void main() {
     'configured sea links connect real towns only after capturing their port',
     () {
       final atlas = national.atlas;
-      final game = Game(atlas)..setHome('29205043001');
+      final game = Game(atlas)..startAt('29205043001');
       expect(atlas.seaNeighbors, isNotEmpty);
       for (final entry in atlas.seaNeighbors.entries) {
         expect(atlas.towns.containsKey(entry.key), isTrue);

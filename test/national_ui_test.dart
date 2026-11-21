@@ -34,7 +34,7 @@ void main() {
       );
       final saved =
           Game(nara)
-            ..setHome(home.id)
+            ..startAt(home.id)
             ..selectAttackTarget(target);
       saved.tap(target, DateTime.now());
       SharedPreferences.setMockInitialValues({
@@ -391,7 +391,7 @@ void main() {
         '47',
       );
       expect(find.byType(NationalMap), findsNothing);
-      expect(game.home, saved.home);
+      expect(game.lastCapturedTownId, saved.lastCapturedTownId);
       expect(game.owned, saved.owned);
       expect(game.progress, saved.progress);
       expect(game.totalTaps, saved.totalTaps);

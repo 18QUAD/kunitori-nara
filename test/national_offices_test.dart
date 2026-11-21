@@ -51,7 +51,7 @@ void main() {
       expect(atlas.mapOffices['27127']!.name, '大阪市北区役所');
       expect(atlas.mapOffices['47381']!.townId, isNull);
       final town = atlas.mapOffices['27127']!.townId!;
-      final game = Game(atlas)..setHome(town);
+      final game = Game(atlas)..startAt(town);
       game.owned.addAll(atlas.byCity['27127']!.map((t) => t.id));
       expect(game.cityOwned('27127'), isTrue);
       expect(game.canStartQuizAt(town), isFalse);
@@ -80,7 +80,7 @@ void main() {
     'Osaka prefecture and ward maps expose city/ward office markers and selection',
     (tester) async {
       await tester.runAsync(() => data.ensureGeometry('27'));
-      final game = Game(data.atlas)..setHome('29205043001');
+      final game = Game(data.atlas)..startAt('29205043001');
       game.selectAttackTarget('29205041001');
       game.tap('29205041001', DateTime.utc(2026));
       final saved = game.toJson();

@@ -12,7 +12,7 @@ void main(List<String> args) {
       ).readAsStringSync(),
     ),
   );
-  final g = Game(atlas)..setHome('29205043001');
+  final g = Game(atlas)..startAt('29205043001');
   const target = '29205041001';
   final town = atlas.towns[target]!;
   g.owned.addAll(
@@ -23,7 +23,7 @@ void main(List<String> args) {
   g.progress[target] = g.requiredTaps(town) - 2;
   g.totalTaps =
       g.owned
-          .where((id) => id != g.home)
+          .where((id) => id != g.lastCapturedTownId)
           .fold(0, (n, id) => n + g.requiredTaps(atlas.towns[id]!)) +
       g.progress[target]!;
   g.cityTaps[town.cityId] = g.totalTaps;

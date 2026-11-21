@@ -20,7 +20,7 @@ void main() {
       final target = home.neighbors.firstWhere(
         (id) => a.towns[id]!.population > 100,
       );
-      final g = Game(a)..setHome(home.id);
+      final g = Game(a)..startAt(home.id);
       g.selectAttackTarget(target);
       g.progress[target] = 1;
       final paths = {

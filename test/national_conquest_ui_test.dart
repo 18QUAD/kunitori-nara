@@ -28,16 +28,20 @@ void main() {
     bool attack = false,
     bool finishCity = false,
     bool legacyQuiz = false,
+    bool unstarted = false,
   }) async {
     final atlas = data.atlas, hub = data.atlas.officeTownIds[city]!;
-    final game = Game(atlas)..setHome(hub);
+    final game = Game(atlas);
+    if (!unstarted) game.startAt(hub);
     final target =
         attack
             ? atlas.byCity[city]!
                 .firstWhere((t) => t.id != hub && game.canAttack(t.id))
                 .id
             : hub;
-    if (!attack) game.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
+    if (!attack && !unstarted) {
+      game.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
+    }
     if (finishCity) {
       game.owned.addAll(
         atlas.byCity[city]!.where((t) => t.id != target).map((t) => t.id),
@@ -124,6 +128,87 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     return tester.widget<TerritoryMap>(find.byType(TerritoryMap)).game;
   }
+
+  testWidgets(
+    'start has no fixed base and the map button is disabled before acquisition',
+    (tester) async {
+      final game = await launch(tester, '24216', unstarted: true);
+      expect(game.hasStarted, isFalse);
+      expect(
+        tester.widget<IconButton>(find.byKey(const Key('map-home'))).onPressed,
+        isNull,
+      );
+      expect(find.text('ここを本拠地にする'), findsNothing);
+      await tester.tap(find.text('ここから攻略を始める').first);
+      await tester.pump();
+      expect(game.hasStarted, isTrue);
+      expect(game.campaignFocusTownId, game.lastCapturedTownId);
+      expect(game.toJson().containsKey('home'), isFalse);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    },
+  );
+
+  testWidgets(
+    'map button returns to latest capture, then prioritizes an ongoing attack',
+    (tester) async {
+      final game = await launch(tester, '24216', attack: true);
+      TerritoryMap map() =>
+          tester.widget<TerritoryMap>(find.byType(TerritoryMap));
+      Future<void> pressMapButton() async {
+        // Tile pixels are mocked in this fixture. Exercise the application's
+        // supplied navigation button; decoding locks have separate coverage.
+        final button =
+            map().controls.singleWhere((w) => w.key == const Key('map-home'))
+                as IconButton;
+        expect(button.onPressed, isNotNull);
+        button.onPressed!();
+        await tester.pump();
+      }
+
+      final initial = game.lastCapturedTownId!;
+      final target = map().selected!;
+      game.progress[target] = game.requiredTaps(game.atlas.towns[target]!) - 1;
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byKey(const Key('action-region')),
+              matching: find.byType(FilledButton),
+            )
+            .first,
+      );
+      await tester.pump();
+      expect(game.lastCapturedTownId, target);
+      map().onSelected(initial);
+      await tester.pump();
+      expect(map().selected, initial);
+      expect(find.byTooltip('直前に攻略した地域へ'), findsOneWidget);
+      await pressMapButton();
+      expect(map().selected, target);
+      final ongoing = game.atlas.towns[target]!.neighbors.firstWhere(
+        (id) =>
+            !game.owned.contains(id) && game.atlas.towns[id]!.population > 1,
+      );
+      map().onSelected(ongoing);
+      game.tap(ongoing, DateTime.utc(2026));
+      map().onSelected(initial);
+      await tester.pump();
+      expect(find.byTooltip('攻略中の地域へ'), findsOneWidget);
+      await pressMapButton();
+      expect(map().selected, ongoing);
+      expect(game.lastCapturedTownId, target);
+      final prefs = await SharedPreferences.getInstance();
+      final restored = Game.restore(
+        game.atlas,
+        jsonDecode(prefs.getString(SaveStore.key)!),
+      );
+      expect(restored.lastCapturedTownId, target);
+      expect(restored.attackTarget, ongoing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    },
+  );
 
   testWidgets(
     'map and old-name search use display names without conquest quiz actions',

@@ -11,7 +11,7 @@ void main() {
       var visits = 0;
       final control = IconButton.filledTonal(
         key: Key(name),
-        tooltip: '本拠地へ',
+        tooltip: '直前に攻略した地域へ',
         onPressed: () => visits++,
         icon: const Icon(Icons.home_outlined),
       );

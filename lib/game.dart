@@ -562,7 +562,9 @@ class Game {
   final Atlas atlas;
   final Random random;
   Difficulty difficulty = Difficulty.standard;
-  String? home, attackTarget;
+  String? lastCapturedTownId, attackTarget;
+  bool get hasStarted => everOwned.isNotEmpty;
+  String? get campaignFocusTownId => attackTarget ?? lastCapturedTownId;
   final Set<String> owned = {},
       mastered = {},
       conquestGuideSeen = {},
@@ -578,11 +580,11 @@ class Game {
 
   int requiredTaps(Town t) => max(1, t.population);
   bool canLand(String id) =>
-      home != null &&
+      hasStarted &&
       !owned.contains(id) &&
       (atlas.seaNeighbors[id]?.any(owned.contains) ?? false);
   bool isReachable(String id) =>
-      home != null &&
+      hasStarted &&
       !owned.contains(id) &&
       ((atlas.towns[id]?.neighbors.any(owned.contains) ?? false) ||
           canLand(id) ||
@@ -660,7 +662,7 @@ class Game {
     }
     final target = attackTarget ?? selectedTown;
     return target == null
-        ? selectedCity ?? (home == null ? null : atlas.towns[home]?.cityId)
+        ? selectedCity ?? atlas.towns[lastCapturedTownId]?.cityId
         : atlas.towns[target]?.cityId;
   }
 
@@ -692,13 +694,13 @@ class Game {
   Iterable<String> citiesInPrefecture(String prefecture) =>
       atlas.cities.keys.where((id) => id.startsWith(prefecture));
 
-  void setHome(String id) {
-    if (home != null || !atlas.towns.containsKey(id)) return;
-    home = id;
+  void startAt(String id) {
+    if (hasStarted || !atlas.towns.containsKey(id)) return;
+    lastCapturedTownId = id;
     owned.add(id);
     everOwned.add(id);
     titles.add('大和への第一歩');
-    message = '${atlas.towns[id]!.displayName}を本拠地にしました。隣接する地域へ進軍しましょう。';
+    message = '${atlas.towns[id]!.displayName}から攻略を始めました。隣接する地域へ進軍しましょう。';
     _completeCity(atlas.towns[id]!.cityId);
   }
 
@@ -715,6 +717,7 @@ class Game {
     if (progress[id]! < requiredTaps(town)) return false;
     owned.add(id);
     everOwned.add(id);
+    lastCapturedTownId = id;
     progress.remove(id);
     _resumePendingTarget();
     if (everOwned.length >= 10) titles.add('十郷の領主');
@@ -802,7 +805,8 @@ class Game {
     'tapRule': 'population-v1',
     'territoryUnit': 'town-v1',
     'difficulty': difficulty.name,
-    'home': home,
+    'navigationRule': 'last-capture-v1',
+    'lastCapturedTownId': lastCapturedTownId,
     'attackTarget': attackTarget,
     'owned': owned.toList(),
     'mastered': mastered.toList(),
@@ -819,19 +823,20 @@ class Game {
     'quiz': null,
   };
 
-  void _migrateTownUnits() {
+  void _migrateTownUnits(String? legacyHome) {
     final valid = atlas.sourceTowns.keys.toSet();
     if (!valid.containsAll(owned) ||
         !valid.containsAll(everOwned) ||
         !valid.containsAll(progress.keys) ||
         !everOwned.containsAll(owned) ||
-        (home != null && !owned.contains(home)) ||
+        (legacyHome != null && !owned.contains(legacyHome)) ||
         progress.entries.any((e) => e.value < 0 || owned.contains(e.key))) {
       throw const FormatException('保存データに不整合があります。');
     }
     final oldOwned = {...owned};
     final oldProgress = {...progress};
-    home = home == null ? null : atlas.sourceToTown[home];
+    final initialTown =
+        legacyHome == null ? null : atlas.sourceToTown[legacyHome];
     final visited = everOwned.map((id) => atlas.sourceToTown[id]!).toSet();
     owned.clear();
     progress.clear();
@@ -839,7 +844,7 @@ class Game {
       ..clear()
       ..addAll(visited);
     for (final entry in atlas.membersByTown.entries) {
-      if (entry.key == home ||
+      if (entry.key == initialTown ||
           entry.value.every((t) => oldOwned.contains(t.id))) {
         owned.add(entry.key);
         everOwned.add(entry.key);
@@ -876,7 +881,11 @@ class Game {
     g.difficulty = Difficulty.values.firstWhere(
       (d) => d.name == j['difficulty'],
     );
-    g.home = j['home'] as String?;
+    final navigationRule = j['navigationRule'];
+    if (navigationRule != null && navigationRule != 'last-capture-v1') {
+      throw const FormatException('対応していない移動方式です。');
+    }
+    final legacyHome = navigationRule == null ? j['home'] as String? : null;
     g.owned.addAll(List<String>.from(j['owned']));
     g.mastered.addAll(List<String>.from(j['mastered']));
     g.seen.addAll(List<String>.from(j['seen']));
@@ -887,7 +896,27 @@ class Game {
     if (!legacyUnits && j['territoryUnit'] != 'town-v1') {
       throw const FormatException('対応していない地域単位です。');
     }
-    if (legacyUnits) g._migrateTownUnits();
+    if (legacyUnits) g._migrateTownUnits(legacyHome);
+    // Old saves preserve acquisition order in their owned list. Use the last
+    // surviving owned region; do not fall back to a designated starting base.
+    final savedRecent = j['lastCapturedTownId'] as String?;
+    if (savedRecent != null) {
+      g.lastCapturedTownId =
+          legacyUnits ? atlas.sourceToTown[savedRecent] : savedRecent;
+      if (g.lastCapturedTownId == null ||
+          !g.owned.contains(g.lastCapturedTownId)) {
+        throw const FormatException('直前に攻略した地域が不正です。');
+      }
+    } else {
+      for (final source in List<String>.from(j['owned']).reversed) {
+        final id = legacyUnits ? atlas.sourceToTown[source] : source;
+        if (id != null && g.owned.contains(id)) {
+          g.lastCapturedTownId = id;
+          break;
+        }
+      }
+      g.lastCapturedTownId ??= g.owned.lastOrNull;
+    }
     if (j.containsKey('conquestGuideSeen')) {
       g.conquestGuideSeen.addAll(List<String>.from(j['conquestGuideSeen']));
     } else {
@@ -939,12 +968,16 @@ class Game {
         g.totalTaps < 0 ||
         g.wins < 0 ||
         g.losses < 0 ||
-        (g.home != null &&
-            (!validIds.contains(g.home) ||
-                !g.everOwned.contains(g.home) ||
-                (!g.owned.contains(g.home) &&
-                    (legacyQuiz || atlas.officeForTown(g.home!) == null)))) ||
-        (g.home == null && (g.owned.isNotEmpty || g.quiz != null)) ||
+        (legacyHome != null &&
+            (!validIds.contains(
+                  legacyUnits ? atlas.sourceToTown[legacyHome] : legacyHome,
+                ) ||
+                (!legacyUnits && !g.everOwned.contains(legacyHome)) ||
+                (!legacyUnits &&
+                    !g.owned.contains(legacyHome) &&
+                    (legacyQuiz ||
+                        atlas.officeForTown(legacyHome) == null)))) ||
+        (!g.hasStarted && (g.owned.isNotEmpty || g.progress.isNotEmpty)) ||
         g.mastered.any((c) => !g.cityOwned(c)) ||
         g.progress.entries.any(
           (e) =>

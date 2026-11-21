@@ -30,7 +30,7 @@ void main() {
     final home = atlas.towns.values.firstWhere(
       (t) => t.neighbors.any((id) => atlas.towns[id]!.population > 1000),
     );
-    g.setHome(home.id);
+    g.startAt(home.id);
     g.selectAttackTarget(
       home.neighbors.firstWhere((id) => atlas.towns[id]!.population > 1000),
     );
@@ -54,7 +54,7 @@ void main() {
       final restored = store.load(atlas);
       expect(restored.totalTaps, 100);
       expect(restored.progress, g.progress);
-      expect(restored.home, g.home);
+      expect(restored.lastCapturedTownId, g.lastCapturedTownId);
       expect(g.encodes, 1);
       expect(notifications, 0);
       expect(store.saving, false);
@@ -81,7 +81,7 @@ void main() {
       final (g, store) = await fixture();
       g.tap(g.attackTarget!, DateTime.now());
       final pending = store.queueSave(g);
-      final replacement = CountingGame(atlas)..setHome(g.home!);
+      final replacement = CountingGame(atlas)..startAt(g.lastCapturedTownId!);
       await store.save(replacement);
       await pending;
       await Future<void>.delayed(const Duration(milliseconds: 250));
@@ -93,7 +93,7 @@ void main() {
     'tips cache reuses results and refreshes when regional data changes',
     () async {
       final (g, _) = await fixture();
-      final city = atlas.towns[g.home]!.cityId;
+      final city = atlas.towns[g.lastCapturedTownId]!.cityId;
       final first = g.tipsFor(selectedCity: city);
       expect(identical(first, g.tipsFor(selectedCity: city)), true);
       final original = atlas.facts[city]!;

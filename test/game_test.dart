@@ -29,7 +29,7 @@ void main() {
       expect(tips.map((f) => f.id).toSet(), hasLength(1170));
       expect(tips.every((f) => f.source.startsWith('https://')), isTrue);
       expect(tips.every((f) => !f.text.contains('人口')), isTrue);
-      final g = Game(atlas)..setHome(atlas.byCity['29202']!.first.id);
+      final g = Game(atlas)..startAt(atlas.byCity['29202']!.first.id);
       g.seen.addAll(['29202:public:1', tips.first.id]);
       final restored = Game.restore(atlas, g.toJson());
       expect(restored.seen, containsAll(['29202:public:1', tips.first.id]));
@@ -57,7 +57,7 @@ void main() {
             atlas.towns[id]!.population > 2,
       ),
     );
-    final g = Game(atlas)..setHome(home.id);
+    final g = Game(atlas)..startAt(home.id);
     final local = g.tipsFor().where((f) => !f.quizEligible).toList();
     expect(local, hasLength(30));
     expect(g.tipsFor().first.text, contains('桜井市の市の木'));
@@ -80,7 +80,7 @@ void main() {
       final target = home.neighbors
           .map((id) => atlas.towns[id]!)
           .firstWhere((t) => t.population > 2);
-      final g = Game(atlas)..setHome(home.id);
+      final g = Game(atlas)..startAt(home.id);
       expect(g.selectAttackTarget(target.id), isTrue);
       final tips = g.tipsFor(
         selectedTown: atlas.byCity['29449']!.first.id,
@@ -110,7 +110,7 @@ void main() {
             .where((t) => t.population > 2)
             .take(2)
             .toList();
-    final g = Game(atlas)..setHome(home.id);
+    final g = Game(atlas)..startAt(home.id);
     expect(g.selectAttackTarget(targets[0].id), isTrue);
     expect(g.selectAttackTarget(targets[1].id), isTrue);
     g.tap(targets[1].id, now);
@@ -140,7 +140,7 @@ void main() {
             .where((t) => t.population > 2)
             .take(2)
             .toList();
-    final g = Game(atlas)..setHome(home.id);
+    final g = Game(atlas)..startAt(home.id);
     g.progress.addAll({targets[0].id: 1, targets[1].id: 2});
     g.totalTaps = 3;
     final saved = g.toJson()..remove('attackTarget');
@@ -157,7 +157,7 @@ void main() {
     final city = atlas.byCity.keys.first;
     final towns =
         atlas.byCity[city]!.where((t) => t.population > 5).take(3).toList();
-    final g = Game(atlas)..setHome(towns[0].id);
+    final g = Game(atlas)..startAt(towns[0].id);
     g.owned.add(towns[1].id);
     g.everOwned.add(towns[1].id);
     g.progress[towns[2].id] = 3;
@@ -197,7 +197,7 @@ void main() {
   test('regional tap counts survive reload and reject inactive taps', () {
     final g = Game(atlas);
     final home = atlas.towns.values.firstWhere((t) => t.neighbors.isNotEmpty);
-    g.setHome(home.id);
+    g.startAt(home.id);
     final target = atlas.towns[home.neighbors.first]!;
     g.tap(home.id, now);
     expect(g.cityTaps, isEmpty);
@@ -260,7 +260,11 @@ void main() {
             .toList();
     final home = groups.first;
     final target = groups[1];
-    final old = Game(atlas).toJson()..remove('territoryUnit');
+    final old =
+        Game(atlas).toJson()
+          ..remove('territoryUnit')
+          ..remove('navigationRule')
+          ..remove('lastCapturedTownId');
     old['home'] = home.last.id;
     old['owned'] = [home.last.id, target.first.id];
     old['everOwned'] = old['owned'];
@@ -269,7 +273,7 @@ void main() {
     final migrated = Game.restore(atlas, old);
     final homeId = atlas.sourceToTown[home.last.id]!;
     final targetId = atlas.sourceToTown[target.first.id]!;
-    expect(migrated.home, homeId);
+    expect(migrated.lastCapturedTownId, homeId);
     expect(migrated.owned, contains(homeId));
     expect(migrated.owned, isNot(contains(targetId)));
     expect(migrated.progress[targetId], target.first.population + 2);
@@ -286,7 +290,7 @@ void main() {
       final home = atlas.towns.values.first;
       expect(g.tap(home.id, now), false);
       expect(g.totalTaps, 0);
-      g.setHome(home.id);
+      g.startAt(home.id);
       final near = atlas.towns[home.neighbors.first]!;
       final far = atlas.towns.values.firstWhere(
         (t) => t.id != home.id && !t.neighbors.contains(home.id),
@@ -313,7 +317,7 @@ void main() {
     );
     for (final difficulty in Difficulty.values) {
       final g = Game(atlas)..difficulty = difficulty;
-      g.setHome(t.neighbors.first);
+      g.startAt(t.neighbors.first);
       final initial = g.population;
       expect(g.requiredTaps(t), t.population);
       for (var i = 1; i <= t.population; i++) {
@@ -325,7 +329,7 @@ void main() {
   });
   test('45 residents require 45 taps even after 16 taps', () {
     final town = atlas.towns.values.firstWhere((t) => t.population == 45);
-    final g = Game(atlas)..setHome(town.neighbors.first);
+    final g = Game(atlas)..startAt(town.neighbors.first);
     expect(g.requiredTaps(town), 45);
     for (var i = 0; i < 16; i++) {
       expect(g.tap(town.id, now), false);
@@ -362,7 +366,7 @@ void main() {
       (t) => t.population == 0 && t.neighbors.isNotEmpty,
     );
     final g = Game(atlas);
-    g.setHome(t.neighbors.first);
+    g.startAt(t.neighbors.first);
     final initial = g.population;
     expect(g.requiredTaps(t), 1);
     expect(g.tap(t.id, now), true);
@@ -372,12 +376,12 @@ void main() {
     final t = atlas.towns.values.firstWhere(
       (t) => t.population == 0 && t.neighbors.isNotEmpty,
     );
-    final g = Game(atlas)..setHome(t.neighbors.first);
+    final g = Game(atlas)..startAt(t.neighbors.first);
     final legacy = g.toJson()..remove('tapRule');
     legacy['progress'] = {t.id: 2};
     legacy['totalTaps'] = 2;
     final restored = Game.restore(atlas, legacy);
-    expect(restored.home, g.home);
+    expect(restored.lastCapturedTownId, g.lastCapturedTownId);
     expect(restored.owned, g.owned);
     expect(restored.progress[t.id], 0);
     expect(restored.tap(t.id, now), true);
@@ -387,7 +391,7 @@ void main() {
       (a, b) => a.value.length < b.value.length ? a : b,
     );
     final g = Game(atlas, random: Random(2));
-    g.setHome(city.value.first.id);
+    g.startAt(city.value.first.id);
     // Fixture starts one tap before the final region is captured.
     final last = city.value.last;
     for (final t in city.value.where((t) => t.id != last.id)) {
@@ -416,7 +420,7 @@ void main() {
     final g = completeCity();
     final owned = {...g.owned};
     final mastered = {...g.mastered};
-    g.startQuizAt(g.home!, now);
+    g.startQuizAt(g.lastCapturedTownId!, now);
     expect(g.quiz, isNull);
     expect(g.answer('wrong', now), isNull);
     expect(g.expire(now.add(const Duration(days: 10))), isFalse);
@@ -432,7 +436,7 @@ void main() {
       save['quizRule'] = rule;
       save['mastered'] = <String>[];
       save['quiz'] = {
-        'cityId': atlas.towns[g.home]!.cityId,
+        'cityId': atlas.towns[g.lastCapturedTownId]!.cityId,
         'deadline': now.subtract(const Duration(days: 1)).toIso8601String(),
         'pausedRemainingMs': 7000,
         'correctCount': 2,
@@ -454,12 +458,16 @@ void main() {
 
   test('an old quiz loss does not grant the missing office territory', () {
     final g = completeCity();
-    final city = atlas.towns[g.home]!.cityId;
+    final city = atlas.towns[g.lastCapturedTownId]!.cityId;
     final office = atlas.officeTownIds[city]!;
-    g.home = office;
     g.owned.remove(office);
     g.mastered.remove(city);
-    final saved = g.toJson()..['quizRule'] = 'office-five-v1';
+    final saved =
+        g.toJson()
+          ..remove('navigationRule')
+          ..remove('lastCapturedTownId')
+          ..['home'] = office
+          ..['quizRule'] = 'office-five-v1';
     final loaded = Game.restore(atlas, saved);
     expect(loaded.owned, g.owned);
     expect(loaded.mastered.contains(city), isFalse);
@@ -476,8 +484,8 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final store = SaveStore(prefs);
       final g = Game(atlas);
-      g.setHome(atlas.towns.keys.first);
-      final next = atlas.towns[g.home]!.neighbors.first;
+      g.startAt(atlas.towns.keys.first);
+      final next = atlas.towns[g.lastCapturedTownId]!.neighbors.first;
       g.tap(next, now);
       final first = store.save(g);
       g.tap(next, now);
@@ -485,7 +493,7 @@ void main() {
       await Future.wait([first, second]);
       final restored = store.load(atlas);
       expect(restored.progress[next], 2);
-      expect(restored.home, g.home);
+      expect(restored.lastCapturedTownId, g.lastCapturedTownId);
       expect(store.error, isNull);
       await prefs.setString(SaveStore.key, '{broken');
       expect(() => store.load(atlas), throwsFormatException);
@@ -494,7 +502,7 @@ void main() {
   );
   test('invalid and future-version save data is rejected', () {
     final g = Game(atlas);
-    g.setHome(atlas.towns.keys.first);
+    g.startAt(atlas.towns.keys.first);
     expect(
       () => Game.restore(atlas, {...g.toJson(), 'version': 999}),
       throwsFormatException,

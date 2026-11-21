@@ -112,7 +112,7 @@ void main() {
     () async {
       final game =
           Game(atlas)
-            ..setHome('29205043001')
+            ..startAt('29205043001')
             ..selectAttackTarget('29205041001');
       game.tap('29205041001', DateTime.utc(2026));
       game.observe('24208'); // Old placeholder IDs remain valid too.
@@ -129,10 +129,10 @@ void main() {
 
   test('regional tip loading preserves migrated tap conquest', () async {
     const city = '29362';
-    final game = Game(atlas)..setHome(atlas.officeTownIds[city]!);
+    final game = Game(atlas)..startAt(atlas.officeTownIds[city]!);
     game.owned.addAll(atlas.byCity[city]!.map((t) => t.id));
     game.everOwned.addAll(game.owned);
-    game.startQuizAt(game.home!, DateTime.utc(2026));
+    game.startQuizAt(game.lastCapturedTownId!, DateTime.utc(2026));
     final save = game.toJson();
     await tips.ensure('24');
     await tips.ensure(null);

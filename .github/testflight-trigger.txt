@@ -1,1 +1,1 @@
-TestFlight: complete municipalities on the final territory tap; retire conquest quizzes, timers, office challenges and practice UI. Migrate old full-control saves and clear old quizzes without territory loss. Preserve census IDs, maps, names and tap progress.
+TestFlight: remove fixed home/base state and marker. Map home button focuses the active attack, otherwise the latest captured region. Persist latest capture, migrate old saves without returning to their former base, and preserve geography, population and progress.

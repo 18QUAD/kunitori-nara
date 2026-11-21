@@ -279,15 +279,24 @@ class _TerritoryMapState extends State<TerritoryMap> {
               ? _union(city.value.map((t) => paths[t.id]!).toList())
               : _polygonPath(prebuilt);
       if (prebuilt != null) {
-        boundaryRings[city.key] = [for (final polygon in prebuilt) for (final ring in polygon) ring.map(project).toList()];
+        boundaryRings[city.key] = [
+          for (final polygon in prebuilt)
+            for (final ring in polygon) ring.map(project).toList(),
+        ];
       }
       cityPaths[city.key] = outline;
       cityOutlines[city.key] = exteriorOutline(outline);
       cityBounds[city.key] = outline.getBounds();
     }
     final prebuilt = widget.atlas.prefecturePolygons[widget.prefectureId];
-    if (prebuilt != null && widget.atlas.preparedGeometryPrefectures.contains(widget.prefectureId)) {
-      boundaryRings['pref'] = [for (final polygon in prebuilt) for (final ring in polygon) ring.map(project).toList()];
+    if (prebuilt != null &&
+        widget.atlas.preparedGeometryPrefectures.contains(
+          widget.prefectureId,
+        )) {
+      boundaryRings['pref'] = [
+        for (final polygon in prebuilt)
+          for (final ring in polygon) ring.map(project).toList(),
+      ];
     }
     prefecturePath =
         prebuilt == null ||
@@ -1042,19 +1051,6 @@ class _MapPainter extends CustomPainter {
         transform.toScene(viewportSize.bottomRight(Offset.zero)),
       ),
     );
-    if (game.home != null) {
-      final town = atlas.towns[game.home]!;
-      if ((overview || town.cityId == cityId) &&
-          bounds.containsKey(overview ? town.cityId : town.id)) {
-        final p = bounds[overview ? town.cityId : town.id]!.center;
-        canvas.drawCircle(
-          p,
-          4 / zoom,
-          Paint()..color = const Color(0xFF101C2B),
-        );
-        canvas.drawCircle(p, 2 / zoom, Paint()..color = Colors.white);
-      }
-    }
     // Keep the selection and active campaign above map fills and labels.
     final highlighted = <String>{};
     for (final id in [selected, game.attackTarget]) {

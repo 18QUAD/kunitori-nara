@@ -38,7 +38,7 @@ void main() {
         (a.towns as CompactTowns).materializedCount,
         lessThanOrEqualTo(512),
       );
-      final g = Game(a)..setHome('29205043001');
+      final g = Game(a)..startAt('29205043001');
       g.selectAttackTarget('29205041001');
       g.tap('29205041001', DateTime.now());
       final restored = Game.restore(a, g.toJson());
@@ -51,10 +51,15 @@ void main() {
       };
       await n.prepareLegacySave(legacy);
       expect(a.sourceTowns, isNotEmpty);
-      final old = g.toJson()..remove('territoryUnit');
+      final old =
+          g.toJson()
+            ..remove('territoryUnit')
+            ..remove('navigationRule')
+            ..remove('lastCapturedTownId')
+            ..['home'] = g.lastCapturedTownId;
       old['progress'] = {'29205041001': 7};
       final migrated = Game.restore(a, old);
-      expect(migrated.home, g.home);
+      expect(migrated.lastCapturedTownId, g.lastCapturedTownId);
       expect(migrated.progress['29205041001'], 7);
       n.releaseLegacySave();
       expect(a.sourceTowns, isEmpty);

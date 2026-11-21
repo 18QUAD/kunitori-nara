@@ -28,7 +28,7 @@ void main() {
     );
     final game =
         Game(atlas)
-          ..setHome(home.id)
+          ..startAt(home.id)
           ..selectAttackTarget(target);
     final before = MapPaintSnapshot(game);
     game.tap(target, DateTime.now());
@@ -124,7 +124,7 @@ void main() {
       );
       final game =
           Game(atlas)
-            ..setHome(home.id)
+            ..startAt(home.id)
             ..selectAttackTarget(target);
       Widget screen() => MaterialApp(
         home: RepaintBoundary(

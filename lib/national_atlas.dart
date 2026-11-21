@@ -187,6 +187,8 @@ class NationalAtlas {
       ...((save['everOwned'] as List?) ?? []).cast<String>(),
       ...((save['progress'] as Map?) ?? {}).keys.cast<String>(),
       if (save['home'] is String) save['home'] as String,
+      if (save['lastCapturedTownId'] is String)
+        save['lastCapturedTownId'] as String,
     };
     for (final pref in ids.map((id) => id.substring(0, 2)).toSet()) {
       final rows =

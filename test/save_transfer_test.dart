@@ -19,7 +19,7 @@ void main() {
   test(
     'portable save preserves game progress and appearance with checksum',
     () {
-      final game = Game(atlas)..setHome(atlas.byCity['29202']!.first.id);
+      final game = Game(atlas)..startAt(atlas.byCity['29202']!.first.id);
       game.totalTaps = 12345;
       final values = <String, String?>{
         SaveStore.key: jsonEncode(game.toJson()),
@@ -48,8 +48,8 @@ void main() {
   test(
     'import retains durable previous save and supports restoring backup',
     () async {
-      final a = Game(atlas)..setHome(atlas.byCity['29202']!.first.id);
-      final b = Game(atlas)..setHome(atlas.byCity['29206']!.first.id);
+      final a = Game(atlas)..startAt(atlas.byCity['29202']!.first.id);
+      final b = Game(atlas)..startAt(atlas.byCity['29206']!.first.id);
       SharedPreferences.setMockInitialValues({
         SaveStore.key: jsonEncode(a.toJson()),
       });
@@ -57,13 +57,19 @@ void main() {
       final previous = SaveTransfer.snapshot(prefs);
       final incoming = {...previous, SaveStore.key: jsonEncode(b.toJson())};
       await SaveTransfer.install(prefs, incoming);
-      expect(SaveStore(prefs).load(atlas).home, b.home);
+      expect(
+        SaveStore(prefs).load(atlas).lastCapturedTownId,
+        b.lastCapturedTownId,
+      );
       final backup = SaveTransfer.decode(
         prefs.getString(SaveTransfer.backupKey)!,
       );
       expect(backup, previous);
       await SaveTransfer.install(prefs, backup);
-      expect(SaveStore(prefs).load(atlas).home, a.home);
+      expect(
+        SaveStore(prefs).load(atlas).lastCapturedTownId,
+        a.lastCapturedTownId,
+      );
     },
   );
 }

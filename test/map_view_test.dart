@@ -25,7 +25,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final store = SaveStore(prefs);
-      final game = Game(atlas)..setHome(atlas.officeTownIds['29205']!);
+      final game = Game(atlas)..startAt(atlas.officeTownIds['29205']!);
       final operations = <Future<void>>[];
       for (var i = 0; i < 20; i++) {
         operations.add(
@@ -76,7 +76,7 @@ void main() {
   testWidgets(
     'launch restores map; pan, zoom, overview and geography survive restart and resizing',
     (tester) async {
-      final game = Game(atlas)..setHome(atlas.officeTownIds['29205']!);
+      final game = Game(atlas)..startAt(atlas.officeTownIds['29205']!);
       final selected = atlas.byCity['29212']!.first.id;
       final saved = MapViewState(
         center: const Offset(590, 830),

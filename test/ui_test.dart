@@ -113,7 +113,7 @@ void main() {
       isNull,
     );
     expect(tester.takeException(), isNull);
-    await tester.tap(find.text('地名から本拠地を探す'));
+    await tester.tap(find.text('地名から最初の地域を探す'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('進軍可能地域のみ'));
     await tester.pumpAndSettle();
@@ -132,9 +132,9 @@ void main() {
       tester.widget<Text>(find.byKey(const Key('current-location'))).data,
       '油留木町',
     );
-    await tester.ensureVisible(find.text('ここを本拠地にする'));
+    await tester.ensureVisible(find.text('ここから攻略を始める'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('ここを本拠地にする'));
+    await tester.tap(find.text('ここから攻略を始める'));
     await tester.pumpAndSettle();
     expect(find.text('この地域はあなたの領土です'), findsOneWidget);
     await tester.tap(find.byKey(const Key('tips-region')), warnIfMissed: false);
@@ -264,7 +264,7 @@ void main() {
     );
     expect(
       tester.widget<Text>(find.byKey(const Key('prefecture-progress'))).data,
-      '奈良県 ${number(map.atlas.towns[map.game.home]!.population + 10)} / ${number(map.atlas.prefecturePopulations['29']!)}',
+      '奈良県 ${number(map.atlas.towns[map.game.lastCapturedTownId]!.population + 10)} / ${number(map.atlas.prefecturePopulations['29']!)}',
     );
     expect(
       tester.getRect(find.byKey(const Key('attack-progress'))).bottom,
@@ -292,7 +292,7 @@ void main() {
     await tester.tap(find.byTooltip('1段上の地図を表示'));
     await tester.pumpAndSettle();
     expect(find.text('奈良県'), findsOneWidget);
-    expect(find.text('ここを本拠地にする'), findsNothing);
+    expect(find.text('ここから攻略を始める'), findsNothing);
     await waitForMapImages(tester);
     await tester.tap(find.byKey(const Key('map-home')));
     await tester.pumpAndSettle();
