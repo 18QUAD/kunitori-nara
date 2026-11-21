@@ -1,1 +1,1 @@
-TestFlight: remove fixed home/base state and marker. Map home button focuses the active attack, otherwise the latest captured region. Persist latest capture, migrate old saves without returning to their former base, and preserve geography, population and progress.
+TestFlight: remove the battle-records menu and screen. Keep saved progress/history intact and preserve reset with confirmation in Settings.

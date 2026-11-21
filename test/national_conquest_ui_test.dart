@@ -223,8 +223,13 @@ void main() {
       expect(game.quiz, isNull);
       expect(find.text('制圧クイズに挑戦'), findsNothing);
       expect(find.text('クイズを予習'), findsNothing);
+      final beforeSettings = game.toJson();
       await tester.tap(find.byTooltip('設定'));
       await tester.pumpAndSettle();
+      expect(find.text('戦績'), findsNothing);
+      expect(find.text('戦績と足跡'), findsNothing);
+      expect(find.text('最初からやり直す'), findsOneWidget);
+      expect(game.toJson(), beforeSettings);
       await tester.tap(find.text('地名から探す'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '田辺田辺');

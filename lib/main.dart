@@ -523,7 +523,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           (context) => AlertDialog(
             title: const Text('最初からやり直しますか？'),
             content: const Text(
-              '領土・攻略状況・戦績・称号・地域tipsの履歴をリセットします。元に戻せません。市区町村から最初の地域を選び直せます。',
+              '領土・攻略状況・地域tipsの履歴をリセットします。元に戻せません。市区町村から最初の地域を選び直せます。',
             ),
             actions: [
               TextButton(
@@ -861,7 +861,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           icon: const Icon(Icons.settings_outlined),
           onSelected: (value) {
             if (value == 'search') _search();
-            if (value == 'records') _showRecords();
+            if (value == 'restart') _restart();
             if (value == 'help') _about();
             if (value == 'tips') _tipSettings();
             if (value == 'map-cache') _mapCacheSettings();
@@ -891,10 +891,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 PopupMenuItem(
-                  value: 'records',
+                  value: 'restart',
                   child: ListTile(
-                    leading: Icon(Icons.emoji_events_outlined),
-                    title: Text('戦績'),
+                    leading: Icon(Icons.restart_alt),
+                    title: Text('最初からやり直す'),
                   ),
                 ),
                 if (kIsWeb)
@@ -1523,135 +1523,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     ),
   );
 
-  void _showRecords() => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: panel,
-    builder:
-        (sheetContext) => SizedBox(
-          height: MediaQuery.sizeOf(sheetContext).height * 0.9,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 8, 0),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        '戦績',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: '戦績を閉じる',
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(sheetContext),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: _records(
-                  onRestart: () async {
-                    final before = game;
-                    await _restart();
-                    if (sheetContext.mounted && game != before) {
-                      Navigator.pop(sheetContext);
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-  );
-
-  Widget _records({required VoidCallback onRestart}) => ListView(
-    padding: const EdgeInsets.all(20),
-    children: [
-      const Text(
-        '戦績と足跡',
-        style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        'この端末に残る、あなただけの大和紀行。',
-        style: TextStyle(color: Colors.white60),
-      ),
-      const SizedBox(height: 20),
-      _card(
-        Column(
-          children: [
-            _record('累計タップ数', number(game!.totalTaps)),
-            _record('訪れた領土', number(game!.everOwned.length)),
-          ],
-        ),
-      ),
-      const SizedBox(height: 20),
-      const Text(
-        '獲得した称号',
-        style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 12),
-      if (game!.titles.isEmpty) const Text('最初の地域を選んで、旅を始めましょう。'),
-      Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children:
-            game!.titles
-                .map(
-                  (t) => Chip(
-                    avatar: const Icon(
-                      Icons.military_tech,
-                      color: gold,
-                      size: 20,
-                    ),
-                    label: Text(t),
-                    side: const BorderSide(color: Color(0xFF566050)),
-                  ),
-                )
-                .toList(),
-      ),
-      const SizedBox(height: 24),
-      OutlinedButton.icon(
-        onPressed: onRestart,
-        icon: const Icon(Icons.restart_alt),
-        label: const Text('最初からやり直す'),
-      ),
-      const SizedBox(height: 12),
-      const Text(
-        'MVPはソロプレイです。全国ランキング・対戦シーズンは未実装です。GDP・石高は未収録のため表示していません。',
-        style: TextStyle(color: Colors.white54, height: 1.6),
-      ),
-    ],
-  );
-  Widget _record(String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 12),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(label, style: const TextStyle(color: Colors.white60)),
-        ),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
-        ),
-      ],
-    ),
-  );
-  Widget _card(Widget child) => Container(
-    padding: const EdgeInsets.all(22),
-    decoration: BoxDecoration(
-      color: panel,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-    ),
-    child: child,
-  );
   Future<void> _search() async {
     final result = await showModalBottomSheet<String>(
       context: context,

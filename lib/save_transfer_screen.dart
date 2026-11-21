@@ -71,7 +71,7 @@ class _SaveTransferScreenState extends State<SaveTransferScreen> {
       padding: const EdgeInsets.all(20),
       children: [
         const Text(
-          'ブラウザ版の設定からコードをコピーし、アプリ版のこの画面に貼り付けてください。領土・タップ数・戦績・キャラ設定を引き継ぎます。自動同期はされません。',
+          'ブラウザ版の設定からコードをコピーし、アプリ版のこの画面に貼り付けてください。領土・タップ数・キャラ設定を引き継ぎます。自動同期はされません。',
         ),
         const SizedBox(height: 20),
         FilledButton.icon(
