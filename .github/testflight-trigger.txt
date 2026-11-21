@@ -1,1 +1,1 @@
-TestFlight: remove Start Over from Settings and delete its reset confirmation and handler. Keep saved campaign progress and history unchanged.
+TestFlight: omit 小字 address-level prefixes before selecting town display names, including verified upper/lower boundaries in combined labels. Preserve original names, IDs, merging, population, maps and saved progress.

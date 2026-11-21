@@ -16,6 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 AUDIT = ROOT / 'docs/town-name-audit/naming-rules'
 
 
+def display_field(value):
+    """Omit leading address-level designations before hierarchy comparison."""
+    return value.removeprefix('大字').removeprefix('小字')
+
+
 def read_fields(estat_dir=None):
     with gzip.open(AUDIT / 'source-fields.csv.gz', 'rt', encoding='utf-8', newline='') as stream:
         rows = list(csv.DictReader(stream))
@@ -48,7 +53,7 @@ def select_names(fields):
     for filename in index['townFiles']:
         for tid, name, population, _area, _neighbors in json.loads((compact / filename).read_text()):
             assert tid not in regions
-            regions[tid] = dict(canonical=name, population=population, uppers=set(), lowers=set(),
+            regions[tid] = dict(canonical=name, population=population, uppers=set(), lowers=set(), koaza_uppers=set(),
                                 has_text=False)
     seen = set()
     for path in sorted((compact / 'legacy').glob('*.json')):
@@ -57,9 +62,11 @@ def select_names(fields):
             seen.add(source)
             upper, lower = fields[source]
             r = regions[tid]
-            # 大字 is omitted before grouping, not just after label selection.
-            r['uppers'].add(upper.removeprefix('大字'))
-            r['lowers'].add(lower.removeprefix('大字'))
+            # Omit designations before grouping, not just after selection.
+            r['uppers'].add(display_field(upper))
+            r['lowers'].add(display_field(lower))
+            if lower.startswith('小字'):
+                r['koaza_uppers'].add(display_field(upper))
             r['has_text'] |= bool(upper or lower)
     assert seen == fields.keys()
     assert len(regions) == 141900
@@ -67,7 +74,14 @@ def select_names(fields):
     upper_owners = collections.defaultdict(set)
     for tid, r in regions.items():
         assert r['uppers'] and r['lowers']
-        r['full'] = r['canonical'].removeprefix('大字')
+        r['full'] = display_field(r['canonical'])
+        # Full merged labels also omit the lower field's designation, only
+        # at a boundary confirmed by the census hierarchy. Keep other text.
+        for upper in sorted(r['koaza_uppers'], key=lambda v: (-len(v), v)):
+            prefix = upper + '小字'
+            if r['full'].startswith(prefix):
+                r['full'] = upper + r['full'][len(prefix):]
+                break
         r['upper'] = next(iter(r['uppers'])) if len(r['uppers']) == 1 else ''
         r['lower'] = next(iter(r['lowers'])) if len(r['lowers']) == 1 else ''
         for upper in r['uppers'] - {''}:

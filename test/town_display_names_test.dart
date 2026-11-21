@@ -62,6 +62,14 @@ void main() {
         '04581026003': '石浜字高森',
         '02201015003': '字忍',
         '02201119001': '新田',
+        '26303001001': '藤井畑',
+        '26303001014': '鏡田',
+        '26303001016': '岸畑',
+        '26303002001': '夏目',
+        '26303002015': '鎌田',
+        '26303001008': '字大山崎茶屋前',
+        '26303002007': '字円明寺茶屋前',
+        '26366001001': '祝園池頭',
       };
       for (final entry in examples.entries) {
         expect(
@@ -78,49 +86,68 @@ void main() {
     },
   );
 
-  test('no 大字 is restored and only documented existing homonyms remain', () {
-    expect(townDisplayNames.length, 34777);
-    final collisions = <String, List<String>>{};
-    var unknown = 0;
-    var changed = 0;
-    for (final city in atlas.byCity.entries) {
-      final seen = <String, List<String>>{};
-      for (final t in city.value) {
-        expect(t.displayName.startsWith('大字'), isFalse, reason: t.id);
-        seen.putIfAbsent(t.displayName, () => []).add(t.id);
-        if (t.name == '名称未設定') {
-          unknown++;
-          expect(t.displayName, t.name);
-          expect(townDisplayNames.containsKey(t.id), isFalse);
+  test(
+    'no 大字 or 小字 is restored and only documented existing homonyms remain',
+    () {
+      expect(townDisplayNames.length, 34955);
+      final collisions = <String, List<String>>{};
+      var unknown = 0;
+      var changed = 0;
+      for (final city in atlas.byCity.entries) {
+        final seen = <String, List<String>>{};
+        for (final t in city.value) {
+          expect(t.displayName.startsWith('大字'), isFalse, reason: t.id);
+          expect(t.displayName.startsWith('小字'), isFalse, reason: t.id);
+          seen.putIfAbsent(t.displayName, () => []).add(t.id);
+          if (t.name == '名称未設定') {
+            unknown++;
+            expect(t.displayName, t.name);
+            expect(townDisplayNames.containsKey(t.id), isFalse);
+          }
+          if (t.displayName != t.name) changed++;
         }
-        if (t.displayName != t.name) changed++;
+        for (final entry in seen.entries.where((e) => e.value.length > 1)) {
+          final ids = entry.value..sort();
+          collisions['${city.key}/${entry.key}'] = ids;
+          // These are existing canonical homonyms, never a new collision.
+          expect(ids.map((id) => atlas.towns[id]!.name).toSet(), hasLength(1));
+        }
       }
-      for (final entry in seen.entries.where((e) => e.value.length > 1)) {
-        final ids = entry.value..sort();
-        collisions['${city.key}/${entry.key}'] = ids;
-        // These are existing canonical homonyms, never a new collision.
-        expect(ids.map((id) => atlas.towns[id]!.name).toSet(), hasLength(1));
+      final documented =
+          jsonDecode(
+                File(
+                  'docs/town-name-audit/naming-rules/unresolved-names.json',
+                ).readAsStringSync(),
+              )
+              as List;
+      expect(collisions, {
+        for (final row in documented)
+          '${row['city_id']}/${row['display_name']}': row['ids'],
+      });
+      expect(collisions.length, 376);
+      expect(unknown, 117);
+      expect(changed, 34955);
+      for (final entry in townDisplayNames.entries) {
+        expect(atlas.towns[entry.key]!.name, entry.value.sourceName);
+        expect(townDisplayName(entry.key, '異なる原本名'), '異なる原本名');
       }
-    }
-    final documented =
-        jsonDecode(
-              File(
-                'docs/town-name-audit/naming-rules/unresolved-names.json',
-              ).readAsStringSync(),
-            )
-            as List;
-    expect(collisions, {
-      for (final row in documented)
-        '${row['city_id']}/${row['display_name']}': row['ids'],
-    });
-    expect(collisions.length, 376);
-    expect(unknown, 117);
-    expect(changed, 34777);
-    for (final entry in townDisplayNames.entries) {
-      expect(atlas.towns[entry.key]!.name, entry.value.sourceName);
-      expect(townDisplayName(entry.key, '異なる原本名'), '異なる原本名');
-    }
-  });
+    },
+  );
+
+  test(
+    'koaza display normalization retains the original merged names and IDs',
+    () {
+      final town = atlas.towns['26303001001']!;
+      expect(town.name, '字大山崎小字藤井畑');
+      expect(town.displayName, '藤井畑');
+      expect(townDisplayName(town.id, '別の原本名'), '別の原本名');
+      final office = atlas.facts['26303']!.singleWhere(
+        (f) => f.id.endsWith(':office'),
+      );
+      expect(office.text, contains('町は夏目。'));
+      expect(office.text, isNot(contains('小字')));
+    },
+  );
 
   test(
     'source merge preserves every town ID, canonical name and population',
